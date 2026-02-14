@@ -1,0 +1,544 @@
+{
+  "app": {
+    "name": "Acme Fitness",
+    "slug": "acme-fitness"
+  },
+  "events": {
+    "available": [
+      "app_opened", "onboarding_started", "onboarding_completed", "account_created",
+      "home_viewed", "profile_viewed", "settings_opened", "search_performed", "feature_tutorial_viewed",
+      "paywall_viewed", "free_trial_started", "purchase_completed", "purchase_failed",
+      "push_notification_enabled", "app_shared_with_friend", "app_rated"
+    ],
+    "counts": {
+      "app_opened": 12500,
+      "onboarding_started": 11250,
+      "onboarding_completed": 8000,
+      "account_created": 7500,
+      "home_viewed": 20000,
+      "profile_viewed": 6250,
+      "settings_opened": 3000,
+      "search_performed": 4500,
+      "feature_tutorial_viewed": 2250,
+      "paywall_viewed": 3750,
+      "free_trial_started": 1500,
+      "purchase_completed": 450,
+      "purchase_failed": 100,
+      "push_notification_enabled": 2000,
+      "app_shared_with_friend": 625,
+      "app_rated": 375
+    }
+  },
+  "summary": {
+    "app_name": "Acme Fitness",
+    "total_events": 84055,
+    "events_by_name": {
+      "home_viewed": 20000,
+      "app_opened": 12500,
+      "onboarding_started": 11250,
+      "onboarding_completed": 8000,
+      "account_created": 7500,
+      "profile_viewed": 6250,
+      "search_performed": 4500,
+      "paywall_viewed": 3750,
+      "settings_opened": 3000,
+      "feature_tutorial_viewed": 2250,
+      "push_notification_enabled": 2000,
+      "free_trial_started": 1500,
+      "app_shared_with_friend": 625,
+      "purchase_completed": 450,
+      "app_rated": 375,
+      "purchase_failed": 100
+    },
+    "events_by_day": [
+      {"count": 2650, "unique_buckets": 385},
+      {"count": 2720, "unique_buckets": 392},
+      {"count": 2890, "unique_buckets": 410},
+      {"count": 2780, "unique_buckets": 398},
+      {"count": 2950, "unique_buckets": 420},
+      {"count": 3100, "unique_buckets": 445},
+      {"count": 2850, "unique_buckets": 408},
+      {"count": 2700, "unique_buckets": 390},
+      {"count": 2680, "unique_buckets": 385},
+      {"count": 2750, "unique_buckets": 395},
+      {"count": 2820, "unique_buckets": 405},
+      {"count": 2900, "unique_buckets": 415},
+      {"count": 3050, "unique_buckets": 438},
+      {"count": 2980, "unique_buckets": 425},
+      {"count": 2720, "unique_buckets": 390},
+      {"count": 2680, "unique_buckets": 385},
+      {"count": 2790, "unique_buckets": 400},
+      {"count": 2850, "unique_buckets": 408},
+      {"count": 2920, "unique_buckets": 418},
+      {"count": 3080, "unique_buckets": 442},
+      {"count": 2950, "unique_buckets": 422},
+      {"count": 2700, "unique_buckets": 388},
+      {"count": 2650, "unique_buckets": 380},
+      {"count": 2780, "unique_buckets": 398},
+      {"count": 2870, "unique_buckets": 412},
+      {"count": 2940, "unique_buckets": 420},
+      {"count": 3120, "unique_buckets": 448},
+      {"count": 2990, "unique_buckets": 428},
+      {"count": 2750, "unique_buckets": 395},
+      {"count": 2680, "unique_buckets": 385}
+    ],
+    "top_countries": [
+      {"country": "US", "count": 29420},
+      {"country": "GB", "count": 10087},
+      {"country": "DE", "count": 7565},
+      {"country": "CA", "count": 6725},
+      {"country": "AU", "count": 5044},
+      {"country": "FR", "count": 4203},
+      {"country": "NL", "count": 3363},
+      {"country": "SE", "count": 2522},
+      {"country": "JP", "count": 2102},
+      {"country": "BR", "count": 1682}
+    ],
+    "unique_countries": 42
+  },
+  "event_types": {
+    "app_name": "Acme Fitness",
+    "event_types": [
+      "app_opened", "onboarding_started", "onboarding_completed", "account_created",
+      "home_viewed", "profile_viewed", "settings_opened", "search_performed", "feature_tutorial_viewed",
+      "paywall_viewed", "free_trial_started", "purchase_completed", "purchase_failed",
+      "push_notification_enabled", "app_shared_with_friend", "app_rated"
+    ],
+    "count": 16
+  },
+  "recent_activity": {
+    "new_event_count": 12,
+    "last_event_timestamp": "2026-01-15T14:32:15Z",
+    "total_in_range": 847,
+    "should_refresh": false,
+    "time_range_minutes": 30,
+    "event_preview": [
+      {"event_name": "home_viewed", "timestamp": "2026-01-15T14:32:15Z", "session_id": "a1b2c3d4", "country": "US", "platform": "ios"},
+      {"event_name": "purchase_completed", "timestamp": "2026-01-15T14:31:42Z", "session_id": "e5f6g7h8", "country": "GB", "platform": "android"},
+      {"event_name": "onboarding_completed", "timestamp": "2026-01-15T14:30:58Z", "session_id": "i9j0k1l2", "country": "DE", "platform": "ios"},
+      {"event_name": "paywall_viewed", "timestamp": "2026-01-15T14:30:21Z", "session_id": "m3n4o5p6", "country": "US", "platform": "ios"},
+      {"event_name": "feature_tutorial_viewed", "timestamp": "2026-01-15T14:29:45Z", "session_id": "q7r8s9t0", "country": "CA", "platform": "android"}
+    ],
+    "warnings": [],
+    "server_time": "2026-01-15T14:32:30Z"
+  },
+  "dau": {
+    "app_name": "Acme Fitness",
+    "granularity": "day",
+    "date_range": {"from": "2025-12-17", "to": "2026-01-15"},
+    "active_sessions": [
+      {"unique_sessions": 385, "total_events": 2650, "avg_session_length_seconds": 245},
+      {"unique_sessions": 392, "total_events": 2720, "avg_session_length_seconds": 252},
+      {"unique_sessions": 410, "total_events": 2890, "avg_session_length_seconds": 238},
+      {"unique_sessions": 398, "total_events": 2780, "avg_session_length_seconds": 261},
+      {"unique_sessions": 420, "total_events": 2950, "avg_session_length_seconds": 249},
+      {"unique_sessions": 445, "total_events": 3100, "avg_session_length_seconds": 235},
+      {"unique_sessions": 408, "total_events": 2850, "avg_session_length_seconds": 258},
+      {"unique_sessions": 390, "total_events": 2700, "avg_session_length_seconds": 242},
+      {"unique_sessions": 385, "total_events": 2680, "avg_session_length_seconds": 255},
+      {"unique_sessions": 395, "total_events": 2750, "avg_session_length_seconds": 248},
+      {"unique_sessions": 405, "total_events": 2820, "avg_session_length_seconds": 239},
+      {"unique_sessions": 415, "total_events": 2900, "avg_session_length_seconds": 263},
+      {"unique_sessions": 438, "total_events": 3050, "avg_session_length_seconds": 251},
+      {"unique_sessions": 425, "total_events": 2980, "avg_session_length_seconds": 244},
+      {"unique_sessions": 390, "total_events": 2720, "avg_session_length_seconds": 256},
+      {"unique_sessions": 385, "total_events": 2680, "avg_session_length_seconds": 241},
+      {"unique_sessions": 400, "total_events": 2790, "avg_session_length_seconds": 259},
+      {"unique_sessions": 408, "total_events": 2850, "avg_session_length_seconds": 246},
+      {"unique_sessions": 418, "total_events": 2920, "avg_session_length_seconds": 237},
+      {"unique_sessions": 442, "total_events": 3080, "avg_session_length_seconds": 264},
+      {"unique_sessions": 422, "total_events": 2950, "avg_session_length_seconds": 253},
+      {"unique_sessions": 388, "total_events": 2700, "avg_session_length_seconds": 240},
+      {"unique_sessions": 380, "total_events": 2650, "avg_session_length_seconds": 257},
+      {"unique_sessions": 398, "total_events": 2780, "avg_session_length_seconds": 249},
+      {"unique_sessions": 412, "total_events": 2870, "avg_session_length_seconds": 236},
+      {"unique_sessions": 420, "total_events": 2940, "avg_session_length_seconds": 262},
+      {"unique_sessions": 448, "total_events": 3120, "avg_session_length_seconds": 250},
+      {"unique_sessions": 428, "total_events": 2990, "avg_session_length_seconds": 243},
+      {"unique_sessions": 395, "total_events": 2750, "avg_session_length_seconds": 254},
+      {"unique_sessions": 385, "total_events": 2680, "avg_session_length_seconds": 247}
+    ],
+    "summary": {
+      "total_sessions": 12180,
+      "sessions_with_duration": 11534,
+      "avg_session_length_seconds": 249
+    },
+    "top_events_current_period": [
+      {"event_name": "home_viewed", "count": 667},
+      {"event_name": "app_opened", "count": 417},
+      {"event_name": "onboarding_started", "count": 375},
+      {"event_name": "onboarding_completed", "count": 267},
+      {"event_name": "account_created", "count": 250}
+    ]
+  },
+  "dau_weekly": {
+    "app_name": "Acme Fitness",
+    "granularity": "week",
+    "active_sessions": [
+      {"unique_sessions": 2858, "total_events": 19940, "avg_session_length_seconds": 248},
+      {"unique_sessions": 2853, "total_events": 19900, "avg_session_length_seconds": 251},
+      {"unique_sessions": 2908, "total_events": 20290, "avg_session_length_seconds": 246},
+      {"unique_sessions": 2866, "total_events": 19990, "avg_session_length_seconds": 252}
+    ]
+  },
+  "dau_monthly": {
+    "app_name": "Acme Fitness",
+    "granularity": "month",
+    "active_sessions": [
+      {"unique_sessions": 12180, "total_events": 84055, "avg_session_length_seconds": 249}
+    ]
+  },
+  "time_to_conversion": {
+    "app": {"name": "Acme Fitness", "slug": "acme-fitness"},
+    "filters": {"conversion_events": ["purchase_completed"]},
+    "data_quality": {
+      "sessions_with_conversions": 450,
+      "total_sessions": 12180,
+      "coverage_percent": 3.69
+    },
+    "time_to_conversion": {
+      "median_minutes": 12.5,
+      "mean_minutes": 18.3,
+      "p25_minutes": 5.2,
+      "p75_minutes": 28.7,
+      "p90_minutes": 45.4
+    },
+    "time_distribution": {
+      "under_5_min": {"count": 68, "percent": 15.1},
+      "5_to_15_min": {"count": 180, "percent": 40.0},
+      "15_to_60_min": {"count": 158, "percent": 35.1},
+      "1_to_2_hours": {"count": 44, "percent": 9.8}
+    }
+  },
+  "conversion_paths": {
+    "app": {"name": "Acme Fitness", "slug": "acme-fitness"},
+    "filters": {"conversion_events": ["purchase_completed"], "limit": 5},
+    "data_quality": {
+      "total_converting_sessions": 450,
+      "paths_analyzed": 420,
+      "unique_paths_found": 28
+    },
+    "top_conversion_paths": [
+      {
+        "rank": 1,
+        "path": ["app_opened", "onboarding_completed", "home_viewed", "paywall_viewed", "free_trial_started", "purchase_completed"],
+        "sessions": 135,
+        "conversion_rate": 0.30,
+        "avg_duration_minutes": 18.5
+      },
+      {
+        "rank": 2,
+        "path": ["app_opened", "onboarding_completed", "feature_tutorial_viewed", "paywall_viewed", "purchase_completed"],
+        "sessions": 98,
+        "conversion_rate": 0.22,
+        "avg_duration_minutes": 14.2
+      },
+      {
+        "rank": 3,
+        "path": ["app_opened", "home_viewed", "search_performed", "paywall_viewed", "free_trial_started", "purchase_completed"],
+        "sessions": 72,
+        "conversion_rate": 0.16,
+        "avg_duration_minutes": 22.8
+      },
+      {
+        "rank": 4,
+        "path": ["app_opened", "push_notification_enabled", "home_viewed", "paywall_viewed", "purchase_completed"],
+        "sessions": 58,
+        "conversion_rate": 0.13,
+        "avg_duration_minutes": 11.5
+      },
+      {
+        "rank": 5,
+        "path": ["app_opened", "onboarding_completed", "home_viewed", "profile_viewed", "paywall_viewed", "purchase_completed"],
+        "sessions": 42,
+        "conversion_rate": 0.09,
+        "avg_duration_minutes": 25.3
+      }
+    ]
+  },
+  "drop_off": {
+    "app": {"name": "Acme Fitness", "slug": "acme-fitness"},
+    "filters": {"conversion_events": ["purchase_completed"]},
+    "data_quality": {
+      "total_sessions": 12180,
+      "converting_sessions": 450,
+      "non_converting_sessions": 11730,
+      "conversion_rate": 0.037
+    },
+    "drop_off_points": [
+      {"rank": 1, "event": "paywall_viewed", "sessions_dropped": 2250, "drop_off_rate": 0.60, "avg_time_before_exit_minutes": 2.8, "impact_score": 0.92},
+      {"rank": 2, "event": "onboarding_started", "sessions_dropped": 3250, "drop_off_rate": 0.29, "avg_time_before_exit_minutes": 1.2, "impact_score": 0.78},
+      {"rank": 3, "event": "home_viewed", "sessions_dropped": 1850, "drop_off_rate": 0.16, "avg_time_before_exit_minutes": 4.5, "impact_score": 0.65},
+      {"rank": 4, "event": "free_trial_started", "sessions_dropped": 1050, "drop_off_rate": 0.70, "avg_time_before_exit_minutes": 6.2, "impact_score": 0.58},
+      {"rank": 5, "event": "settings_opened", "sessions_dropped": 890, "drop_off_rate": 0.30, "avg_time_before_exit_minutes": 0.8, "impact_score": 0.45}
+    ]
+  },
+  "event_correlation": {
+    "app": {"name": "Acme Fitness", "slug": "acme-fitness"},
+    "filters": {"conversion_events": ["purchase_completed"]},
+    "data_quality": {
+      "total_sessions": 12180,
+      "converting_sessions": 450,
+      "non_converting_sessions": 11730,
+      "baseline_conversion_rate": 0.037,
+      "events_analyzed": 16
+    },
+    "positive_correlations": [
+      {"rank": 1, "event": "push_notification_enabled", "lift_percent": 240.5, "sessions_with_event": 2000, "conversion_rate_with": 0.126, "conversion_rate_without": 0.037},
+      {"rank": 2, "event": "app_shared_with_friend", "lift_percent": 310.8, "sessions_with_event": 625, "conversion_rate_with": 0.152, "conversion_rate_without": 0.037},
+      {"rank": 3, "event": "feature_tutorial_viewed", "lift_percent": 178.4, "sessions_with_event": 2250, "conversion_rate_with": 0.103, "conversion_rate_without": 0.037},
+      {"rank": 4, "event": "search_performed", "lift_percent": 145.9, "sessions_with_event": 4500, "conversion_rate_with": 0.091, "conversion_rate_without": 0.037},
+      {"rank": 5, "event": "app_rated", "lift_percent": 356.8, "sessions_with_event": 375, "conversion_rate_with": 0.169, "conversion_rate_without": 0.037}
+    ],
+    "negative_correlations": [
+      {"rank": 1, "event": "purchase_failed", "lift_percent": -78.4, "sessions_with_event": 100, "conversion_rate_with": 0.008, "conversion_rate_without": 0.037},
+      {"rank": 2, "event": "settings_opened", "lift_percent": -45.9, "sessions_with_event": 3000, "conversion_rate_with": 0.020, "conversion_rate_without": 0.037}
+    ],
+    "neutral_events": ["app_opened", "home_viewed", "profile_viewed"]
+  },
+  "segments_platform": {
+    "app_name": "Acme Fitness",
+    "granularity": "day",
+    "segment_by": "platform",
+    "summary": {
+      "total_segments": 2,
+      "total_conversions": 450,
+      "total_sessions": 12180,
+      "overall_conversion_rate": 0.037
+    },
+    "segments": [
+      {
+        "segment": "iOS",
+        "summary": {"total_active_sessions": 7308, "total_conversions": 292, "conversion_rate": 0.040},
+        "periods": [
+          {"active_sessions": 231, "conversions": 9},
+          {"active_sessions": 235, "conversions": 10},
+          {"active_sessions": 246, "conversions": 10},
+          {"active_sessions": 239, "conversions": 9},
+          {"active_sessions": 252, "conversions": 10},
+          {"active_sessions": 267, "conversions": 11},
+          {"active_sessions": 245, "conversions": 10},
+          {"active_sessions": 234, "conversions": 9},
+          {"active_sessions": 231, "conversions": 9},
+          {"active_sessions": 237, "conversions": 9},
+          {"active_sessions": 243, "conversions": 10},
+          {"active_sessions": 249, "conversions": 10},
+          {"active_sessions": 263, "conversions": 11},
+          {"active_sessions": 255, "conversions": 10},
+          {"active_sessions": 234, "conversions": 9},
+          {"active_sessions": 231, "conversions": 9},
+          {"active_sessions": 240, "conversions": 10},
+          {"active_sessions": 245, "conversions": 10},
+          {"active_sessions": 251, "conversions": 10},
+          {"active_sessions": 265, "conversions": 11},
+          {"active_sessions": 253, "conversions": 10},
+          {"active_sessions": 233, "conversions": 9},
+          {"active_sessions": 228, "conversions": 9},
+          {"active_sessions": 239, "conversions": 10},
+          {"active_sessions": 247, "conversions": 10},
+          {"active_sessions": 252, "conversions": 10},
+          {"active_sessions": 269, "conversions": 11},
+          {"active_sessions": 257, "conversions": 10},
+          {"active_sessions": 237, "conversions": 9},
+          {"active_sessions": 231, "conversions": 9}
+        ]
+      },
+      {
+        "segment": "Android",
+        "summary": {"total_active_sessions": 4872, "total_conversions": 158, "conversion_rate": 0.032},
+        "periods": [
+          {"active_sessions": 154, "conversions": 5},
+          {"active_sessions": 157, "conversions": 5},
+          {"active_sessions": 164, "conversions": 5},
+          {"active_sessions": 159, "conversions": 5},
+          {"active_sessions": 168, "conversions": 5},
+          {"active_sessions": 178, "conversions": 6},
+          {"active_sessions": 163, "conversions": 5},
+          {"active_sessions": 156, "conversions": 5},
+          {"active_sessions": 154, "conversions": 5},
+          {"active_sessions": 158, "conversions": 5},
+          {"active_sessions": 162, "conversions": 5},
+          {"active_sessions": 166, "conversions": 5},
+          {"active_sessions": 175, "conversions": 6},
+          {"active_sessions": 170, "conversions": 5},
+          {"active_sessions": 156, "conversions": 5},
+          {"active_sessions": 154, "conversions": 5},
+          {"active_sessions": 160, "conversions": 5},
+          {"active_sessions": 163, "conversions": 5},
+          {"active_sessions": 167, "conversions": 5},
+          {"active_sessions": 177, "conversions": 6},
+          {"active_sessions": 169, "conversions": 5},
+          {"active_sessions": 155, "conversions": 5},
+          {"active_sessions": 152, "conversions": 5},
+          {"active_sessions": 159, "conversions": 5},
+          {"active_sessions": 165, "conversions": 5},
+          {"active_sessions": 168, "conversions": 5},
+          {"active_sessions": 179, "conversions": 6},
+          {"active_sessions": 171, "conversions": 5},
+          {"active_sessions": 158, "conversions": 5},
+          {"active_sessions": 154, "conversions": 5}
+        ]
+      }
+    ]
+  },
+  "segments_country": {
+    "app_name": "Acme Fitness",
+    "granularity": "day",
+    "segment_by": "country",
+    "summary": {
+      "total_segments": 10,
+      "total_conversions": 450,
+      "total_sessions": 12180,
+      "overall_conversion_rate": 0.037
+    },
+    "segments": [
+      {"segment": "US", "summary": {"total_active_sessions": 4263, "total_conversions": 171, "conversion_rate": 0.040}},
+      {"segment": "GB", "summary": {"total_active_sessions": 1463, "total_conversions": 54, "conversion_rate": 0.037}},
+      {"segment": "DE", "summary": {"total_active_sessions": 1097, "total_conversions": 38, "conversion_rate": 0.035}},
+      {"segment": "CA", "summary": {"total_active_sessions": 975, "total_conversions": 37, "conversion_rate": 0.038}},
+      {"segment": "AU", "summary": {"total_active_sessions": 731, "total_conversions": 29, "conversion_rate": 0.040}},
+      {"segment": "FR", "summary": {"total_active_sessions": 609, "total_conversions": 21, "conversion_rate": 0.034}},
+      {"segment": "NL", "summary": {"total_active_sessions": 488, "total_conversions": 19, "conversion_rate": 0.039}},
+      {"segment": "SE", "summary": {"total_active_sessions": 366, "total_conversions": 15, "conversion_rate": 0.041}},
+      {"segment": "JP", "summary": {"total_active_sessions": 305, "total_conversions": 10, "conversion_rate": 0.033}},
+      {"segment": "BR", "summary": {"total_active_sessions": 244, "total_conversions": 8, "conversion_rate": 0.033}}
+    ]
+  },
+  "segments_events_per_session": {
+    "app_name": "Acme Fitness",
+    "segment_by": "events_per_session",
+    "segments": [
+      {"segment": "1-2", "summary": {"total_active_sessions": 3045, "total_conversions": 15, "conversion_rate": 0.005}},
+      {"segment": "3-5", "summary": {"total_active_sessions": 4872, "total_conversions": 97, "conversion_rate": 0.020}},
+      {"segment": "6-10", "summary": {"total_active_sessions": 3045, "total_conversions": 183, "conversion_rate": 0.060}},
+      {"segment": "11+", "summary": {"total_active_sessions": 1218, "total_conversions": 155, "conversion_rate": 0.127}}
+    ]
+  },
+  "segments_hour": {
+    "app_name": "Acme Fitness",
+    "segment_by": "hour",
+    "segments": [
+      {"segment": "0", "summary": {"total_active_sessions": 183, "total_conversions": 3, "conversion_rate": 0.016}},
+      {"segment": "1", "summary": {"total_active_sessions": 122, "total_conversions": 2, "conversion_rate": 0.016}},
+      {"segment": "2", "summary": {"total_active_sessions": 85, "total_conversions": 2, "conversion_rate": 0.024}},
+      {"segment": "3", "summary": {"total_active_sessions": 61, "total_conversions": 1, "conversion_rate": 0.016}},
+      {"segment": "4", "summary": {"total_active_sessions": 73, "total_conversions": 1, "conversion_rate": 0.014}},
+      {"segment": "5", "summary": {"total_active_sessions": 122, "total_conversions": 2, "conversion_rate": 0.016}},
+      {"segment": "6", "summary": {"total_active_sessions": 305, "total_conversions": 8, "conversion_rate": 0.026}},
+      {"segment": "7", "summary": {"total_active_sessions": 548, "total_conversions": 19, "conversion_rate": 0.035}},
+      {"segment": "8", "summary": {"total_active_sessions": 731, "total_conversions": 29, "conversion_rate": 0.040}},
+      {"segment": "9", "summary": {"total_active_sessions": 609, "total_conversions": 27, "conversion_rate": 0.044}},
+      {"segment": "10", "summary": {"total_active_sessions": 548, "total_conversions": 22, "conversion_rate": 0.040}},
+      {"segment": "11", "summary": {"total_active_sessions": 487, "total_conversions": 17, "conversion_rate": 0.035}},
+      {"segment": "12", "summary": {"total_active_sessions": 731, "total_conversions": 26, "conversion_rate": 0.036}},
+      {"segment": "13", "summary": {"total_active_sessions": 609, "total_conversions": 21, "conversion_rate": 0.034}},
+      {"segment": "14", "summary": {"total_active_sessions": 548, "total_conversions": 18, "conversion_rate": 0.033}},
+      {"segment": "15", "summary": {"total_active_sessions": 487, "total_conversions": 17, "conversion_rate": 0.035}},
+      {"segment": "16", "summary": {"total_active_sessions": 548, "total_conversions": 19, "conversion_rate": 0.035}},
+      {"segment": "17", "summary": {"total_active_sessions": 609, "total_conversions": 24, "conversion_rate": 0.039}},
+      {"segment": "18", "summary": {"total_active_sessions": 731, "total_conversions": 33, "conversion_rate": 0.045}},
+      {"segment": "19", "summary": {"total_active_sessions": 853, "total_conversions": 43, "conversion_rate": 0.050}},
+      {"segment": "20", "summary": {"total_active_sessions": 975, "total_conversions": 53, "conversion_rate": 0.054}},
+      {"segment": "21", "summary": {"total_active_sessions": 853, "total_conversions": 43, "conversion_rate": 0.050}},
+      {"segment": "22", "summary": {"total_active_sessions": 609, "total_conversions": 27, "conversion_rate": 0.044}},
+      {"segment": "23", "summary": {"total_active_sessions": 365, "total_conversions": 13, "conversion_rate": 0.036}}
+    ]
+  },
+  "globe_stats": {
+    "data": [
+      {"country": "US", "count": 29420, "sessions": 4263, "conversions": 171, "conversion_rate": 4.0},
+      {"country": "GB", "count": 10087, "sessions": 1463, "conversions": 54, "conversion_rate": 3.7},
+      {"country": "DE", "count": 7565, "sessions": 1097, "conversions": 38, "conversion_rate": 3.5},
+      {"country": "CA", "count": 6725, "sessions": 975, "conversions": 37, "conversion_rate": 3.8},
+      {"country": "AU", "count": 5044, "sessions": 731, "conversions": 29, "conversion_rate": 4.0},
+      {"country": "FR", "count": 4203, "sessions": 609, "conversions": 21, "conversion_rate": 3.4},
+      {"country": "NL", "count": 3363, "sessions": 488, "conversions": 19, "conversion_rate": 3.9},
+      {"country": "SE", "count": 2522, "sessions": 366, "conversions": 15, "conversion_rate": 4.1},
+      {"country": "JP", "count": 2102, "sessions": 305, "conversions": 10, "conversion_rate": 3.3},
+      {"country": "BR", "count": 1682, "sessions": 244, "conversions": 8, "conversion_rate": 3.3},
+      {"country": "ES", "count": 1261, "sessions": 183, "conversions": 7, "conversion_rate": 3.8},
+      {"country": "IT", "count": 1177, "sessions": 171, "conversions": 6, "conversion_rate": 3.5},
+      {"country": "MX", "count": 1009, "sessions": 146, "conversions": 5, "conversion_rate": 3.4},
+      {"country": "IN", "count": 925, "sessions": 134, "conversions": 4, "conversion_rate": 3.0},
+      {"country": "PL", "count": 841, "sessions": 122, "conversions": 5, "conversion_rate": 4.1},
+      {"country": "BE", "count": 757, "sessions": 110, "conversions": 4, "conversion_rate": 3.6},
+      {"country": "CH", "count": 673, "sessions": 98, "conversions": 4, "conversion_rate": 4.1},
+      {"country": "AT", "count": 589, "sessions": 85, "conversions": 3, "conversion_rate": 3.5},
+      {"country": "DK", "count": 505, "sessions": 73, "conversions": 3, "conversion_rate": 4.1},
+      {"country": "NO", "count": 421, "sessions": 61, "conversions": 2, "conversion_rate": 3.3}
+    ],
+    "cached": false
+  },
+  "geo_summary": {
+    "app_name": "Acme Fitness",
+    "total_events": 84055,
+    "countries": [
+      {"country": "US", "count": 29420, "percentage": 35.0},
+      {"country": "GB", "count": 10087, "percentage": 12.0},
+      {"country": "DE", "count": 7565, "percentage": 9.0},
+      {"country": "CA", "count": 6725, "percentage": 8.0},
+      {"country": "AU", "count": 5044, "percentage": 6.0},
+      {"country": "FR", "count": 4203, "percentage": 5.0},
+      {"country": "NL", "count": 3363, "percentage": 4.0},
+      {"country": "SE", "count": 2522, "percentage": 3.0},
+      {"country": "JP", "count": 2102, "percentage": 2.5},
+      {"country": "BR", "count": 1682, "percentage": 2.0},
+      {"country": "ES", "count": 1261, "percentage": 1.5},
+      {"country": "IT", "count": 1177, "percentage": 1.4},
+      {"country": "MX", "count": 1009, "percentage": 1.2},
+      {"country": "IN", "count": 925, "percentage": 1.1},
+      {"country": "PL", "count": 841, "percentage": 1.0},
+      {"country": "BE", "count": 757, "percentage": 0.9},
+      {"country": "CH", "count": 673, "percentage": 0.8},
+      {"country": "AT", "count": 589, "percentage": 0.7},
+      {"country": "DK", "count": 505, "percentage": 0.6},
+      {"country": "NO", "count": 421, "percentage": 0.5}
+    ]
+  },
+  "funnel": {
+    "funnel": [
+      {"step": "app_opened", "count": 12500},
+      {"step": "onboarding_completed", "count": 8000},
+      {"step": "paywall_viewed", "count": 3750},
+      {"step": "purchase_completed", "count": 450}
+    ],
+    "total_sessions_analyzed": 12500,
+    "steps_analyzed": ["app_opened", "onboarding_completed", "paywall_viewed", "purchase_completed"]
+  },
+  "step_timing": {
+    "transitions": [
+      {
+        "from": "app_opened",
+        "to": "onboarding_completed",
+        "median_seconds": 45,
+        "mean_seconds": 72,
+        "p25_seconds": 28,
+        "p75_seconds": 95,
+        "sessions_analyzed": 8000
+      },
+      {
+        "from": "onboarding_completed",
+        "to": "paywall_viewed",
+        "median_seconds": 180,
+        "mean_seconds": 245,
+        "p25_seconds": 90,
+        "p75_seconds": 360,
+        "sessions_analyzed": 3750
+      },
+      {
+        "from": "paywall_viewed",
+        "to": "purchase_completed",
+        "median_seconds": 35,
+        "mean_seconds": 52,
+        "p25_seconds": 18,
+        "p75_seconds": 78,
+        "sessions_analyzed": 450
+      }
+    ],
+    "funnel_summary": {
+      "median_total_seconds": 260,
+      "mean_total_seconds": 369,
+      "completion_rate": 0.036
+    }
+  }
+}

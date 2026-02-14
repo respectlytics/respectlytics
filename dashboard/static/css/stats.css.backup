@@ -1,0 +1,695 @@
+/**
+ * Stats Page Styles
+ * Extracted from stats.html for modular maintenance
+ */
+
+/* ==========================================================================
+   Sidebar Navigation Styles - Light theme to match navbar
+   ========================================================================== */
+
+.sidebar-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    padding: 0.625rem 1rem;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #4B5563;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: left;
+}
+
+.sidebar-nav-item:hover {
+    background: #F3F4F6;
+    color: #111827;
+}
+
+.sidebar-nav-item.active {
+    background: #EEF2FF;
+    color: #4F46E5;
+    font-weight: 600;
+}
+
+.sidebar-nav-icon {
+    width: 1.25rem;
+    height: 1.25rem;
+    flex-shrink: 0;
+}
+
+.sidebar-divider {
+    height: 1px;
+    background: #E5E7EB;
+    margin: 1rem 0.75rem;
+}
+
+/* ==========================================================================
+   App Switcher Styles
+   ========================================================================== */
+
+.sidebar-app-option {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    padding: 0.625rem 0.75rem;
+    border-radius: 0.5rem;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: #374151;
+    transition: all 0.2s;
+}
+
+.sidebar-app-option:hover {
+    background: #F3F4F6;
+}
+
+.sidebar-app-option.active {
+    background: #EEF2FF;
+}
+
+.sidebar-app-option-icon {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 0.5rem;
+    background: linear-gradient(135deg, #6366F1, #8B5CF6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 0.8125rem;
+    color: white;
+}
+
+.sidebar-app-option-name {
+    flex: 1;
+    text-align: left;
+    font-weight: 500;
+}
+
+.sidebar-app-option-check {
+    width: 1.125rem;
+    height: 1.125rem;
+    color: #10B981;
+    display: none;
+}
+
+.sidebar-app-option.active .sidebar-app-option-check {
+    display: block;
+}
+
+/* ==========================================================================
+   Tab & UI Components
+   ========================================================================== */
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+.pill-tab.active {
+    background: white;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    color: #4F46E5;
+}
+
+.event-status-popover.active {
+    display: block !important;
+}
+
+.collapsible-section.collapsed .collapsible-content {
+    display: none;
+}
+
+.collapsible-section.collapsed .collapsible-toggle {
+    transform: rotate(-90deg);
+}
+
+/* ==========================================================================
+   Globe Section
+   ========================================================================== */
+
+#globeSection {
+    background: linear-gradient(180deg, #0a0e27 0%, #1a1f3a 100%);
+}
+
+/* ==========================================================================
+   Skeleton Loading Animations
+   ========================================================================== */
+
+@keyframes shimmer {
+    0% {
+        background-position: -200% 0;
+    }
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+.skeleton {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 4px;
+}
+
+.skeleton-line--lg {
+    height: 24px;
+    width: 60%;
+    margin-bottom: 12px;
+}
+
+.skeleton-line--sm {
+    height: 16px;
+    width: 40%;
+    margin-bottom: 8px;
+}
+
+.skeleton-chart {
+    height: 200px;
+    width: 100%;
+}
+
+.skeleton-stat {
+    height: 80px;
+    width: 100%;
+}
+
+.skeleton-card {
+    padding: 24px;
+    background: white;
+    border-radius: 16px;
+    margin-bottom: 16px;
+}
+
+.skeleton-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+}
+
+/* ==========================================================================
+   Warning Banner
+   ========================================================================== */
+
+.warning-banner {
+    display: none;
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: white;
+    padding: 16px 24px;
+    border-radius: 12px;
+    margin-bottom: 24px;
+    align-items: center;
+    gap: 16px;
+}
+
+.warning-banner.visible {
+    display: flex;
+}
+
+/* ==========================================================================
+   Cohort Table Heatmap
+   ========================================================================== */
+
+.cohort-cell {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.cohort-cell--high {
+    background: rgba(16, 185, 129, 0.2);
+    color: #059669;
+}
+
+.cohort-cell--medium {
+    background: rgba(251, 191, 36, 0.2);
+    color: #d97706;
+}
+
+.cohort-cell--low {
+    background: rgba(239, 68, 68, 0.1);
+    color: #dc2626;
+}
+
+.cohort-cell--none {
+    background: #f3f4f6;
+    color: #9ca3af;
+}
+
+/* ==========================================================================
+   Live Activity Section
+   ========================================================================== */
+
+.live-metric {
+    transition: color 0.2s;
+}
+
+.live-metric.zero-value {
+    color: #6B7280;
+}
+
+/* Live Activity - compact inline badges */
+.live-event-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    font-size: 11px;
+    white-space: nowrap;
+}
+
+.live-event-badge .event-name {
+    color: #E5E7EB;
+    font-weight: 500;
+    max-width: 80px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.live-event-badge .event-flag {
+    font-size: 12px;
+}
+
+.live-event-badge .event-time {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.live-empty {
+    color: #6B7280;
+    font-size: 11px;
+    font-style: italic;
+}
+
+/* ==========================================================================
+   Conversion Tab - Session Bars
+   ========================================================================== */
+
+.session-bar-new {
+    background: linear-gradient(to top, #4F46E5, #818CF8);
+    border-radius: 6px;
+    min-height: 24px;
+    transition: height 0.3s ease;
+}
+
+/* ==========================================================================
+   Scrollable Table
+   ========================================================================== */
+
+.scrollable-table {
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #94A3B8 transparent;
+}
+
+/* ==========================================================================
+   Sortable Table Headers
+   ========================================================================== */
+
+.sortable-header {
+    cursor: pointer;
+    user-select: none;
+    transition: color 0.15s;
+}
+
+.sortable-header:hover {
+    color: #4F46E5;
+}
+
+.sortable-header .sort-icon {
+    opacity: 0.3;
+    transition: opacity 0.15s;
+}
+
+.sortable-header:hover .sort-icon {
+    opacity: 0.6;
+}
+
+.sortable-header.sort-active {
+    color: #4F46E5;
+}
+
+.sortable-header.sort-active .sort-icon {
+    opacity: 1;
+}
+
+/* ==========================================================================
+   Info Tooltip - Instant display with better visibility
+   ========================================================================== */
+
+.info-tooltip {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #6B7280;
+    background: #F3F4F6;
+    border-radius: 50%;
+    cursor: help;
+    transition: all 0.15s;
+}
+
+.info-tooltip:hover {
+    background: #E5E7EB;
+    color: #4B5563;
+}
+
+.info-tooltip::after {
+    content: attr(data-tip);
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 10px 14px;
+    background: #1F2937;
+    color: white;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1.5;
+    white-space: normal;
+    width: 320px;
+    max-width: 400px;
+    text-align: left;
+    border-radius: 8px;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.1s, visibility 0.1s;
+    z-index: 1000;
+    pointer-events: none;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.info-tooltip::before {
+    content: '';
+    position: absolute;
+    top: calc(100% + 2px);
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-bottom-color: #1F2937;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.1s, visibility 0.1s;
+    z-index: 1000;
+}
+
+.info-tooltip:hover::after,
+.info-tooltip:hover::before {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Tooltip alignment variants for edge columns */
+.info-tooltip.tooltip-left::after {
+    left: 0;
+    transform: translateX(0);
+}
+
+.info-tooltip.tooltip-left::before {
+    left: 12px;
+    transform: translateX(0);
+}
+
+.info-tooltip.tooltip-right::after {
+    left: auto;
+    right: 0;
+    transform: translateX(0);
+}
+
+.info-tooltip.tooltip-right::before {
+    left: auto;
+    right: 12px;
+    transform: translateX(0);
+}
+
+/* ==========================================================================
+   Behavior Tab - Lift Items (Boosters/Blockers)
+   ========================================================================== */
+
+.lift-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid #F3F4F6;
+}
+
+.lift-item:last-child {
+    border-bottom: none;
+}
+
+.lift-event {
+    flex-shrink: 0;
+    width: 120px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #374151;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.lift-bar-container {
+    flex: 1;
+    height: 8px;
+    background: #F3F4F6;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.lift-bar {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+.lift-bar--positive {
+    background: linear-gradient(90deg, #10B981, #34D399);
+}
+
+.lift-bar--negative {
+    background: linear-gradient(90deg, #EF4444, #F87171);
+}
+
+.lift-value {
+    flex-shrink: 0;
+    min-width: 52px;
+    text-align: right;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.lift-value--positive {
+    color: #059669;
+}
+
+.lift-value--negative {
+    color: #DC2626;
+}
+
+/* New detailed lift items for Behavior tab */
+.lift-item-detailed {
+    padding: 12px 0;
+    border-bottom: 1px solid #F3F4F6;
+}
+
+.lift-item-detailed:last-of-type {
+    border-bottom: none;
+}
+
+/* ==========================================================================
+   Behavior Tab - Signal Cards
+   ========================================================================== */
+
+.signal-card {
+    background: #FFFFFF;
+    border: 1px solid #E5E7EB;
+    border-radius: 12px;
+    padding: 16px;
+    transition: all 0.2s;
+}
+
+.signal-card:hover {
+    border-color: #D1D5DB;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.signal-card--boost {
+    border-left: 3px solid #10B981;
+    padding-left: 20px;
+}
+
+.signal-card--hurt {
+    border-left: 3px solid #EF4444;
+    padding-left: 20px;
+}
+
+.signal-event {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1F2937;
+    margin-bottom: 8px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.signal-adjustment {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.signal-adjustment--positive {
+    color: #059669;
+}
+
+.signal-adjustment--negative {
+    color: #DC2626;
+}
+
+.signal-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    font-size: 11px;
+    color: #6B7280;
+}
+
+.signal-confidence {
+    letter-spacing: -1px;
+}
+
+.signal-early {
+    background: #FEF3C7;
+    color: #92400E;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 500;
+    position: relative;
+    cursor: help;
+}
+
+.signal-early::after {
+    content: attr(data-tip);
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 8px 12px;
+    background: #1F2937;
+    color: white;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1.4;
+    white-space: nowrap;
+    border-radius: 6px;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.1s, visibility 0.1s;
+    z-index: 50;
+    pointer-events: none;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.signal-early::before {
+    content: '';
+    position: absolute;
+    bottom: calc(100% + 2px);
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: #1F2937;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.1s, visibility 0.1s;
+    z-index: 50;
+}
+
+.signal-early:hover::after,
+.signal-early:hover::before {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* ==========================================================================
+   Retention Tab Styles
+   ========================================================================== */
+
+.retention-granularity-btn {
+    transition: all 0.2s ease;
+}
+
+.retention-granularity-btn.active {
+    background: white;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    color: #7C3AED;
+    font-weight: 600;
+}
+
+.retention-table {
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.retention-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.retention-table tbody tr:hover {
+    background: #F5F3FF !important;
+}
+
+/* Engagement Chart Styles */
+#engagementChart {
+    position: relative;
+}
+
+#engagementLabels {
+    display: flex;
+    justify-content: space-around;
+    margin-top: 12px;
+}
+
+/* Purple theme color variants */
+.text-purple-50 { color: #FAF5FF; }
+.text-purple-100 { color: #F3E8FF; }
+.text-purple-600 { color: #7C3AED; }
+.text-purple-700 { color: #6D28D9; }
+.text-purple-800 { color: #5B21B6; }
+.text-purple-900 { color: #4C1D95; }
+
+.bg-purple-50 { background-color: #FAF5FF; }
+.bg-purple-100 { background-color: #F3E8FF; }
+.bg-purple-600 { background-color: #7C3AED; }
+.bg-purple-700 { background-color: #6D28D9; }
+
+.border-purple-100 { border-color: #F3E8FF; }
+
+.hover\:bg-purple-50\/30:hover {
+    background-color: rgba(250, 245, 255, 0.3);
+}
+
+.hover\:bg-purple-700:hover {
+    background-color: #6D28D9;
+}
+

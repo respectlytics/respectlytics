@@ -1,0 +1,70 @@
+{% extends 'users/account/base.html' %}
+
+{% block account_content %}
+<div class="space-y-5">
+  
+  <!-- Change Password Section -->
+  <div>
+    <h2 class="text-lg font-bold text-slate-50 mb-3">Change Password</h2>
+    
+    {% if messages %}
+    <div class="mb-3">
+      {% for message in messages %}
+      <div class="p-3 rounded-lg text-sm {% if message.tags == 'success' %}bg-emerald-500/10 border border-emerald-500/20 text-emerald-400{% else %}bg-red-500/10 border border-red-500/20 text-red-400{% endif %}">
+        {{ message }}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+    
+    <form method="post" class="space-y-3">
+      {% csrf_token %}
+      
+      {% if form.errors %}
+      <div class="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+        {% for field, errors in form.errors.items %}
+          {% for error in errors %}
+            <div>{{ error }}</div>
+          {% endfor %}
+        {% endfor %}
+      </div>
+      {% endif %}
+      
+      <div>
+        <label class="block text-xs font-medium text-slate-300 mb-1.5">Current Password</label>
+        {{ form.old_password }}
+      </div>
+      
+      <div>
+        <label class="block text-xs font-medium text-slate-300 mb-1.5">New Password</label>
+        {{ form.new_password1 }}
+        <p class="mt-1 text-xs text-slate-500">Must be at least 8 characters</p>
+      </div>
+      
+      <div>
+        <label class="block text-xs font-medium text-slate-300 mb-1.5">Confirm New Password</label>
+        {{ form.new_password2 }}
+      </div>
+      
+      <button type="submit" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium rounded-lg transition-colors">
+        Update Password
+      </button>
+    </form>
+  </div>
+  
+  <!-- Danger Zone -->
+  <div class="mt-6 pt-6 border-t border-white/10">
+    <div class="p-4 bg-red-500/5 border border-red-500/20 rounded-xl">
+      <h3 class="text-base font-bold text-red-400 mb-1">Danger Zone</h3>
+      <p class="text-xs text-slate-400 mb-3">
+        Once you delete your account, there is no going back. This will permanently delete all your apps, analytics data, and cancel any active subscriptions.
+      </p>
+      <a href="{% url 'account_delete' %}" 
+         class="inline-block px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-medium rounded-lg transition-colors">
+        Delete Account
+      </a>
+    </div>
+  </div>
+  
+</div>
+{% endblock %}

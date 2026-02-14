@@ -1,0 +1,1772 @@
+{% extends 'dashboard/dashboard_base.html' %}
+{% load static %}
+
+{% block title %}Funnel Analysis - Respectlytics{% endblock %}
+
+{# Full-width navbar on pages with sidebar #}
+{% block navbar_container_class %}{% endblock %}
+
+{% block app_icon %}{{ app_name|slice:":1"|upper|default:"F" }}{% endblock %}
+{% block app_name %}{{ app_name|default:"Select App" }}{% endblock %}
+
+{% block app_dropdown %}{% endblock %}
+
+{% block nav_items %}
+<!-- Back to Apps Link -->
+<a href="{% url 'dashboard:main' %}" class="sidebar-nav-item mb-2">
+    <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+    All Apps
+</a>
+<div class="sidebar-divider"></div>
+<!-- Analytics Navigation -->
+<a href="{% url 'dashboard:stats' app_slug %}" class="sidebar-nav-item">
+    <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+    Overview
+</a>
+<a href="{% url 'dashboard:stats' app_slug %}#conversion" class="sidebar-nav-item">
+    <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+    Conversion
+</a>
+<a href="{% url 'dashboard:stats' app_slug %}#behavior" class="sidebar-nav-item">
+    <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    Behavior
+</a>
+<a href="{% url 'dashboard:stats' app_slug %}#segments" class="sidebar-nav-item">
+    <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+    Segments
+</a>
+<div class="sidebar-divider"></div>
+<button class="sidebar-nav-item active">
+    <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+    Funnel Analysis
+</button>
+<div class="sidebar-divider"></div>
+<!-- Danger Zone -->
+<a href="{% url 'dashboard:stats' app_slug %}?action=delete_events" class="sidebar-nav-item text-rose-400 hover:text-rose-300 hover:bg-rose-500/10">
+    <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+    Delete Events
+</a>
+{% endblock %}
+
+{% block topbar %}
+<div class="flex items-center gap-3 p-4 md:p-6 lg:py-4 lg:px-12 bg-[#1e293b] border-b border-white/10 lg:hidden">
+    <!-- Mobile Menu Toggle -->
+    <button onclick="toggleSidebar()"
+            class="p-2 -ml-2 text-slate-400 hover:text-slate-50 hover:bg-slate-700 rounded-lg transition-all"
+            aria-label="Toggle navigation">
+        <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+    </button>
+    <h1 class="text-xl font-semibold text-slate-50">Funnel Analysis</h1>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Sidebar Navigation Styles - Dark theme */
+.sidebar-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    padding: 0.625rem 1rem;
+    border-radius: 0.5rem;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: #94a3b8;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: left;
+}
+.sidebar-nav-item:hover {
+    background: #334155;
+    color: #f8fafc;
+}
+.sidebar-nav-item.active {
+    background: rgba(139, 92, 246, 0.15);
+    color: #a78bfa;
+    font-weight: 600;
+}
+.sidebar-nav-icon {
+    width: 1.25rem;
+    height: 1.25rem;
+    flex-shrink: 0;
+}
+.sidebar-divider {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.1);
+    margin: 1rem 0.75rem;
+}
+
+/* Funnel step styling (Results) - Proportional width design */
+#funnelVisualization {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    padding: 1rem 1.5rem;
+    width: 100%;
+    max-width: 100%;
+}
+.funnel-step-wrapper {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}
+.funnel-step {
+    position: relative;
+    background: linear-gradient(135deg, #4F46E5, #7C3AED);
+    color: white;
+    padding: 0.875rem 1.25rem 0.875rem 1.25rem;
+    border-radius: 0.625rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 3px 12px rgba(79, 70, 229, 0.25);
+    min-width: 280px;
+    min-height: 88px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+.funnel-step:hover {
+    transform: scale(1.01);
+    box-shadow: 0 5px 20px rgba(79, 70, 229, 0.35);
+}
+.funnel-step.funnel-step-dead {
+    background: linear-gradient(135deg, #6B7280, #9CA3AF);
+    box-shadow: 0 3px 12px rgba(107, 114, 128, 0.25);
+}
+.funnel-step.funnel-step-dead:hover {
+    box-shadow: 0 5px 20px rgba(107, 114, 128, 0.35);
+}
+.funnel-step.funnel-step-dead .funnel-step-number {
+    background: #EF4444;
+}
+.funnel-step-number {
+    position: absolute;
+    top: 50%;
+    left: 12px;
+    transform: translateY(-50%);
+    background: #10B981;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.875rem;
+    box-shadow: 0 2px 6px rgba(16, 185, 129, 0.4);
+}
+.funnel-step-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+.funnel-step-name {
+    font-size: 1.25rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+.funnel-step-count {
+    font-size: 1.125rem;
+    font-weight: 700;
+}
+.funnel-step-primary {
+    font-size: 1.0625rem;
+    opacity: 0.98;
+    line-height: 1.4;
+    margin-top: 0.25rem;
+}
+.funnel-step-primary strong {
+    font-weight: 600;
+}
+.funnel-step-secondary {
+    font-size: 0.9375rem;
+    opacity: 0.9;
+    line-height: 1.4;
+    margin-top: 0.125rem;
+}
+.funnel-step-secondary strong {
+    font-weight: 600;
+}
+.funnel-step-dropoff {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    margin-top: 0.375rem;
+    padding: 0.25rem 0.625rem;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    width: fit-content;
+}
+.funnel-step-dropoff svg {
+    width: 14px;
+    height: 14px;
+}
+.funnel-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.375rem 0;
+    color: #6366F1;
+}
+.funnel-arrow svg {
+    width: 1.5rem;
+    height: 1.5rem;
+    stroke-width: 2.5;
+}
+
+/* Funnel Builder Step Cards */
+.funnel-step-card {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.875rem 1rem;
+    background: #1e293b;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0.75rem;
+    transition: all 0.2s;
+    cursor: grab;
+}
+.funnel-step-card:hover {
+    border-color: rgba(255, 255, 255, 0.2);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+.funnel-step-card.dragging {
+    opacity: 0.5;
+    cursor: grabbing;
+}
+.funnel-step-card .step-number {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    background: linear-gradient(135deg, #4F46E5, #7C3AED);
+    color: white;
+    border-radius: 50%;
+    font-size: 0.875rem;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+.funnel-step-card .step-name {
+    flex: 1;
+    font-weight: 500;
+    color: #f8fafc;
+}
+.funnel-step-card .step-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+.funnel-step-card .step-action-btn {
+    padding: 0.375rem;
+    border-radius: 0.375rem;
+    color: #94a3b8;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.funnel-step-card .step-action-btn:hover {
+    background: #334155;
+    color: #f8fafc;
+}
+.funnel-step-card .step-action-btn.delete:hover {
+    background: rgba(239, 68, 68, 0.15);
+    color: #fb7185;
+}
+.funnel-step-card .drag-handle {
+    cursor: grab;
+    color: #94A3B8;
+    padding: 0.25rem;
+}
+
+/* Step connector arrow */
+.step-connector {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0.5rem 0;
+}
+.step-connector svg {
+    width: 1.5rem;
+    height: 1.5rem;
+    color: #6366F1;
+    stroke-width: 2.5;
+    filter: drop-shadow(0 1px 2px rgba(99, 102, 241, 0.3));
+}
+
+/* Custom Event Dropdown */
+#eventDropdown .dropdown-item {
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    font-size: 0.9375rem;
+    color: #f8fafc;
+    transition: background-color 0.15s;
+}
+#eventDropdown .dropdown-item:hover,
+#eventDropdown .dropdown-item.highlighted {
+    background-color: rgba(139, 92, 246, 0.15);
+    color: #a78bfa;
+}
+#eventDropdown .dropdown-item:first-child {
+    border-radius: 0.75rem 0.75rem 0 0;
+}
+#eventDropdown .dropdown-item:last-child {
+    border-radius: 0 0 0.75rem 0.75rem;
+}
+#eventDropdown .no-results {
+    padding: 1rem;
+    text-align: center;
+    color: #64748b;
+    font-size: 0.875rem;
+}
+
+/* Loading spinner */
+/* Loading Overlay - Full screen modal */
+.loading-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(15, 23, 42, 0.75);
+    backdrop-filter: blur(4px);
+    z-index: 9999;
+    justify-content: center;
+    align-items: center;
+}
+.loading-overlay.active {
+    display: flex;
+}
+.loading-modal {
+    background: #1e293b;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 1rem;
+    padding: 2.5rem 3rem;
+    text-align: center;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    animation: modalPop 0.3s ease-out;
+}
+@keyframes modalPop {
+    from { transform: scale(0.9); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+.loading-spinner-animation {
+    width: 56px;
+    height: 56px;
+    border: 4px solid #E2E8F0;
+    border-top-color: #4F46E5;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 1.25rem;
+}
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+.loading-modal h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #f8fafc;
+    margin-bottom: 0.5rem;
+}
+.loading-modal p {
+    color: #94a3b8;
+    font-size: 0.875rem;
+}
+</style>
+{% endblock %}
+
+{% block dashboard_content %}
+{% if error %}
+<div class="bg-rose-500/15 border-2 border-rose-400/20 rounded-xl p-6 mb-8 text-rose-400 font-medium">
+    <strong>Error:</strong> {{ error }}
+</div>
+{% elif not app_key %}
+<div class="bg-blue-500/15 border-2 border-blue-400/20 rounded-xl p-6 mb-8 text-blue-400 font-medium">
+    <strong>No app selected.</strong> Please go to the <a href="{% url 'dashboard:main' %}" class="font-semibold underline">Dashboard</a> to select an app.
+</div>
+{% else %}
+
+<!-- Header -->
+<div class="mb-5 flex items-start justify-between">
+    <div>
+        <h1 class="text-2xl font-bold text-slate-50 flex items-center gap-3 tracking-tight">
+            <span>Funnel Analysis</span>
+        </h1>
+        <p class="text-sm text-slate-400">Track session journeys and conversion paths</p>
+    </div>
+    <button onclick="resetFunnelPage()"
+            class="px-3 py-1.5 text-xs font-medium text-rose-400 bg-slate-800 hover:bg-rose-500/15 border border-rose-400/20 rounded-lg transition-all flex items-center gap-2">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+            <path d="M3 3v5h5"/>
+        </svg>
+        Reset
+    </button>
+</div>
+
+<!-- Session-Scope Info Banner -->
+<div class="bg-indigo-500/15 border border-indigo-400/20 rounded-xl p-3 mb-5 flex items-start gap-2">
+    <div class="w-6 h-6 rounded-lg bg-indigo-500/20 flex items-center justify-center flex-shrink-0">
+        <svg class="w-3.5 h-3.5 text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M12 16v-4"/>
+            <path d="M12 8h.01"/>
+        </svg>
+    </div>
+    <div class="text-xs text-indigo-300">
+        <strong class="text-indigo-200">Session-Based Analysis:</strong> Funnel tracks behavior within single sessions (max 2 hours). Each session is analyzed independently—funnels don't span multiple app opens.
+    </div>
+</div>
+
+<!-- Step 1: Build Your Funnel -->
+<div class="bg-[#1e293b] rounded-xl p-5 shadow-lg border border-white/10 mb-5">
+    <h2 class="text-lg font-bold text-slate-50 mb-1">Step 1: Build Your Funnel</h2>
+    <p class="text-sm text-slate-400 mb-4">Add events in the order you want to track. Drag to reorder.</p>
+
+    <div id="loadingEvents" class="loading-spinner active text-center py-8 text-slate-400">
+        Loading available events...
+    </div>
+
+    <!-- Funnel Steps Builder -->
+    <div id="funnelBuilder" class="hidden">
+        <!-- Selected steps will appear here -->
+        <div id="funnelStepsContainer" class="space-y-3 mb-4">
+            <!-- Steps rendered dynamically -->
+        </div>
+
+        <!-- Add Event Dropdown -->
+        <div class="flex items-center gap-2">
+            <div class="relative flex-1 max-w-md" id="eventDropdownWrapper">
+                <input type="text"
+                       id="eventSearchInput"
+                       placeholder="Search and add event..."
+                       class="w-full px-3 py-2 pl-9 bg-slate-800 border border-white/20 text-slate-50 placeholder-slate-400 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all"
+                       autocomplete="off">
+                <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                </svg>
+                <svg class="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M6 9l6 6 6-6"/>
+                </svg>
+                <!-- Custom Dropdown -->
+                <div id="eventDropdown" class="hidden absolute z-50 w-full mt-1 bg-slate-800 border border-white/10 rounded-xl shadow-lg max-h-64 overflow-y-auto">
+                    <!-- Options populated dynamically -->
+                </div>
+            </div>
+            <button onclick="addEventFromInput()"
+                    class="px-4 py-2 text-sm font-semibold text-white bg-brand-600 hover:bg-brand-700 rounded-lg transition-all flex items-center gap-1.5 shadow-sm hover:shadow-md">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+                Add Step
+            </button>
+        </div>
+
+        <!-- Help text -->
+        <p id="funnelHelpText" class="text-xs text-slate-400 mt-2">
+            <span id="stepCountText">Add at least 2 events to analyze your funnel.</span>
+        </p>
+    </div>
+</div>
+
+<!-- Step 2: Filters (Collapsible) -->
+<div class="bg-[#1e293b] rounded-xl shadow-lg border border-white/10 mb-5 overflow-hidden">
+    <button onclick="toggleFiltersSection()"
+            class="w-full flex items-center justify-between p-4 text-left hover:bg-slate-800/30 transition-colors"
+            id="filtersToggleBtn">
+        <div class="flex items-center gap-2">
+            <svg class="w-5 h-5 text-brand-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+            </svg>
+            <div>
+                <h2 class="text-base font-bold text-slate-50">Filters</h2>
+                <p class="text-xs text-slate-400" id="activeFiltersCount">No filters applied</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-3">
+            <span id="filterBadge" class="hidden px-2.5 py-1 text-sm font-medium text-brand-700 bg-brand-100 rounded-full"></span>
+            <svg id="filtersChevron" class="w-5 h-5 text-gray-400 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M6 9l6 6 6-6"/>
+            </svg>
+        </div>
+    </button>
+
+    <div id="filtersContent" class="hidden border-t border-white/10">
+        <!-- Active Filter Chips -->
+        <div id="activeFiltersChips" class="hidden p-3 pb-0 flex flex-wrap gap-2">
+            <!-- Chips rendered dynamically -->
+        </div>
+
+        <!-- Add Filter Dropdown -->
+        <div class="p-4 pt-3">
+            <div class="flex flex-wrap items-center gap-2 mb-3">
+                <div class="relative">
+                    <select id="filterTypeSelect"
+                            class="appearance-none px-3 py-2 pr-8 border border-white/20 rounded-lg text-sm font-medium text-slate-50 bg-slate-800 hover:bg-slate-700 cursor-pointer focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all">
+                        <option value="">+ Add Filter</option>
+                        <option value="country">Country</option>
+                        <option value="platform">Platform</option>
+                        <option value="dateRange">Date Range</option>
+                    </select>
+                    <svg class="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M6 9l6 6 6-6"/>
+                    </svg>
+                </div>
+
+                <!-- Dynamic Filter Value Selector -->
+                <div id="filterValueContainer" class="hidden flex items-center gap-2">
+                    <select id="filterValueSelect"
+                            class="px-3 py-2 bg-slate-800 border border-white/20 text-slate-50 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500 min-w-[180px]">
+                        <!-- Options populated dynamically -->
+                    </select>
+                    <button onclick="applySelectedFilter()"
+                            class="px-3 py-2 text-sm font-medium text-white bg-brand-600 hover:bg-brand-700 rounded-lg transition-all">
+                        Apply
+                    </button>
+                    <button onclick="cancelFilterSelection()"
+                            class="px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 transition-all">
+                        Cancel
+                    </button>
+                </div>
+
+                <!-- Date Range Inputs -->
+                <div id="dateRangeContainer" class="hidden flex items-center gap-2">
+                    <input type="date" id="filterFrom" class="px-2.5 py-2 bg-slate-800 border border-white/20 text-slate-50 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500">
+                    <span class="text-slate-400 text-sm">to</span>
+                    <input type="date" id="filterTo" class="px-2.5 py-2 bg-slate-800 border border-white/20 text-slate-50 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500">
+                    <button onclick="applyDateFilter()"
+                            class="px-3 py-2 text-sm font-medium text-white bg-brand-600 hover:bg-brand-700 rounded-lg transition-all">
+                        Apply
+                    </button>
+                    <button onclick="cancelFilterSelection()"
+                            class="px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 transition-all">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+
+            <!-- Clear All Filters -->
+            <button id="clearAllFiltersBtn"
+                    onclick="clearAllFilters()"
+                    class="hidden text-xs text-slate-400 hover:text-rose-400 transition-colors">
+                Clear all filters
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Analyze Section -->
+<div class="bg-[#1e293b] rounded-xl p-4 shadow-lg border border-white/10 mb-5">
+    <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
+        <!-- Conversion Window -->
+        <div class="flex items-center gap-2">
+            <label for="conversionWindow" class="text-sm font-medium text-slate-50 whitespace-nowrap">
+                Step Timeout:
+            </label>
+            <div class="relative">
+                <select id="conversionWindow"
+                        class="appearance-none px-3 py-2 pr-8 border border-white/20 rounded-lg text-sm font-medium text-slate-50 bg-slate-800 hover:bg-slate-700 cursor-pointer focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all">
+                    <option value="">No limit</option>
+                    <option value="5">5 minutes</option>
+                    <option value="15">15 minutes</option>
+                    <option value="30" selected>30 minutes</option>
+                    <option value="60">60 minutes</option>
+                    <option value="120">120 minutes (max session)</option>
+                </select>
+                <svg class="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M6 9l6 6 6-6"/>
+                </svg>
+            </div>
+            <span class="text-xs text-slate-400 hidden sm:inline">
+                (Max time between consecutive steps)
+            </span>
+        </div>
+
+        <!-- Analyze Button -->
+        <button onclick="analyzeFunnel()"
+                class="px-5 py-2 text-sm font-bold text-white bg-brand-600 hover:bg-brand-700 rounded-lg shadow-lg hover:shadow-xl transition-all flex items-center gap-1.5">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+            </svg>
+            Analyze Funnel
+        </button>
+    </div>
+</div>
+
+<!-- Results Section -->
+<div id="funnelResults" class="hidden">
+    <div class="bg-[#1e293b] rounded-xl p-4 shadow-lg border border-white/10">
+        <div class="flex justify-between items-center mb-3 flex-wrap gap-2">
+            <div class="flex items-center gap-4">
+                <h2 class="text-lg font-bold text-slate-50">Funnel Results</h2>
+                <div class="flex items-center gap-3 text-sm">
+                    <div class="flex items-center gap-1">
+                        <span class="text-slate-400">Sessions:</span>
+                        <span class="font-bold text-slate-50" id="totalSessions">-</span>
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <span class="text-slate-400">Conversion:</span>
+                        <span class="font-bold text-emerald-400" id="conversionRate">-</span>
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <span class="text-slate-400">Drop-off:</span>
+                        <span class="font-bold text-rose-400" id="totalDropOff">-</span>
+                    </div>
+                </div>
+            </div>
+            <div class="flex gap-1.5">
+                <button onclick="exportFunnelData('csv')" class="px-2.5 py-1 text-xs font-medium text-slate-50 bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors">📥 CSV</button>
+                <button onclick="exportFunnelData('json')" class="px-2.5 py-1 text-xs font-medium text-slate-50 bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors">📥 JSON</button>
+            </div>
+        </div>
+
+        <div id="funnelVisualization">
+            <!-- Funnel steps will be rendered here -->
+        </div>
+    </div>
+
+    <!-- Transition Timing Section -->
+    <div id="timingSection" class="mt-5 bg-[#1e293b] rounded-xl p-5 shadow-lg border border-white/10">
+        <div class="mb-3">
+            <h3 class="text-base font-bold text-slate-50">Transition Timing</h3>
+            <p class="text-xs text-slate-400 mt-0.5">Time between consecutive steps within a session</p>
+        </div>
+
+        <!-- Timing Loading State -->
+        <div id="timingLoading" class="flex items-center justify-center py-6">
+            <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-brand-500"></div>
+            <span class="ml-2 text-sm text-slate-400">Loading timing data...</span>
+        </div>
+
+        <!-- Timing Error State -->
+        <div id="timingError" class="hidden py-4 text-center">
+            <p class="text-sm text-slate-400">Unable to load timing data</p>
+        </div>
+
+        <!-- Timing Data -->
+        <div id="timingData" class="hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr class="text-sm text-slate-400 uppercase tracking-wider">
+                            <th class="px-4 py-3 text-left">Transition</th>
+                            <th class="px-4 py-3 text-right">Median</th>
+                            <th class="px-4 py-3 text-right">Mean</th>
+                            <th class="px-4 py-3 text-right">P25 (Fast)</th>
+                            <th class="px-4 py-3 text-right">P75 (Slow)</th>
+                            <th class="px-4 py-3 text-right">Sessions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="timingTableBody">
+                        <!-- Timing rows will be rendered here -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Insight Alert -->
+            <div id="timingInsight" class="hidden mt-4 p-4 bg-amber-900/20 border border-amber-500/30 rounded-xl">
+                <div class="flex items-start gap-3">
+                    <span class="text-xl">⚠️</span>
+                    <div>
+                        <p class="text-slate-300 text-sm" id="timingInsightText"></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Summary Stats -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+                <div class="bg-slate-800/50 rounded-xl p-4 text-center border border-white/5">
+                    <div class="text-3xl font-black text-slate-50 mb-1" id="summaryMedianTime">-</div>
+                    <div class="text-sm text-slate-400">Median Total Time</div>
+                    <div class="text-xs text-slate-500 mt-1">From first to last step</div>
+                </div>
+                <div class="bg-slate-800/50 rounded-xl p-4 text-center border border-white/5">
+                    <div class="text-3xl font-black text-slate-50 mb-1" id="summaryMeanTime">-</div>
+                    <div class="text-sm text-slate-400">Mean Total Time</div>
+                    <div class="text-xs text-slate-500 mt-1">Pulled up by slow completers</div>
+                </div>
+                <div class="bg-slate-800/50 rounded-xl p-4 text-center border border-white/5">
+                    <div class="text-3xl font-black text-emerald-400 mb-1" id="summaryCompletionRate">-</div>
+                    <div class="text-sm text-slate-400">Completion Rate</div>
+                    <div class="text-xs text-slate-500 mt-1">Sessions completing all steps</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Overlay Modal -->
+<div id="loadingFunnel" class="loading-overlay">
+    <div class="loading-modal">
+        <div class="loading-spinner-animation"></div>
+        <h3>Analyzing Funnel</h3>
+        <p>Crunching the numbers, please wait...</p>
+    </div>
+</div>
+
+<div id="emptyState" class="hidden text-center py-12">
+    <div class="text-7xl mb-4">📊</div>
+    <h3 class="text-2xl font-bold text-slate-50 mb-2">No Data Available</h3>
+    <p class="text-slate-400">Select at least 2 events and click "Analyze Funnel" to see results.</p>
+</div>
+
+{% endif %}
+{% endblock %}
+{% block dashboard_scripts %}
+<script>
+const appKey = '{{ app_key }}';
+const appSlug = '{{ app_slug }}';
+let selectedEvents = [];
+const MAX_FUNNEL_STEPS = 10;
+let availableEvents = [];
+let filterOptions = {
+    countries: [],
+    devices: [],
+    osVersions: []
+};
+let draggedElement = null;
+
+// Load event types
+async function loadEventTypes() {
+    try {
+        const response = await fetch('/api/v1/events/event-types/', {
+            headers: { 'X-App-Key': appKey }
+        });
+
+        if (!response.ok) throw new Error('Failed to load events');
+
+        const data = await response.json();
+        availableEvents = data.event_types;
+
+        populateEventDatalist();
+        loadFilterOptions();
+
+        document.getElementById('loadingEvents').style.display = 'none';
+        document.getElementById('funnelBuilder').classList.remove('hidden');
+    } catch (error) {
+        document.getElementById('loadingEvents').innerHTML =
+            `<div class="alert alert-warning">Error loading events: ${error.message}</div>`;
+    }
+}
+
+function populateEventDatalist() {
+    const dropdown = document.getElementById('eventDropdown');
+
+    // Only show events not already selected
+    const unselectedEvents = availableEvents.filter(e => !selectedEvents.includes(e));
+
+    renderDropdownOptions(unselectedEvents);
+}
+
+function renderDropdownOptions(events, filter = '') {
+    const dropdown = document.getElementById('eventDropdown');
+    dropdown.innerHTML = '';
+
+    const filteredEvents = filter
+        ? events.filter(e => e.toLowerCase().includes(filter.toLowerCase()))
+        : events;
+
+    if (filteredEvents.length === 0) {
+        dropdown.innerHTML = '<div class="no-results">No matching events</div>';
+        return;
+    }
+
+    filteredEvents.forEach((event, index) => {
+        const item = document.createElement('div');
+        item.className = 'dropdown-item';
+        item.textContent = event;
+        item.dataset.value = event;
+        item.dataset.index = index;
+        item.addEventListener('click', () => selectEventFromDropdown(event));
+        dropdown.appendChild(item);
+    });
+}
+
+function selectEventFromDropdown(eventName) {
+    const input = document.getElementById('eventSearchInput');
+    input.value = eventName;
+    hideEventDropdown();
+    addEventFromInput();
+}
+
+function showEventDropdown() {
+    const dropdown = document.getElementById('eventDropdown');
+    const unselectedEvents = availableEvents.filter(e => !selectedEvents.includes(e));
+    const filter = document.getElementById('eventSearchInput').value;
+    renderDropdownOptions(unselectedEvents, filter);
+    dropdown.classList.remove('hidden');
+}
+
+function hideEventDropdown() {
+    document.getElementById('eventDropdown').classList.add('hidden');
+    highlightedIndex = -1;
+}
+
+let highlightedIndex = -1;
+
+function highlightDropdownItem(index) {
+    const items = document.querySelectorAll('#eventDropdown .dropdown-item');
+    items.forEach((item, i) => {
+        item.classList.toggle('highlighted', i === index);
+    });
+    highlightedIndex = index;
+
+    // Scroll into view
+    if (items[index]) {
+        items[index].scrollIntoView({ block: 'nearest' });
+    }
+}
+
+function addEventFromInput() {
+    const input = document.getElementById('eventSearchInput');
+    const eventName = input.value.trim();
+
+    if (!eventName) {
+        return;
+    }
+
+    // Validation: max length 255 chars
+    if (eventName.length > 255) {
+        showToast('Event name must be 255 characters or less.', 'error');
+        return;
+    }
+    
+    // Validation: safe characters only (letters, numbers, underscores, hyphens, dots, spaces, colons, dollar signs)
+    const safePattern = /^[a-zA-Z0-9_\-\.\s:$]+$/;
+    if (!safePattern.test(eventName)) {
+        showToast('Event name can only contain letters, numbers, underscores, hyphens, dots, spaces, colons, and dollar signs.', 'warning');
+        return;
+    }
+
+    // Check if already selected
+    if (selectedEvents.includes(eventName)) {
+        showToast('Event already added to funnel.', 'warning');
+        input.value = '';
+        return;
+    }
+
+    // Check max steps limit
+    if (selectedEvents.length >= MAX_FUNNEL_STEPS) {
+        showToast(`Maximum ${MAX_FUNNEL_STEPS} steps allowed in a funnel.`, 'warning');
+        input.value = '';
+        return;
+    }
+
+    // Show hint if event doesn't exist yet
+    const isPending = !availableEvents.includes(eventName);
+    if (isPending) {
+        showToast(`Added "${eventName}" - this event hasn't been tracked yet.`, 'info');
+    }
+
+    selectedEvents.push(eventName);
+    input.value = '';
+
+    renderFunnelSteps();
+    populateEventDatalist();
+    updateHelpText();
+}
+
+// Handle Enter key in search input
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('eventSearchInput');
+    if (searchInput) {
+        // Show dropdown on focus
+        searchInput.addEventListener('focus', showEventDropdown);
+
+        // Filter on input
+        searchInput.addEventListener('input', function() {
+            showEventDropdown();
+        });
+
+        // Keyboard navigation
+        searchInput.addEventListener('keydown', function(e) {
+            const dropdown = document.getElementById('eventDropdown');
+            const items = dropdown.querySelectorAll('.dropdown-item');
+
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                if (dropdown.classList.contains('hidden')) {
+                    showEventDropdown();
+                } else {
+                    const newIndex = Math.min(highlightedIndex + 1, items.length - 1);
+                    highlightDropdownItem(newIndex);
+                }
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                const newIndex = Math.max(highlightedIndex - 1, 0);
+                highlightDropdownItem(newIndex);
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                if (highlightedIndex >= 0 && items[highlightedIndex]) {
+                    const eventName = items[highlightedIndex].dataset.value;
+                    selectEventFromDropdown(eventName);
+                } else if (this.value) {
+                    addEventFromInput();
+                }
+            } else if (e.key === 'Escape') {
+                hideEventDropdown();
+            }
+        });
+    }
+
+    // Hide dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+        const wrapper = document.getElementById('eventDropdownWrapper');
+        if (wrapper && !wrapper.contains(e.target)) {
+            hideEventDropdown();
+        }
+    });
+});
+
+function renderFunnelSteps() {
+    const container = document.getElementById('funnelStepsContainer');
+    container.innerHTML = '';
+
+    selectedEvents.forEach((event, index) => {
+        // Check if this event exists in tracked events
+        const isPending = !availableEvents.includes(event);
+        const pendingBadge = isPending ? '<span class="ml-2 px-2 py-0.5 text-xs font-medium text-amber-400 bg-amber-500/10 rounded-full border border-amber-500/30">pending</span>' : '';
+        const pendingClass = isPending ? 'border-l-2 border-dashed border-amber-500/50' : '';
+        
+        // Create step card
+        const stepDiv = document.createElement('div');
+        stepDiv.className = `funnel-step-card ${pendingClass}`;
+        stepDiv.draggable = true;
+        stepDiv.dataset.index = index;
+
+        stepDiv.innerHTML = `
+            <div class="drag-handle" title="Drag to reorder">
+                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                    <circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/>
+                    <circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/>
+                    <circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/>
+                </svg>
+            </div>
+            <div class="step-number">${index + 1}</div>
+            <div class="step-name">${event}${pendingBadge}</div>
+            <div class="step-actions">
+                <button class="step-action-btn delete" onclick="removeStep(${index})" title="Remove step">
+                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 6L6 18M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+        `;
+
+        // Add drag events
+        stepDiv.addEventListener('dragstart', handleDragStart);
+        stepDiv.addEventListener('dragover', handleDragOver);
+        stepDiv.addEventListener('drop', handleDrop);
+        stepDiv.addEventListener('dragend', handleDragEnd);
+
+        container.appendChild(stepDiv);
+
+        // Add connector arrow (except for last step)
+        if (index < selectedEvents.length - 1) {
+            const connector = document.createElement('div');
+            connector.className = 'step-connector';
+            connector.innerHTML = `
+                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 5v14M5 12l7 7 7-7"/>
+                </svg>
+            `;
+            container.appendChild(connector);
+        }
+    });
+}
+
+function removeStep(index) {
+    selectedEvents.splice(index, 1);
+    renderFunnelSteps();
+    populateEventDatalist();
+    updateHelpText();
+
+    // Hide results if less than 2 steps
+    if (selectedEvents.length < 2) {
+        document.getElementById('funnelResults').style.display = 'none';
+    }
+}
+
+function updateHelpText() {
+    const text = document.getElementById('stepCountText');
+    const count = selectedEvents.length;
+
+    if (count === 0) {
+        text.textContent = 'Add at least 2 events to analyze your funnel.';
+    } else if (count === 1) {
+        text.textContent = 'Add 1 more event to analyze your funnel.';
+    } else {
+        text.textContent = `${count} steps selected. Ready to analyze!`;
+        text.parentElement.classList.add('text-green-600');
+    }
+
+    if (count < 2) {
+        text.parentElement.classList.remove('text-green-600');
+    }
+}
+
+// Drag and drop handlers
+function handleDragStart(e) {
+    draggedElement = this;
+    this.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+}
+
+function handleDragOver(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+
+    const card = e.target.closest('.funnel-step-card');
+    if (card && card !== draggedElement) {
+        const rect = card.getBoundingClientRect();
+        const midY = rect.top + rect.height / 2;
+
+        if (e.clientY < midY) {
+            card.style.borderTop = '2px solid #4F46E5';
+            card.style.borderBottom = '';
+        } else {
+            card.style.borderBottom = '2px solid #4F46E5';
+            card.style.borderTop = '';
+        }
+    }
+}
+
+function handleDrop(e) {
+    e.preventDefault();
+
+    const card = e.target.closest('.funnel-step-card');
+    if (card && draggedElement && card !== draggedElement) {
+        const fromIndex = parseInt(draggedElement.dataset.index);
+        const toIndex = parseInt(card.dataset.index);
+
+        // Reorder the array
+        const [movedEvent] = selectedEvents.splice(fromIndex, 1);
+
+        const rect = card.getBoundingClientRect();
+        const midY = rect.top + rect.height / 2;
+        const insertIndex = e.clientY < midY ? toIndex : toIndex + (fromIndex < toIndex ? 0 : 1);
+
+        selectedEvents.splice(insertIndex, 0, movedEvent);
+
+        renderFunnelSteps();
+    }
+
+    // Clear all border indicators
+    document.querySelectorAll('.funnel-step-card').forEach(c => {
+        c.style.borderTop = '';
+        c.style.borderBottom = '';
+    });
+}
+
+function handleDragEnd() {
+    this.classList.remove('dragging');
+    draggedElement = null;
+
+    document.querySelectorAll('.funnel-step-card').forEach(c => {
+        c.style.borderTop = '';
+        c.style.borderBottom = '';
+    });
+}
+
+// Note: Toast notification function is now global from staticfiles/js/toast.js
+
+function clearSelection() {
+    selectedEvents = [];
+    renderFunnelSteps();
+    populateEventDatalist();
+    updateHelpText();
+    document.getElementById('funnelResults').style.display = 'none';
+    document.getElementById('emptyState').style.display = 'block';
+}
+
+// ============================================
+// FILTER MANAGEMENT
+// ============================================
+
+// Store filter options from API
+let filterOptionsData = {
+    countries: [],
+    platforms: []
+};
+
+// Active filters (applied filters as chips)
+let activeFilters = {};
+let currentFilterType = null;
+
+// Filter type mappings
+const filterTypeMeta = {
+    country: { label: 'Country', dataKey: 'countries', apiParam: 'country' },
+    platform: { label: 'Platform', dataKey: 'platforms', apiParam: 'platform' }
+};
+
+async function loadFilterOptions() {
+    try {
+        const response = await fetch('/api/v1/events/filter-options/', {
+            headers: { 'X-App-Key': appKey }
+        });
+
+        if (!response.ok) {
+            console.error('Failed to load filter options');
+            return;
+        }
+
+        const data = await response.json();
+        filterOptionsData = data.filters;
+
+        // Set up filter type selector
+        setupFilterTypeSelect();
+
+    } catch (error) {
+        console.error('Error loading filter options:', error);
+    }
+}
+
+function setupFilterTypeSelect() {
+    const filterTypeSelect = document.getElementById('filterTypeSelect');
+
+    filterTypeSelect.addEventListener('change', function() {
+        const filterType = this.value;
+
+        if (!filterType) {
+            hideFilterValueSelectors();
+            return;
+        }
+
+        currentFilterType = filterType;
+
+        if (filterType === 'dateRange') {
+            showDateRangeInputs();
+        } else {
+            showFilterValueSelect(filterType);
+        }
+    });
+}
+
+function showFilterValueSelect(filterType) {
+    const container = document.getElementById('filterValueContainer');
+    const dateContainer = document.getElementById('dateRangeContainer');
+    const select = document.getElementById('filterValueSelect');
+
+    dateContainer.classList.add('hidden');
+    container.classList.remove('hidden');
+
+    // Get the options for this filter type
+    const meta = filterTypeMeta[filterType];
+    const options = filterOptionsData[meta.dataKey] || [];
+
+    select.innerHTML = '';
+
+    if (options.length === 0) {
+        const opt = document.createElement('option');
+        opt.value = '';
+        opt.textContent = 'No options available';
+        opt.disabled = true;
+        select.appendChild(opt);
+        return;
+    }
+
+    // Add default option
+    const defaultOpt = document.createElement('option');
+    defaultOpt.value = '';
+    defaultOpt.textContent = `Select ${meta.label}...`;
+    select.appendChild(defaultOpt);
+
+    options.forEach(option => {
+        const opt = document.createElement('option');
+        opt.value = option;
+        opt.textContent = option;
+        select.appendChild(opt);
+    });
+}
+
+function showDateRangeInputs() {
+    const container = document.getElementById('filterValueContainer');
+    const dateContainer = document.getElementById('dateRangeContainer');
+
+    container.classList.add('hidden');
+    dateContainer.classList.remove('hidden');
+}
+
+function hideFilterValueSelectors() {
+    document.getElementById('filterValueContainer').classList.add('hidden');
+    document.getElementById('dateRangeContainer').classList.add('hidden');
+    currentFilterType = null;
+}
+
+function cancelFilterSelection() {
+    document.getElementById('filterTypeSelect').value = '';
+    hideFilterValueSelectors();
+}
+
+function applySelectedFilter() {
+    const select = document.getElementById('filterValueSelect');
+    const value = select.value;
+
+    if (!value || !currentFilterType) return;
+
+    const meta = filterTypeMeta[currentFilterType];
+
+    // Initialize array if not exists
+    if (!activeFilters[currentFilterType]) {
+        activeFilters[currentFilterType] = [];
+    }
+
+    // Add if not already present
+    if (!activeFilters[currentFilterType].includes(value)) {
+        activeFilters[currentFilterType].push(value);
+    }
+
+    // Reset and render
+    document.getElementById('filterTypeSelect').value = '';
+    hideFilterValueSelectors();
+    renderActiveFilters();
+}
+
+function applyDateFilter() {
+    const from = document.getElementById('filterFrom').value;
+    const to = document.getElementById('filterTo').value;
+
+    if (from || to) {
+        activeFilters.dateRange = { from, to };
+    }
+
+    document.getElementById('filterTypeSelect').value = '';
+    hideFilterValueSelectors();
+    renderActiveFilters();
+}
+
+function removeFilter(filterType, value) {
+    if (filterType === 'dateRange') {
+        delete activeFilters.dateRange;
+    } else if (activeFilters[filterType]) {
+        activeFilters[filterType] = activeFilters[filterType].filter(v => v !== value);
+        if (activeFilters[filterType].length === 0) {
+            delete activeFilters[filterType];
+        }
+    }
+    renderActiveFilters();
+}
+
+function clearAllFilters() {
+    activeFilters = {};
+    document.getElementById('filterFrom').value = '';
+    document.getElementById('filterTo').value = '';
+    renderActiveFilters();
+}
+
+function resetFunnelPage() {
+    // Clear all selected events
+    selectedEvents = [];
+    renderFunnelSteps();
+    updateHelpText();
+    populateEventDatalist();
+
+    // Clear the activeFilters object completely
+    activeFilters = {};
+
+    // Clear date range inputs
+    const filterFrom = document.getElementById('filterFrom');
+    const filterTo = document.getElementById('filterTo');
+    if (filterFrom) filterFrom.value = '';
+    if (filterTo) filterTo.value = '';
+
+    // Reset filter type selector and hide value containers
+    const filterTypeSelect = document.getElementById('filterTypeSelect');
+    if (filterTypeSelect) filterTypeSelect.value = '';
+
+    const filterValueContainer = document.getElementById('filterValueContainer');
+    const dateRangeContainer = document.getElementById('dateRangeContainer');
+    if (filterValueContainer) filterValueContainer.classList.add('hidden');
+    if (dateRangeContainer) dateRangeContainer.classList.add('hidden');
+    currentFilterType = null;
+
+    // Clear the chips container manually
+    const chipsContainer = document.getElementById('activeFiltersChips');
+    if (chipsContainer) {
+        chipsContainer.innerHTML = '';
+        chipsContainer.classList.add('hidden');
+    }
+
+    // Reset filter count text and badge
+    const countText = document.getElementById('activeFiltersCount');
+    const badge = document.getElementById('filterBadge');
+    const clearBtn = document.getElementById('clearAllFiltersBtn');
+    if (countText) countText.textContent = 'No filters applied';
+    if (badge) badge.classList.add('hidden');
+    if (clearBtn) clearBtn.classList.add('hidden');
+
+    // Reset conversion window to default
+    const conversionWindow = document.getElementById('conversionWindow');
+    if (conversionWindow) conversionWindow.value = '7';
+
+    // Clear the search input
+    const eventSearchInput = document.getElementById('eventSearchInput');
+    if (eventSearchInput) eventSearchInput.value = '';
+}
+
+function renderActiveFilters() {
+    const container = document.getElementById('activeFiltersChips');
+    const countText = document.getElementById('activeFiltersCount');
+    const badge = document.getElementById('filterBadge');
+    const clearBtn = document.getElementById('clearAllFiltersBtn');
+
+    container.innerHTML = '';
+
+    let chipCount = 0;
+
+    // Render chips for each filter type
+    Object.entries(activeFilters).forEach(([filterType, values]) => {
+        if (filterType === 'dateRange') {
+            const { from, to } = values;
+            let label = 'Date: ';
+            if (from && to) label += `${from} to ${to}`;
+            else if (from) label += `from ${from}`;
+            else if (to) label += `until ${to}`;
+
+            container.appendChild(createFilterChip(label, () => removeFilter('dateRange')));
+            chipCount++;
+        } else {
+            const meta = filterTypeMeta[filterType];
+            values.forEach(value => {
+                const label = `${meta.label}: ${value}`;
+                container.appendChild(createFilterChip(label, () => removeFilter(filterType, value)));
+                chipCount++;
+            });
+        }
+    });
+
+    // Update UI state
+    if (chipCount > 0) {
+        container.classList.remove('hidden');
+        clearBtn.classList.remove('hidden');
+        countText.textContent = `${chipCount} filter${chipCount > 1 ? 's' : ''} applied`;
+        badge.textContent = chipCount;
+        badge.classList.remove('hidden');
+    } else {
+        container.classList.add('hidden');
+        clearBtn.classList.add('hidden');
+        countText.textContent = 'No filters applied';
+        badge.classList.add('hidden');
+    }
+}
+
+function createFilterChip(label, onRemove) {
+    const chip = document.createElement('span');
+    chip.className = 'inline-flex items-center gap-1.5 px-3 py-1.5 bg-brand-50 text-brand-700 rounded-full text-sm font-medium';
+
+    chip.innerHTML = `
+        <span>${label}</span>
+        <button class="hover:bg-brand-100 rounded-full p-0.5 transition-colors" title="Remove filter">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M18 6L6 18M6 6l12 12"/>
+            </svg>
+        </button>
+    `;
+
+    chip.querySelector('button').addEventListener('click', (e) => {
+        e.stopPropagation();
+        onRemove();
+    });
+
+    return chip;
+}
+
+function toggleFiltersSection() {
+    const content = document.getElementById('filtersContent');
+    const chevron = document.getElementById('filtersChevron');
+
+    if (content.classList.contains('hidden')) {
+        content.classList.remove('hidden');
+        chevron.style.transform = 'rotate(180deg)';
+    } else {
+        content.classList.add('hidden');
+        chevron.style.transform = '';
+    }
+}
+
+// Build filter params from active filters for API call
+function buildFilterParams() {
+    const params = {};
+
+    // Always include timezone for proper date boundary calculation
+    params.tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+
+    Object.entries(activeFilters).forEach(([filterType, values]) => {
+        if (filterType === 'dateRange') {
+            if (values.from) params.from = values.from;
+            if (values.to) params.to = values.to;
+        } else {
+            const meta = filterTypeMeta[filterType];
+            if (meta && values.length > 0) {
+                params[meta.apiParam] = values.join(',');
+            }
+        }
+    });
+
+    return params;
+}
+
+async function analyzeFunnel() {
+    if (selectedEvents.length < 2) {
+        showToast('Please select at least 2 events for funnel analysis', 'warning');
+        return;
+    }
+
+    document.getElementById('loadingFunnel').classList.add('active');
+    document.getElementById('funnelResults').style.display = 'none';
+    document.getElementById('emptyState').style.display = 'none';
+
+    const params = new URLSearchParams({
+        steps: selectedEvents.join(',')
+    });
+
+    // Add step timeout if set
+    const stepTimeout = document.getElementById('conversionWindow').value;
+    if (stepTimeout) {
+        params.append('window_minutes', stepTimeout);
+    }
+
+    // Get filter params from active filters
+    const filterParams = buildFilterParams();
+    Object.entries(filterParams).forEach(([key, value]) => {
+        params.append(key, value);
+    });
+
+    try {
+        const response = await fetch(`/api/v1/events/funnel/?${params}`, {
+            headers: { 'X-App-Key': appKey }
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to analyze funnel');
+        }
+
+        const data = await response.json();
+        currentFunnelData = data;
+        renderFunnel(data);
+
+        document.getElementById('loadingFunnel').classList.remove('active');
+        document.getElementById('funnelResults').style.display = 'block';
+
+        // Load timing data in parallel (don't block the UI)
+        loadTimingData(selectedEvents, filterParams);
+    } catch (error) {
+        document.getElementById('loadingFunnel').classList.remove('active');
+        showToast('Error: ' + error.message, 'error');
+    }
+}
+
+/**
+ * Load step timing data from the step-timing API
+ */
+async function loadTimingData(steps, filterParams) {
+    // Reset timing section state
+    document.getElementById('timingLoading').classList.remove('hidden');
+    document.getElementById('timingError').classList.add('hidden');
+    document.getElementById('timingData').classList.add('hidden');
+    document.getElementById('timingInsight').classList.add('hidden');
+
+    const params = new URLSearchParams({
+        steps: steps.join(',')
+    });
+
+    // Add timezone for proper date boundary calculation
+    const userTz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+    params.append('tz', userTz);
+
+    // Add date filters if present
+    if (filterParams.from) params.append('start_date', filterParams.from);
+    if (filterParams.to) params.append('end_date', filterParams.to);
+
+    try {
+        const response = await fetch(`/api/v1/analytics/step-timing/?${params}`, {
+            headers: { 'X-App-Key': appKey }
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to load timing data');
+        }
+
+        const data = await response.json();
+        currentTimingData = data;
+        renderTimingData(data);
+
+        document.getElementById('timingLoading').classList.add('hidden');
+        document.getElementById('timingData').classList.remove('hidden');
+    } catch (error) {
+        console.error('Error loading timing data:', error);
+        document.getElementById('timingLoading').classList.add('hidden');
+        document.getElementById('timingError').classList.remove('hidden');
+    }
+}
+
+/**
+ * Format seconds to human-readable time
+ */
+function formatDuration(seconds) {
+    if (seconds === null || seconds === undefined || isNaN(seconds)) return '-';
+
+    seconds = Math.round(seconds);
+
+    if (seconds < 60) {
+        return `${seconds}s`;
+    } else if (seconds < 3600) {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return secs > 0 ? `${mins}m ${secs}s` : `${mins}m`;
+    } else {
+        const hours = Math.floor(seconds / 3600);
+        const mins = Math.floor((seconds % 3600) / 60);
+        return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+    }
+}
+
+/**
+ * Render the timing data table and summary
+ */
+function renderTimingData(data) {
+    const tbody = document.getElementById('timingTableBody');
+    tbody.innerHTML = '';
+
+    const transitions = data.transitions || [];
+    const summary = data.funnel_summary || {};
+
+    // Find the slowest transition for insight
+    let slowestTransition = null;
+    let slowestP75 = 0;
+
+    transitions.forEach(transition => {
+        const row = document.createElement('tr');
+        row.className = 'border-t border-white/5 hover:bg-slate-800/30 transition-colors';
+
+        const p75 = transition.p75_seconds || 0;
+        if (p75 > slowestP75) {
+            slowestP75 = p75;
+            slowestTransition = transition;
+        }
+
+        row.innerHTML = `
+            <td class="px-4 py-3 text-slate-300">
+                <span class="font-mono text-sm">${transition.from}</span>
+                <span class="text-slate-500 mx-2">→</span>
+                <span class="font-mono text-sm">${transition.to}</span>
+            </td>
+            <td class="px-4 py-3 text-right font-bold text-slate-50">${formatDuration(transition.median_seconds)}</td>
+            <td class="px-4 py-3 text-right text-slate-400">${formatDuration(transition.mean_seconds)}</td>
+            <td class="px-4 py-3 text-right text-emerald-400">${formatDuration(transition.p25_seconds)}</td>
+            <td class="px-4 py-3 text-right text-amber-400">${formatDuration(transition.p75_seconds)}</td>
+            <td class="px-4 py-3 text-right text-slate-400">${(transition.sessions_analyzed || 0).toLocaleString()}</td>
+        `;
+
+        tbody.appendChild(row);
+    });
+
+    // Show insight if there's a notably slow transition (P75 > 60 seconds)
+    if (slowestTransition && slowestP75 > 60) {
+        const insightEl = document.getElementById('timingInsight');
+        const insightText = document.getElementById('timingInsightText');
+
+        const p75Formatted = formatDuration(slowestP75);
+        insightText.innerHTML = `<strong>Insight:</strong> The <span class="font-mono text-amber-400">${slowestTransition.from}</span> → <span class="font-mono text-amber-400">${slowestTransition.to}</span> transition has a P75 of ${p75Formatted}. This is where slower users are getting stuck. Consider simplifying this step.`;
+
+        insightEl.classList.remove('hidden');
+    }
+
+    // Update summary stats
+    const medianTotal = summary.median_total_seconds;
+    const meanTotal = summary.mean_total_seconds;
+    const completionRate = summary.completion_rate;
+
+    document.getElementById('summaryMedianTime').textContent = formatDuration(medianTotal);
+    document.getElementById('summaryMeanTime').textContent = formatDuration(meanTotal);
+    document.getElementById('summaryCompletionRate').textContent =
+        completionRate !== undefined ? `${(completionRate * 100).toFixed(1)}%` : '-';
+}
+
+let currentTimingData = null;
+
+function renderFunnel(data) {
+    const container = document.getElementById('funnelVisualization');
+    container.innerHTML = '';
+
+    const funnel = data.funnel;
+    const totalSessions = data.total_sessions_analyzed;
+
+    document.getElementById('totalSessions').textContent = totalSessions.toLocaleString();
+
+    const firstCount = funnel[0]?.count || 0;
+    const lastCount = funnel[funnel.length - 1]?.count || 0;
+    const conversionRate = firstCount > 0 ? ((lastCount / firstCount) * 100).toFixed(1) : 0;
+    const dropOff = firstCount - lastCount;
+
+    document.getElementById('conversionRate').textContent = conversionRate + '%';
+    document.getElementById('totalDropOff').textContent = dropOff.toLocaleString();
+
+    funnel.forEach((step, index) => {
+        const prevCount = index > 0 ? funnel[index - 1].count : firstCount;
+        const percentage = firstCount > 0 ? (step.count / firstCount) * 100 : 0;
+        const percentageDisplay = percentage.toFixed(1);
+        const stepPercentage = prevCount > 0 ? ((step.count / prevCount) * 100).toFixed(1) : 100;
+        const dropOffCount = prevCount - step.count;
+        const dropOffPercent = prevCount > 0 ? (((prevCount - step.count) / prevCount) * 100).toFixed(1) : 0;
+
+        // Calculate width: 100% - (percentage drop * 0.25)
+        // So 10% drop = 97.5% width, 50% drop = 87.5% width, etc.
+        const percentageDrop = 100 - percentage;
+        const widthPercent = Math.max(50, 100 - (percentageDrop * 0.25));
+
+        // Build clear messages - primary line (count) and secondary line (percentages)
+        let primaryMessage = '';
+        let secondaryMessage = '';
+
+        if (index === 0) {
+            primaryMessage = `<strong>${step.count.toLocaleString()}</strong> sessions started here`;
+            secondaryMessage = `This is your full audience (100%)`;
+        } else {
+            primaryMessage = `<strong>${step.count.toLocaleString()}</strong> sessions reached this step`;
+            secondaryMessage = `<strong>${percentageDisplay}%</strong> of all who started`;
+            if (parseFloat(stepPercentage) < 100) {
+                secondaryMessage += ` · <strong>${stepPercentage}%</strong> converted from previous step`;
+            }
+        }
+
+        // Wrapper for centering
+        const wrapper = document.createElement('div');
+        wrapper.className = 'funnel-step-wrapper';
+
+        const stepDiv = document.createElement('div');
+        stepDiv.className = 'funnel-step';
+        if (step.count === 0) {
+            stepDiv.classList.add('funnel-step-dead');
+        }
+        stepDiv.style.width = `${widthPercent}%`;
+
+        let dropOffHtml = '';
+        if (index > 0 && dropOffCount > 0) {
+            dropOffHtml = `
+                <div class="funnel-step-dropoff">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:12px;height:12px"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+                    ${dropOffCount.toLocaleString()} dropped (${dropOffPercent}%)
+                </div>
+            `;
+        }
+
+        stepDiv.innerHTML = `
+            <div class="funnel-step-number">${index + 1}</div>
+            <div class="funnel-step-header">
+                <span class="funnel-step-name">${step.step}</span>
+            </div>
+            <div class="funnel-step-primary">${primaryMessage}</div>
+            <div class="funnel-step-secondary">${secondaryMessage}</div>
+            ${dropOffHtml}
+        `;
+
+        wrapper.appendChild(stepDiv);
+        container.appendChild(wrapper);
+
+        if (index < funnel.length - 1) {
+            const arrow = document.createElement('div');
+            arrow.className = 'funnel-arrow';
+            arrow.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 5v14M5 12l7 7 7-7"/></svg>';
+            container.appendChild(arrow);
+        }
+    });
+}
+
+let currentFunnelData = null;
+
+function exportFunnelData(format) {
+    if (!currentFunnelData) {
+        showToast('No funnel data to export. Please analyze a funnel first.', 'warning');
+        return;
+    }
+
+    let content, filename, mimeType;
+
+    if (format === 'csv') {
+        content = generateFunnelCSV(currentFunnelData);
+        filename = `respectlytics_funnel_${new Date().toISOString().split('T')[0]}.csv`;
+        mimeType = 'text/csv';
+    } else if (format === 'json') {
+        // Combine funnel data with timing data for complete export
+        const exportData = {
+            ...currentFunnelData,
+            timing: currentTimingData || null
+        };
+        content = JSON.stringify(exportData, null, 2);
+        filename = `respectlytics_funnel_${new Date().toISOString().split('T')[0]}.json`;
+        mimeType = 'application/json';
+    }
+
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+function generateFunnelCSV(data) {
+    let csv = 'Respectlytics Funnel Analysis Export\n';
+    csv += `Export Date: ${new Date().toISOString()}\n`;
+    csv += `Total Sessions Analyzed: ${data.total_sessions_analyzed}\n`;
+    csv += `Selected Steps: ${selectedEvents.join(' → ')}\n\n`;
+
+    csv += 'Step,Event Name,Count,% of Initial,% from Previous,Drop-off Count,Drop-off %\n';
+
+    const firstCount = data.funnel[0]?.count || 0;
+
+    data.funnel.forEach((step, index) => {
+        const prevCount = index > 0 ? data.funnel[index - 1].count : firstCount;
+        const percentage = firstCount > 0 ? ((step.count / firstCount) * 100).toFixed(1) : 0;
+        const stepPercentage = prevCount > 0 ? ((step.count / prevCount) * 100).toFixed(1) : 100;
+        const dropOffCount = index > 0 ? prevCount - step.count : 0;
+        const dropOffPercent = index > 0 && prevCount > 0 ? (((prevCount - step.count) / prevCount) * 100).toFixed(1) : 0;
+
+        csv += `${index + 1},"${step.step}",${step.count},${percentage}%,${stepPercentage}%,${dropOffCount},${dropOffPercent}%\n`;
+    });
+
+    // Add timing data if available
+    if (currentTimingData && currentTimingData.transitions && currentTimingData.transitions.length > 0) {
+        csv += '\n\nTransition Timing\n';
+        csv += 'From,To,Median (s),Mean (s),P25 (s),P75 (s),Sessions\n';
+
+        currentTimingData.transitions.forEach(t => {
+            csv += `"${t.from}","${t.to}",${t.median_seconds || 0},${t.mean_seconds || 0},${t.p25_seconds || 0},${t.p75_seconds || 0},${t.sessions_analyzed || 0}\n`;
+        });
+
+        // Add summary
+        const summary = currentTimingData.funnel_summary || {};
+        csv += '\n\nFunnel Summary\n';
+        csv += `Median Total Time (s): ${summary.median_total_seconds || 0}\n`;
+        csv += `Mean Total Time (s): ${summary.mean_total_seconds || 0}\n`;
+        csv += `Completion Rate: ${((summary.completion_rate || 0) * 100).toFixed(1)}%\n`;
+    }
+
+    return csv;
+}
+
+// Initialize on page load
+if (appKey) {
+    loadEventTypes();
+}
+</script>
+{% endblock %}

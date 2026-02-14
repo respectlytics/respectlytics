@@ -1,0 +1,1346 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% if admin_mode %}Admin Docs - Respectlytics{% else %}REST API Reference - Documentation | Respectlytics{% endif %}</title>
+
+    {% if not admin_mode %}
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="Respectlytics REST API reference. Explore all endpoints, request/response schemas, and authentication guides. Privacy-first mobile analytics API docs →">
+    <meta name="keywords" content="respectlytics api, mobile analytics api, rest api reference, api documentation, privacy analytics api, event tracking api">
+    <meta name="author" content="Respectlytics">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://respectlytics.com/api/v1/reference/">
+
+    <!-- OpenGraph -->
+    <meta property="og:title" content="REST API Reference - Documentation | Respectlytics">
+    <meta property="og:description" content="Explore the Respectlytics REST API. Endpoints, schemas, authentication, and code examples for privacy-first mobile analytics.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://respectlytics.com/api/v1/reference/">
+    <meta property="og:image" content="https://respectlytics.com{% static 'images/og/sdk-documentation.png' %}">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="Respectlytics REST API Reference Documentation">
+    <meta property="og:site_name" content="Respectlytics">
+    <meta property="og:locale" content="en_US">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="REST API Reference - Documentation | Respectlytics">
+    <meta name="twitter:description" content="Explore the Respectlytics REST API. Endpoints, schemas, authentication, and code examples for privacy-first mobile analytics.">
+    <meta name="twitter:image" content="https://respectlytics.com{% static 'images/og/sdk-documentation.png' %}">
+    <meta name="twitter:image:alt" content="Respectlytics REST API Reference Documentation">
+
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "TechArticle",
+      "name": "Respectlytics REST API Reference",
+      "headline": "REST API Reference - Interactive Documentation",
+      "description": "Complete REST API reference for Respectlytics privacy-first mobile analytics. Explore endpoints, request/response schemas, authentication methods, and code examples.",
+      "url": "https://respectlytics.com/api/v1/reference/",
+      "inLanguage": "en",
+      "datePublished": "2025-12-01",
+      "dateModified": "2026-02-10",
+      "author": {
+        "@type": "Organization",
+        "name": "Respectlytics",
+        "url": "https://respectlytics.com"
+      },
+      "publisher": {
+        "@type": "Organization",
+        "name": "Respectlytics",
+        "url": "https://respectlytics.com"
+      },
+      "about": {
+        "@type": "WebAPI",
+        "name": "Respectlytics API",
+        "documentation": "https://respectlytics.com/api/v1/reference/",
+        "description": "Privacy-first mobile analytics REST API"
+      },
+      "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": "https://respectlytics.com/api/v1/reference/"
+      }
+    }
+    </script>
+    {% endif %}
+
+    <!-- Favicons -->
+    <link rel="icon" type="image/x-icon" href="{% static 'favicon/favicon.ico' %}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{% static 'favicon/favicon-32x32.png' %}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{% static 'favicon/favicon-16x16.png' %}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{% static 'favicon/apple-touch-icon.png' %}">
+    <link rel="manifest" href="{% static 'favicon/site.webmanifest' %}">
+    <meta name="theme-color" content="#5856d6">
+
+    <style>
+        :root {
+            --primary-500: #667eea;
+            --primary-600: #5b6fd8;
+            --slate-900: #0f172a;
+            --slate-800: #1e293b;
+            --slate-700: #334155;
+            --slate-600: #475569;
+            --slate-500: #64748b;
+            --slate-400: #94a3b8;
+            --slate-300: #cbd5e1;
+            --slate-200: #e2e8f0;
+            --slate-100: #f1f5f9;
+            --slate-50: #f8fafc;
+            --indigo-400: #818cf8;
+            --indigo-500: #6366f1;
+            --space-2: 0.5rem;
+            --space-3: 0.75rem;
+            --space-4: 1rem;
+            --space-6: 1.5rem;
+            --space-8: 2rem;
+            --space-12: 3rem;
+            --radius-md: 0.5rem;
+            --radius-lg: 0.75rem;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: var(--slate-900);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: rgba(30, 41, 59, 0.95);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: var(--space-4) 0;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 var(--space-12);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo {
+            font-size: 1.5625rem;
+            font-weight: 900;
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            color: var(--slate-50);
+            text-decoration: none;
+            letter-spacing: -0.02em;
+        }
+        
+        .logo-mark {
+            width: 8px;
+            height: 28px;
+            background: linear-gradient(135deg, #5856d6 0%, #7c3aed 100%);
+            border-radius: 2px;
+        }
+        
+        nav {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+        }
+        
+        nav ul {
+            display: flex;
+            list-style: none;
+            gap: var(--space-2);
+            margin-right: var(--space-6);
+        }
+        
+        nav a {
+            color: var(--slate-400);
+            text-decoration: none;
+            padding: var(--space-2) var(--space-4);
+            border-radius: var(--radius-md);
+            transition: all 0.2s;
+            font-weight: 500;
+            font-size: 1rem;
+        }
+        
+        nav a:hover {
+            background: var(--slate-800);
+            color: var(--indigo-400);
+        }
+        
+        nav a.active {
+            background: var(--slate-800);
+            color: var(--indigo-400);
+        }
+        
+        .nav-btn {
+            padding: var(--space-3) var(--space-6) !important;
+            background: linear-gradient(135deg, #5856d6 0%, #7c3aed 100%) !important;
+            color: white !important;
+            font-weight: 700 !important;
+            border-radius: var(--radius-lg) !important;
+            box-shadow: 0 4px 12px rgba(88, 86, 214, 0.3);
+            font-size: 1rem !important;
+        }
+        
+        .nav-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(88, 86, 214, 0.4);
+        }
+        
+        .nav-btn-secondary {
+            background: transparent !important;
+            color: var(--slate-400) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        }
+        
+        .nav-btn-secondary:hover {
+            background: var(--slate-800) !important;
+            color: var(--slate-50) !important;
+            border-color: rgba(255, 255, 255, 0.2) !important;
+        }
+        
+        #redoc-container {
+            position: fixed;
+            top: 72px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            overflow: auto;
+        }
+        
+        /* ==============================
+           Sidebar Navigation Enhancements - Dark Theme
+           ============================== */
+        nav[role="navigation"] {
+            background: var(--slate-800) !important;
+            border-right: 1px solid rgba(255, 255, 255, 0.1) !important;
+        }
+
+        /* Search input */
+        nav[role="navigation"] input[type="text"],
+        nav[role="navigation"] input[type="search"],
+        nav[role="navigation"] .search-input {
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            background: var(--slate-900) !important;
+            color: var(--slate-50) !important;
+            border-radius: 8px !important;
+            padding: 10px 12px !important;
+            font-size: 15px !important;
+        }
+        
+        nav[role="navigation"] input::placeholder {
+            color: var(--slate-400) !important;
+        }
+
+        /* Top-level section links (from Info markdown headings) */
+        nav[role="navigation"] > ul > li > a {
+            text-transform: uppercase !important;
+            letter-spacing: .06em !important;
+            color: var(--slate-400) !important;
+            font-weight: 700 !important;
+            font-size: 13px !important;
+            padding: 10px 20px !important;
+            margin-top: 6px !important;
+        }
+
+        nav[role="navigation"] > ul > li > a:hover {
+            color: var(--slate-50) !important;
+            background: var(--slate-700) !important;
+            border-radius: 6px !important;
+        }
+
+        /* Collapsible tag header (e.g., "api") */
+        nav[role="navigation"] > ul > li > div {
+            background: var(--slate-700) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            color: var(--slate-50) !important;
+            border-radius: 10px !important;
+            padding: 12px 16px !important;
+            margin: 10px 12px !important;
+            font-weight: 700 !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 10px !important;
+        }
+
+        nav[role="navigation"] > ul > li > div:hover {
+            background: rgba(99, 102, 241, 0.2) !important;
+            border-color: var(--indigo-400) !important;
+        }
+
+        /* Endpoint items */
+        nav[role="navigation"] li ul li > a {
+            display: flex !important;
+            align-items: center !important;
+            gap: 10px !important;
+            padding: 10px 16px 10px 18px !important;
+            margin: 2px 8px !important;
+            border-left: 3px solid transparent !important;
+            border-radius: 6px !important;
+            color: var(--slate-300) !important;
+            font-size: 15px !important;
+            font-weight: 500 !important;
+        }
+
+        nav[role="navigation"] li ul li > a:hover {
+            background: var(--slate-700) !important;
+            border-left-color: var(--indigo-400) !important;
+            color: var(--slate-50) !important;
+        }
+
+        nav[role="navigation"] li ul li > a.active {
+            background: rgba(99, 102, 241, 0.2) !important;
+            border-left-color: var(--indigo-400) !important;
+            color: var(--slate-50) !important;
+            font-weight: 600 !important;
+        }
+
+        /* HTTP method badges inside sidebar */
+        nav[role="navigation"] .http-verb,
+        nav[role="navigation"] .operation-type {
+            min-width: 42px !important;
+            text-align: center !important;
+            border-radius: 999px !important;
+            padding: 4px 8px !important;
+            font-size: 12px !important;
+            font-weight: 800 !important;
+            letter-spacing: .02em !important;
+        }
+        nav[role="navigation"] .http-verb.get,
+        nav[role="navigation"] .operation-type.get {
+            background: rgba(16, 185, 129, 0.2) !important; /* emerald with opacity */
+            color: #10b981 !important; /* emerald-500 */
+        }
+        nav[role="navigation"] .http-verb.post,
+        nav[role="navigation"] .operation-type.post {
+            background: rgba(99, 102, 241, 0.2) !important; /* indigo with opacity */
+            color: #818cf8 !important; /* indigo-400 */
+        }
+        nav[role="navigation"] .http-verb.put,
+        nav[role="navigation"] .operation-type.put {
+            background: rgba(245, 158, 11, 0.2) !important; /* amber with opacity */
+            color: #f59e0b !important; /* amber-500 */
+        }
+        nav[role="navigation"] .http-verb.delete,
+        nav[role="navigation"] .operation-type.delete {
+            background: rgba(239, 68, 68, 0.2) !important; /* red with opacity */
+            color: #ef4444 !important; /* red-500 */
+        }
+
+        /* Sidebar icons and arrows - Dark Theme */
+        nav[role="navigation"] svg,
+        nav[role="navigation"] path,
+        nav[role="navigation"] polygon {
+            fill: var(--slate-400) !important;
+            stroke: var(--slate-400) !important;
+        }
+
+        nav[role="navigation"] li:hover svg,
+        nav[role="navigation"] li:hover path,
+        nav[role="navigation"] li:hover polygon,
+        nav[role="navigation"] li.active svg,
+        nav[role="navigation"] li.active path,
+        nav[role="navigation"] li.active polygon {
+            fill: var(--indigo-400) !important;
+            stroke: var(--indigo-400) !important;
+        }
+
+        /* Scrollbar styling for sidebar */
+        nav[role="navigation"]::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        nav[role="navigation"]::-webkit-scrollbar-track {
+            background: var(--slate-900);
+        }
+
+        nav[role="navigation"]::-webkit-scrollbar-thumb {
+            background: var(--slate-600);
+            border-radius: 3px;
+        }
+
+        nav[role="navigation"]::-webkit-scrollbar-thumb:hover {
+            background: var(--slate-500);
+        }
+
+        /* Stronger hierarchy and readable content inside ReDoc - Dark Theme */
+        #redoc-container h1 {
+            font-size: 2.8125rem;
+            font-weight: 900;
+            color: var(--slate-50) !important;
+            letter-spacing: -0.03em;
+            margin: 0 0 1rem 0;
+            line-height: 1.15;
+        }
+
+        #redoc-container h2 {
+            font-size: 1.8125rem;
+            font-weight: 800;
+            color: var(--slate-50) !important;
+            margin: 2.25rem 0 0.75rem 0;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+            letter-spacing: -0.015em;
+        }
+
+        #redoc-container h3 {
+            font-size: 1.3125rem;
+            font-weight: 700;
+            color: var(--slate-50) !important;
+            margin: 1.5rem 0 0.5rem 0;
+        }
+
+        #redoc-container p {
+            color: var(--slate-400) !important;
+            line-height: 1.8;
+            margin: 0 0 0.85rem 0;
+            font-size: 1.0625rem;
+        }
+
+        #redoc-container ul, #redoc-container ol {
+            margin: 0.5rem 0 1rem 1.25rem;
+            color: var(--slate-400) !important;
+        }
+
+        #redoc-container li { 
+            margin: 0.25rem 0; 
+            color: var(--slate-400) !important;
+        }
+
+        #redoc-container code {
+            background: var(--slate-800) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            color: var(--indigo-400) !important;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: "SF Mono", Monaco, Inconsolata, "Fira Code", "Courier New", monospace;
+            font-size: 0.9625em;
+        }
+
+        #redoc-container hr {
+            border: none;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            margin: 0.75rem 0;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 0 var(--space-4);
+            }
+            
+            nav ul {
+                display: none;
+            }
+        }
+    </style>
+    <script src="https://cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js"></script>
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <a href="/" class="logo">
+                <span class="logo-mark"></span>
+                <span>Respectlytics</span>
+                {% if admin_mode %}
+                <span style="margin-left:8px; font-size:13px; font-weight:700; color:#4338ca; background:#eef2ff; border:1px solid #e0e7ff; padding:2px 8px; border-radius:999px;">ADMIN</span>
+                {% endif %}
+            </a>
+            <nav>
+                <ul>
+                    <li><a href="/">Home</a></li>
+                    <li><a href="/sdk/">SDK Docs</a></li>
+                    {% if admin_mode %}
+                        <li><a href="/swagger/">Swagger</a></li>
+                        <li><a href="/redoc/" class="active">API Reference (Admin)</a></li>
+                    {% else %}
+                        <li><a href="/api/v1/reference/swagger/">Swagger</a></li>
+                        <li><a href="/api/v1/reference/" class="active">API Reference</a></li>
+                    {% endif %}
+                </ul>
+                <a href="/login/" class="nav-btn-secondary">Sign In</a>
+                <a href="/register/" class="nav-btn">Get Started</a>
+            </nav>
+        </div>
+    </header>
+    
+    <div id="redoc-container">
+        {% if not admin_mode %}
+        <div id="redoc-fallback-content">
+            <h1>Respectlytics REST API Reference</h1>
+            <p>
+                Explore endpoints, request and response schemas, authentication details, and integration guidance for the Respectlytics API.
+                The interactive documentation loads below when JavaScript is available.
+            </p>
+
+            <h2>Quick Links</h2>
+            <ul>
+                <li><strong>OpenAPI Schema (JSON):</strong> <a href="/api/v1/reference/schema.json">/api/v1/reference/schema.json</a></li>
+                <li><strong>OpenAPI Schema (YAML):</strong> <a href="/api/v1/reference/schema.yaml">/api/v1/reference/schema.yaml</a></li>
+                <li><strong>Interactive API Explorer:</strong> <a href="/api/v1/reference/swagger/">/api/v1/reference/swagger/</a></li>
+            </ul>
+
+            <h2>Authentication</h2>
+            <p>
+                API requests use your App Key in the <code>X-App-Key</code> header.
+                Create and manage keys from your dashboard settings.
+            </p>
+
+            <h2>Primary Endpoints</h2>
+            <ul>
+                <li><strong>POST /api/v1/events/</strong> — Ingest analytics events.</li>
+                <li><strong>POST /api/v1/events/batch/</strong> — Ingest events in batch.</li>
+                <li><strong>GET /api/v1/stats/</strong> — Retrieve aggregated analytics metrics.</li>
+                <li><strong>POST /api/v1/events/delete/</strong> — Delete events in a selected date range with optional filters.</li>
+            </ul>
+        </div>
+        <noscript>
+            <div>
+                <p>Interactive API rendering requires JavaScript. Use the links above for schema access and the Swagger explorer.</p>
+            </div>
+        </noscript>
+        {% endif %}
+    </div>
+    
+    <style>
+        /* Enhanced ReDoc Styling */
+        .redoc-wrap {
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif !important;
+        }
+        
+        /* Sidebar Menu Styling */
+        [role="navigation"] {
+            background: #1e293b !important;
+            border-right: 1px solid rgba(255, 255, 255, 0.1) !important;
+            padding: 20px 0 !important;
+        }
+        
+        /* Menu Section Headers */
+        [role="navigation"] > ul > li > label {
+            padding: 8px 20px !important;
+            font-size: 12px !important;
+            font-weight: 600 !important;
+            color: #64748b !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.1em !important;
+            background: transparent !important;
+            border: none !important;
+            margin: 16px 0 4px 0 !important;
+        }
+        
+        /* Menu Items */
+        [role="navigation"] li > a {
+            padding: 10px 20px !important;
+            font-size: 15px !important;
+            font-weight: 500 !important;
+            color: #cbd5e1 !important;
+            transition: all 0.15s ease !important;
+            border-left: none !important;
+            margin: 0 !important;
+            display: flex !important;
+            align-items: center !important;
+            background: transparent !important;
+        }
+        
+        [role="navigation"] li > a:hover {
+            background: #334155 !important;
+            color: #818cf8 !important;
+        }
+        
+        [role="navigation"] li > a.active {
+            background: rgba(99, 102, 241, 0.15) !important;
+            color: #818cf8 !important;
+            font-weight: 600 !important;
+        }
+        
+        /* Operation Tags (GET, POST, etc) in sidebar */
+        [role="navigation"] .operation-type {
+            font-weight: 700 !important;
+            padding: 3px 8px !important;
+            border-radius: 4px !important;
+            font-size: 11px !important;
+            letter-spacing: 0.3px !important;
+            margin-right: 8px !important;
+        }
+        
+        /* Content Area Headers - ALL BOLD AND LARGER */
+        h1 {
+            font-size: 3.0625rem !important;
+            font-weight: 900 !important;
+            color: #f8fafc !important;
+            margin-bottom: 0.75rem !important; /* reduced */
+            margin-top: 1.5rem !important;     /* reduced */
+            letter-spacing: -0.03em !important;
+            line-height: 1.1 !important;
+        }
+        
+        h2 {
+            font-size: 2.3125rem !important;
+            font-weight: 800 !important;
+            color: #f1f5f9 !important;
+            margin-top: 1.75rem !important;     /* reduced */
+            margin-bottom: 0.75rem !important;  /* reduced */
+            padding-bottom: 0.5rem !important;  /* reduced */
+            border-bottom: 3px solid #667eea !important;
+            letter-spacing: -0.02em !important;
+        }
+        
+        h3 {
+            font-size: 1.8125rem !important;
+            font-weight: 700 !important;
+            color: #e2e8f0 !important;
+            margin-top: 1.25rem !important;     /* reduced */
+            margin-bottom: 0.5rem !important;   /* reduced */
+            letter-spacing: -0.01em !important;
+        }
+        
+        h4 {
+            font-size: 1.4375rem !important;
+            font-weight: 700 !important;
+            color: #cbd5e1 !important;
+            margin-top: 2rem !important;
+            margin-bottom: 1rem !important;
+        }
+        
+        h5 {
+            font-size: 1.1875rem !important;
+            font-weight: 700 !important;
+            color: #cbd5e1 !important;
+            margin-top: 1.75rem !important;
+            margin-bottom: 0.875rem !important;
+        }
+        
+        h6 {
+            font-size: 1.0625rem !important;
+            font-weight: 700 !important;
+            color: #94a3b8 !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.05em !important;
+            margin-top: 1.5rem !important;
+            margin-bottom: 0.75rem !important;
+        }
+        
+        /* Paragraph and Text Spacing */
+        p {
+            line-height: 1.75 !important;
+            margin-bottom: 1.25rem !important;
+            color: #94a3b8 !important;
+            font-size: 1.0625rem !important;
+        }
+        
+        /* Code Blocks */
+        code {
+            background: #1e293b !important;
+            padding: 3px 8px !important;
+            border-radius: 5px !important;
+            font-size: 0.9375em !important;
+            color: #818cf8 !important;
+            font-family: "SF Mono", Monaco, Inconsolata, "Fira Code", "Courier New", monospace !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            font-weight: 500 !important;
+        }
+        
+        /* Right Panel - Dark Theme (Reverted) */
+        pre {
+            background: #1a1a2e !important;
+            padding: 1.75rem !important;
+            border-radius: 8px !important;
+            margin: 1.5rem 0 !important;
+            overflow-x: auto !important;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+        }
+        
+        pre code {
+            background: transparent !important;
+            color: #e2e8f0 !important;
+            border: none !important;
+            padding: 0 !important;
+            font-weight: 400 !important;
+        }
+        
+        /* Request/Response Samples Headers - HIGH CONTRAST */
+        .redoc-json h4,
+        .react-tabs__tab-panel h4,
+        div[role="tabpanel"] h4,
+        [class*="SampleControls"] span,
+        [class*="Tab-"],
+        div[class*="dropdown"] button {
+            color: #f8fafc !important;
+            font-weight: 700 !important;
+            font-size: 1.1875rem !important;
+            text-shadow: none !important;
+            margin-bottom: 1rem !important;
+            background: transparent !important;
+        }
+        
+        /* Tab Controls in Right Panel */
+        button[role="tab"],
+        .react-tabs__tab {
+            color: #cbd5e1 !important;
+            font-weight: 600 !important;
+            background: rgba(255, 255, 255, 0.1) !important;
+            border: 1px solid rgba(255, 255, 255, 0.2) !important;
+            padding: 8px 16px !important;
+            border-radius: 6px !important;
+            transition: all 0.2s ease !important;
+        }
+        
+        button[role="tab"]:hover,
+        .react-tabs__tab:hover {
+            background: rgba(255, 255, 255, 0.15) !important;
+            color: #f1f5f9 !important;
+        }
+        
+        button[role="tab"][aria-selected="true"],
+        .react-tabs__tab--selected {
+            background: #667eea !important;
+            color: #ffffff !important;
+            font-weight: 700 !important;
+            border-color: #667eea !important;
+        }
+        
+        /* Tables */
+        table {
+            margin: 1.5rem 0 !important;
+            border-collapse: separate !important;
+            border-spacing: 0 !important;
+            border-radius: 8px !important;
+            overflow: hidden !important;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3) !important;
+            background: #1e293b !important;
+        }
+        
+        th {
+            background: linear-gradient(180deg, #667eea 0%, #5b6fd8 100%) !important;
+            color: white !important;
+            font-weight: 600 !important;
+            padding: 12px 16px !important;
+            text-align: left !important;
+            font-size: 0.9375rem !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.05em !important;
+        }
+        
+        td {
+            padding: 12px 16px !important;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+            font-size: 1rem !important;
+            color: #e2e8f0 !important;
+            background: #1e293b !important;
+        }
+        
+        tr:hover td {
+            background: #334155 !important;
+        }
+        
+        /* Request/Response Samples */
+        .redoc-json {
+            border-radius: 8px !important;
+            overflow: hidden !important;
+        }
+        
+        /* Endpoint Path */
+        .api-content h1 code,
+        .api-content h2 code {
+            background: #667eea !important;
+            color: white !important;
+            padding: 6px 12px !important;
+            border-radius: 6px !important;
+            font-size: 0.9625em !important;
+            font-weight: 600 !important;
+        }
+        
+        /* HTTP Method Badges */
+        .http-verb {
+            font-weight: 700 !important;
+            padding: 6px 12px !important;
+            border-radius: 6px !important;
+            font-size: 14px !important;
+            letter-spacing: 0.5px !important;
+        }
+        
+        /* Description Lists */
+        dl {
+            margin: 1rem 0 !important;
+        }
+        
+        dt {
+            font-weight: 600 !important;
+            color: #e2e8f0 !important;
+            margin-top: 1rem !important;
+            margin-bottom: 0.5rem !important;
+        }
+        
+        dd {
+            margin-left: 0 !important;
+            margin-bottom: 1rem !important;
+            color: #94a3b8 !important;
+            line-height: 1.6 !important;
+        }
+        
+        /* Info Sections */
+        blockquote {
+            border-left: 4px solid #667eea !important;
+            background: rgba(102, 126, 234, 0.1) !important;
+            padding: 0.75rem 1rem !important; /* reduced */
+            margin: 1rem 0 !important;         /* reduced */
+            border-radius: 8px !important;
+            color: #94a3b8 !important;
+        }
+        
+        /* Links */
+        a {
+            color: #818cf8 !important;
+            text-decoration: none !important;
+            font-weight: 500 !important;
+            transition: color 0.2s ease !important;
+        }
+        
+        a:hover {
+            color: #a5b4fc !important;
+            text-decoration: underline !important;
+        }
+        
+        /* Inline endpoint badge styling used in API Root lists */
+        .endpoint-inline {
+            display: inline-block !important;
+            background: #1e293b !important;
+            color: #818cf8 !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            border-radius: 6px !important;
+            padding: 1px 8px !important;
+            margin-right: 6px !important;
+            font-family: "SF Mono", Monaco, Inconsolata, "Fira Code", monospace !important;
+            font-weight: 500 !important;
+            font-size: 1.0125em !important;   /* slightly smaller to account for monospace weight */
+            line-height: 1.2 !important;
+            letter-spacing: 0 !important;
+        }
+        
+        /* ==============================
+           ENDPOINT LIST STYLING (in markdown/info sections)
+           ============================== */
+        
+        /* Target list items containing endpoint information */
+        #redoc-container ul li {
+            margin: 0.5rem 0 !important;
+            list-style: none !important;
+            position: relative !important;
+            padding-left: 0 !important;
+        }
+        
+        /* Style for HTTP method + endpoint pattern */
+        #redoc-container ul li strong {
+            font-weight: 700 !important;
+            font-size: 1rem !important;
+            display: inline-block !important;
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+        
+        /* Color code HTTP methods in lists */
+        #redoc-container ul li:has(strong:first-child) {
+            padding: 12px 16px !important;
+            background: rgba(255, 255, 255, 0.03) !important;
+            border-radius: 8px !important;
+            border-left: 4px solid transparent !important;
+            transition: all 0.2s ease !important;
+            margin: 8px 0 !important;
+        }
+        
+        #redoc-container ul li:has(strong:first-child):hover {
+            background: rgba(255, 255, 255, 0.06) !important;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+        }
+        
+        /* POST endpoints - Blue */
+        #redoc-container ul li:has(strong:first-child):has-text("POST") {
+            border-left-color: #3b82f6 !important;
+            background: rgba(59, 130, 246, 0.08) !important;
+        }
+        
+        #redoc-container ul li:has(strong:first-child):has-text("POST"):hover {
+            background: rgba(59, 130, 246, 0.14) !important;
+        }
+        
+        /* GET endpoints - Green */
+        #redoc-container ul li:has(strong:first-child):has-text("GET") {
+            border-left-color: #10b981 !important;
+            background: rgba(16, 185, 129, 0.08) !important;
+        }
+        
+        #redoc-container ul li:has(strong:first-child):has-text("GET"):hover {
+            background: rgba(16, 185, 129, 0.14) !important;
+        }
+        
+        /* Alternative approach using content matching */
+        #redoc-container ul li strong:first-child {
+            padding: 4px 10px !important;
+            border-radius: 6px !important;
+            margin-right: 10px !important;
+            font-size: 13px !important;
+            letter-spacing: 0.5px !important;
+            font-weight: 800 !important;
+        }
+        
+        /* Apply colors based on text content */
+        #redoc-container p strong:first-of-type,
+        #redoc-container li strong:first-of-type {
+            font-family: "SF Mono", Monaco, Inconsolata, monospace !important;
+        }
+        
+        /* Response Section Alignment Fix - Target BUTTON elements specifically */
+        /* ReDoc uses button elements for response rows */
+        #redoc-container button[class*="sc-"],
+        div[id="redoc-container"] button[class*="sc-"],
+        body #redoc-container button[class*="sc-"] {
+            display: flex !important;
+            flex-direction: row !important;
+            align-items: baseline !important;
+            gap: 12px !important;
+            text-align: left !important;
+        }
+        
+        #redoc-container button[class*="sc-"] > strong:first-child,
+        #redoc-container button[class*="sc-"] > strong,
+        body #redoc-container button[class*="sc-"] > strong:first-child {
+            display: inline-block !important;
+            flex: 0 0 auto !important;
+            width: auto !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            line-height: 1.0 !important;
+            vertical-align: baseline !important;
+        }
+        
+        #redoc-container button[class*="sc-"] > div,
+        body #redoc-container button[class*="sc-"] > div {
+            display: block !important;
+            flex: 1 !important;
+            text-align: left !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            line-height: 1.5 !important;
+        }
+        
+        /* Also target DIV containers that might wrap responses */
+        #redoc-container div[class*="sc-"] > strong:first-child {
+            display: inline-block !important;
+            float: left !important;
+            margin-right: 12px !important;
+        }
+        
+        /* ==============================
+           ReDoc-specific dark theme fixes
+           ============================== */
+        
+        /* Force middle panel dark background */
+        .redoc-wrap > div[class*="sc-"]:not(:first-child):not(:last-child) {
+            background: #0f172a !important;
+        }
+        
+        /* Schema property names & labels */
+        #redoc-container [class*="property-name"],
+        #redoc-container [class*="PropertyName"] {
+            color: #e2e8f0 !important;
+        }
+        
+        /* Type labels (string, integer, etc.) */
+        #redoc-container span[class*="type"],
+        #redoc-container [class*="Type"] > span {
+            color: #818cf8 !important;
+        }
+        
+        /* Required labels */
+        #redoc-container [class*="required"],
+        #redoc-container [class*="Required"] {
+            color: #f87171 !important;
+        }
+        
+        /* Schema/field description text */
+        #redoc-container [class*="description"] p,
+        #redoc-container [class*="Description"] p {
+            color: #94a3b8 !important;
+        }
+        
+        /* Expandable section buttons */
+        #redoc-container button[class*="sc-"] {
+            color: #cbd5e1 !important;
+        }
+        
+        /* Prevent light hover backgrounds on property/parameter rows */
+        #redoc-container tr:hover,
+        #redoc-container [class*="row"]:hover,
+        #redoc-container [class*="Row"]:hover {
+            background: rgba(99, 102, 241, 0.06) !important;
+        }
+        
+        /* Property/schema table cell borders */
+        #redoc-container [class*="cell"],
+        #redoc-container [class*="Cell"] {
+            border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+        
+        /* Enum values */
+        #redoc-container [class*="enum"],
+        #redoc-container [class*="Enum"] {
+            color: #fbbf24 !important;
+            background: rgba(251, 191, 36, 0.1) !important;
+            border-color: rgba(251, 191, 36, 0.2) !important;
+        }
+        
+        /* Clickable/expandable areas - prevent lighter hover */
+        #redoc-container [aria-expanded]:hover {
+            background: rgba(99, 102, 241, 0.08) !important;
+        }
+        
+        /* Authorization / Security section text */
+        #redoc-container [class*="security"],
+        #redoc-container [class*="Security"],
+        #redoc-container [class*="auth"],
+        #redoc-container [class*="Auth"] {
+            color: #cbd5e1 !important;
+        }
+        
+        /* Section labels (AUTHORIZATIONS, QUERY PARAMETERS, etc.) */
+        #redoc-container [class*="label"],
+        #redoc-container [class*="Label"] {
+            color: #94a3b8 !important;
+        }
+        
+        /* Dropdowns and selectors */
+        #redoc-container select,
+        #redoc-container [class*="dropdown"] {
+            background: #1e293b !important;
+            color: #e2e8f0 !important;
+            border-color: rgba(255, 255, 255, 0.15) !important;
+        }
+        
+        /* Prevent any styled-component div from having light hover */
+        #redoc-container div[class*="sc-"]:hover {
+            background-color: inherit;
+        }
+        
+        /* General span text within content area */
+        #redoc-container span {
+            color: inherit;
+        }
+        
+        /* ==============================
+           ReDoc Parameter/Schema Table Dark Theme
+           ============================== */
+        
+        /* ReDoc renders parameter tables as divs with table role */
+        #redoc-container table {
+            background: #1e293b !important;
+        }
+        
+        #redoc-container table td,
+        #redoc-container table th {
+            border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+        
+        #redoc-container table td {
+            color: #e2e8f0 !important;
+            background: #1e293b !important;
+        }
+        
+        #redoc-container table tr:hover td {
+            background: #334155 !important;
+        }
+        
+        /* Schema field rows in ReDoc (styled-components) */
+        #redoc-container [data-section-id] table,
+        #redoc-container [class*="-table"],
+        #redoc-container [class*="Table"] {
+            background: transparent !important;
+        }
+        
+        /* All text within the middle content panel */
+        #redoc-container [class*="sc-"] {
+            color: #cbd5e1;
+        }
+        
+        /* Field/parameter names - bright white */
+        #redoc-container [kind="field"] > span:first-child,
+        #redoc-container [class*="property"] > span:first-child {
+            color: #f1f5f9 !important;
+        }
+        
+        /* Constraint text (e.g. "required", "<= 100") */
+        #redoc-container [class*="constraint"],
+        #redoc-container [class*="Constraint"] {
+            color: #fbbf24 !important;
+        }
+        
+        /* Default value indicators */
+        #redoc-container [class*="default"],
+        #redoc-container [class*="Default"] {
+            color: #94a3b8 !important;
+        }
+        
+        /* Example values */
+        #redoc-container [class*="example"],
+        #redoc-container [class*="Example"] {
+            color: #818cf8 !important;
+        }
+    </style>
+    
+    <script>
+        const redocContainer = document.getElementById('redoc-container');
+        const redocFallback = document.getElementById('redoc-fallback-content');
+
+        function showRedocFallbackStatus(message) {
+            if (!redocFallback) {
+                return;
+            }
+            const status = document.createElement('p');
+            status.textContent = message;
+            redocFallback.appendChild(status);
+        }
+
+        function initRedoc() {
+            if (!window.Redoc || !redocContainer) {
+                showRedocFallbackStatus('Interactive documentation is temporarily unavailable. The schema and Swagger links above remain fully available.');
+                return;
+            }
+
+            try {
+                Redoc.init('{{ spec_url|default:"/swagger.json" }}', {
+            scrollYOffset: 72,
+            hideDownloadButton: true,
+            expandResponses: '200,201',
+            requiredPropsFirst: true,
+            theme: {
+                colors: {
+                    primary: {
+                        main: '#667eea'
+                    },
+                    success: {
+                        main: '#10b981'
+                    },
+                    warning: {
+                        main: '#f59e0b'
+                    },
+                    error: {
+                        main: '#ef4444'
+                    },
+                    text: {
+                        primary: '#f8fafc',
+                        secondary: '#94a3b8'
+                    }
+                },
+                typography: {
+                    fontSize: '16px',
+                    lineHeight: '1.75',
+                    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif',
+                    fontWeightRegular: '400',
+                    fontWeightBold: '600',
+                    fontWeightLight: '300',
+                    headings: {
+                        fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif',
+                        fontWeight: '700',
+                        lineHeight: '1.2'
+                    },
+                    code: {
+                        fontSize: '14px',
+                        fontFamily: '"SF Mono", Monaco, Inconsolata, "Fira Code", "Courier New", monospace',
+                        fontWeight: '400',
+                        color: '#818cf8',
+                        backgroundColor: '#1e293b'
+                    }
+                },
+                sidebar: {
+                    backgroundColor: '#1e293b',
+                    textColor: '#f8fafc',
+                    width: '280px',
+                    groupItems: {
+                        textTransform: 'uppercase'
+                    },
+                    level1Items: {
+                        textTransform: 'none'
+                    }
+                },
+                rightPanel: {
+                    backgroundColor: '#1a1a2e',
+                    textColor: '#f8fafc',
+                    width: '45%'
+                },
+                spacing: {
+                    unit: 5,
+                    sectionHorizontal: 32,
+                    sectionVertical: 24
+                }
+            }
+                }, redocContainer, function() {
+                    if (redocFallback) {
+                        redocFallback.remove();
+                    }
+                });
+            } catch (error) {
+                showRedocFallbackStatus('Interactive documentation failed to load. The schema and Swagger links above remain fully available.');
+            }
+        }
+
+        initRedoc();
+        
+        // Fix response alignment - AGGRESSIVE MUTATION OBSERVER
+        let responseElements = new Set();
+        
+        function applyFixToElement(el) {
+            const text = el.textContent || '';
+            const firstLine = text.split('\n')[0].trim();
+            
+            if (/^(1\d{2}|2\d{2}|3\d{2}|4\d{2}|5\d{2})\s+/.test(firstLine) && el.children.length >= 2) {
+                const firstChildText = el.children[0]?.textContent?.trim() || '';
+                const isFirstChildStatusCode = /^(1\d{2}|2\d{2}|3\d{2}|4\d{2}|5\d{2})$/.test(firstChildText);
+                
+                if (isFirstChildStatusCode) {
+                    responseElements.add(el);
+                    
+                    // Use style object for immediate effect
+                    el.style.display = 'flex';
+                    el.style.flexDirection = 'row';
+                    el.style.alignItems = 'baseline';
+                    el.style.gap = '12px';
+                    el.style.textAlign = 'left';
+                    
+                    el.children[0].style.display = 'inline-block';
+                    el.children[0].style.flex = '0 0 auto';
+                    el.children[0].style.lineHeight = '1.0';
+                    
+                    if (el.children[1]) {
+                        el.children[1].style.display = 'block';
+                        el.children[1].style.flex = '1';
+                        el.children[1].style.lineHeight = '1.5';
+                    }
+                    
+                    return true;
+                }
+            }
+            return false;
+        }
+        
+        function fixAllResponses() {
+            const buttons = document.querySelectorAll('#redoc-container button[class*="sc-"]');
+            let count = 0;
+            buttons.forEach(btn => {
+                if (applyFixToElement(btn)) count++;
+            });
+        }
+        
+        // Initial fix
+        setTimeout(fixAllResponses, 1000);
+        setTimeout(fixAllResponses, 2000);
+        
+        // Style endpoint lists in markdown sections
+        function styleEndpointLists() {
+            const allListItems = document.querySelectorAll('#redoc-container ul li');
+
+            allListItems.forEach(li => {
+                if (li.dataset.endpointStyled === 'true') return;
+
+                const rawText = (li.textContent || '').trim();
+                const match = rawText.match(/^(GET|POST|PUT|DELETE|PATCH)\s+([^\s]+)(\s*-\s*(.*))?$/);
+
+                if (match) {
+                    const method = match[1];
+                    const path = match[2];
+                    const desc = match[4] || '';
+
+                    // Build styled HTML: purple text on light gray background for the endpoint part
+                    const descPrefix = desc ? ' — ' : '';
+                    li.innerHTML = `<span class="endpoint-inline">${method} ${path}</span>${descPrefix}${desc}`;
+
+                    // Mark as processed
+                    li.dataset.endpointStyled = 'true';
+                }
+            });
+        }
+
+        // Expand the AUTHORIZATIONS panel by default to fix alignment
+        function expandAuthorizations() {
+            try {
+                // Try to find an element with aria-expanded and matching label
+                const candidates = Array.from(document.querySelectorAll('#redoc-container [aria-expanded]'));
+                for (const el of candidates) {
+                    const text = (el.textContent || '').trim();
+                    const expanded = el.getAttribute('aria-expanded');
+                    if (/^AUTHORIZATIONS:?/i.test(text) && expanded === 'false') {
+                        el.click();
+                        return true;
+                    }
+                }
+
+                // Fallback: find any element containing the label and click nearest button/summary
+                const any = Array.from(document.querySelectorAll('#redoc-container *')).find(el => /AUTHORIZATIONS:/i.test((el.textContent || '').trim()));
+                if (any) {
+                    let target = any.closest('button,[role="button"],summary');
+                    if (!target) {
+                        // Walk up a few levels to find a clickable region
+                        let p = any;
+                        for (let i = 0; i < 4 && p; i++) {
+                            if (p.tagName === 'BUTTON' || p.getAttribute('role') === 'button') { target = p; break; }
+                            p = p.parentElement;
+                        }
+                    }
+                    if (target && target.getAttribute('aria-expanded') !== 'true') {
+                        target.click();
+                        return true;
+                    }
+                }
+            } catch (e) {
+                // noop
+            }
+            return false;
+        }
+        
+        // Apply endpoint styling after ReDoc loads
+        setTimeout(styleEndpointLists, 1500);
+        setTimeout(styleEndpointLists, 3000);
+    setTimeout(expandAuthorizations, 1600);
+    setTimeout(expandAuthorizations, 3200);
+        
+        // Watch for any changes to response elements and immediately re-apply
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach(mutation => {
+                if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+                    const el = mutation.target;
+                    if (responseElements.has(el) || responseElements.has(el.parentElement)) {
+                        // ReDoc changed the style, re-apply immediately
+                        requestAnimationFrame(() => {
+                            if (responseElements.has(el.parentElement)) {
+                                applyFixToElement(el.parentElement);
+                            }
+                        });
+                    }
+                }
+            });
+        });
+        
+        // Start observing after initial fix
+        setTimeout(() => {
+            observer.observe(document.getElementById('redoc-container'), {
+                attributes: true,
+                attributeFilter: ['style'],
+                subtree: true
+            });
+        }, 2500);
+    </script>
+</body>
+</html>

@@ -1,0 +1,70 @@
+{% extends 'users/account/base.html' %}
+
+{% block title %}Data Management - Account Settings - Respectlytics{% endblock %}
+
+{% block account_content %}
+<div>
+  <h2 class="text-lg font-bold text-slate-50 mb-1">Data Management</h2>
+  <p class="text-sm text-slate-400 mb-5">View your event deletion history across all apps.</p>
+
+  <!-- Summary Cards -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+    <div class="bg-[#0f172a] border border-white/10 rounded-lg p-4">
+      <div class="text-xs text-slate-400 mb-1">Total Deletions</div>
+      <div class="text-2xl font-bold text-slate-50">{{ deletion_count }}</div>
+    </div>
+    <div class="bg-[#0f172a] border border-white/10 rounded-lg p-4">
+      <div class="text-xs text-slate-400 mb-1">Total Events Deleted</div>
+      <div class="text-2xl font-bold text-slate-50">{{ total_deleted|default:"0" }}</div>
+    </div>
+  </div>
+
+  <!-- Deletion History Table -->
+  {% if logs %}
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm text-left">
+      <thead>
+        <tr class="border-b border-white/10">
+          <th class="px-3 py-2 text-xs font-medium text-slate-400">Date</th>
+          <th class="px-3 py-2 text-xs font-medium text-slate-400">App</th>
+          <th class="px-3 py-2 text-xs font-medium text-slate-400">Events Deleted</th>
+          <th class="px-3 py-2 text-xs font-medium text-slate-400">Date Range</th>
+          <th class="px-3 py-2 text-xs font-medium text-slate-400">Filters</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in logs %}
+        <tr class="border-b border-white/5 hover:bg-slate-800/30">
+          <td class="px-3 py-2.5 text-slate-300 whitespace-nowrap">{{ log.deleted_at|date:"M d, Y H:i" }}</td>
+          <td class="px-3 py-2.5 text-slate-50 font-medium">
+            {{ log.app_name }}
+            {% if not log.app %}<span class="text-xs text-slate-500 ml-1">(deleted)</span>{% endif %}
+          </td>
+          <td class="px-3 py-2.5 text-slate-300">{{ log.events_deleted|default:"0" }}</td>
+          <td class="px-3 py-2.5 text-slate-300 whitespace-nowrap">
+            {{ log.filter_date_from|date:"Y-m-d" }} → {{ log.filter_date_to|date:"Y-m-d" }}
+          </td>
+          <td class="px-3 py-2.5 text-slate-400 text-xs">
+            {% if log.filter_platform %}platform: {{ log.filter_platform }}{% endif %}
+            {% if log.filter_country %}{% if log.filter_platform %}, {% endif %}country: {{ log.filter_country }}{% endif %}
+            {% if log.filter_event_name %}{% if log.filter_platform or log.filter_country %}, {% endif %}event: {{ log.filter_event_name }}{% endif %}
+            {% if not log.filter_platform and not log.filter_country and not log.filter_event_name %}—{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="text-center py-8">
+    <div class="text-slate-500 mb-2">
+      <svg class="w-10 h-10 mx-auto opacity-50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+      </svg>
+    </div>
+    <p class="text-slate-400 text-sm">No deletion history yet.</p>
+    <p class="text-slate-500 text-xs mt-1">When you delete events from your apps, the history will appear here.</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

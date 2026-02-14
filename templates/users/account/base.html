@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Account Settings - Respectlytics{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-slate-950 py-6">
+  <div class="max-w-5xl mx-auto px-4">
+    
+    <!-- Page Header -->
+    <div class="mb-6">
+      <h1 class="text-2xl font-bold text-slate-50 mb-1">Account Settings</h1>
+      <p class="text-sm text-slate-400">Manage your profile and settings</p>
+    </div>
+    
+    <!-- Tab Navigation (3 tabs — no Billing, no Preferences) -->
+    <div class="bg-[#1e293b] border border-white/10 rounded-lg p-1.5 mb-5">
+      <div class="flex flex-wrap gap-1.5">
+        <a href="{% url 'account_profile' %}" 
+           class="px-3 py-1.5 rounded-md text-xs font-medium transition-colors {% if active_tab == 'profile' %}bg-purple-600 text-white{% else %}text-slate-400 hover:text-slate-50 hover:bg-slate-800{% endif %}">
+          Profile
+        </a>
+        <a href="{% url 'account_security' %}" 
+           class="px-3 py-1.5 rounded-md text-xs font-medium transition-colors {% if active_tab == 'security' %}bg-purple-600 text-white{% else %}text-slate-400 hover:text-slate-50 hover:bg-slate-800{% endif %}">
+          Security
+        </a>
+        <a href="{% url 'account_data_management' %}" 
+           class="px-3 py-1.5 rounded-md text-xs font-medium transition-colors {% if active_tab == 'data_management' %}bg-purple-600 text-white{% else %}text-slate-400 hover:text-slate-50 hover:bg-slate-800{% endif %}">
+          Data Management
+        </a>
+      </div>
+    </div>
+    
+    <!-- Tab Content -->
+    <div class="bg-[#1e293b] border border-white/10 rounded-xl p-5">
+      {% block account_content %}{% endblock %}
+    </div>
+    
+  </div>
+</div>
+{% endblock %}

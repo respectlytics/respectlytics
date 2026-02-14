@@ -1,0 +1,152 @@
+{# Behavior Tab Content - Partial #}
+<div id="behavior-content" class="hidden">
+        <!-- Ad Blocker Warning Banner -->
+        <div id="behavior-adblocker-warning" class="hidden bg-amber-500/15 border border-amber-400/30 rounded-xl p-4 mb-5">
+            <div class="flex items-start gap-3">
+                <div class="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center flex-shrink-0">
+                    <svg class="w-5 h-5 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                </div>
+                <div class="flex-1">
+                    <h4 class="text-sm font-semibold text-amber-300 mb-1">Ad Blocker Detected</h4>
+                    <p class="text-xs text-amber-200/80 leading-relaxed mb-2">
+                        Your browser extension is blocking our analytics API requests. <strong>We don't run ads</strong> — this is a false positive.
+                    </p>
+                    <p class="text-xs text-amber-200/70 leading-relaxed">
+                        <strong>Why this happens:</strong> Ad blockers often block URLs containing words like "analytics" or "event" to prevent tracking. 
+                        Our API endpoint (<code class="text-amber-300 bg-amber-500/20 px-1 rounded">/api/v1/analytics/</code>) triggers this filter, even though it's your own first-party data.
+                    </p>
+                    <p class="text-xs text-amber-200/70 mt-2">
+                        <strong>To fix:</strong> Add this site to your ad blocker's allowlist, or disable it for this domain.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section Header | Spacing: 8px grid (mb-5=20px, px-3=12px, py-1=4px) -->
+        <div class="flex items-center justify-between mb-5">
+            <div>
+                <h2 class="text-lg font-bold text-slate-50">Behavior Analysis</h2>
+                <p class="text-sm text-slate-400 mt-1">Discover what actions lead to conversions</p>
+            </div>
+            <span class="px-3 py-1 text-sm font-medium bg-indigo-500/15 text-indigo-400 rounded-full" id="scopeBadgeBehavior">⚡ Today</span>
+        </div>
+        
+        <!-- Tip Banner | Spacing: 8px grid (p-3=12px, mb-5=20px, gap-2=8px) -->
+        <div class="bg-indigo-500/15 border border-indigo-400/20 rounded-xl p-3 mb-5 flex items-start gap-2" id="behaviorTabNotice">
+            <div class="w-6 h-6 rounded-lg bg-indigo-500/20 flex items-center justify-center flex-shrink-0">
+                <svg class="w-3.5 h-3.5 text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </div>
+            <div class="text-xs text-indigo-300">Currently analyzing behavior patterns for: <strong id="behaviorTabEvents">No events selected</strong></div>
+        </div>
+        
+        <!-- Processing Status Banner (PERF-023) | Spacing: 8px grid (p-4=16px, mb-6=24px, gap-3=12px) -->
+        <div id="behavior-processing-banner" class="bg-blue-500/15 border border-blue-400/20 rounded-xl p-4 mb-6 hidden" style="display: none;">
+            <div class="flex items-center gap-3">
+                <div class="flex-shrink-0">
+                    <svg class="animate-spin h-5 w-5 text-blue-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                </div>
+                <div class="flex-1">
+                    <div class="text-sm font-medium text-blue-300">
+                        Processing <span id="behavior-event-count" class="font-bold">0</span> events...
+                    </div>
+                    <div class="text-xs text-blue-400 mt-1">
+                        <span id="behavior-sections-complete">0</span> of 2 sections complete
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Boosters & Blockers Grid -->
+        <!-- Correlation Loading Skeleton (PERF-023) | Spacing: 8px grid (mb-6=24px, gap-6=24px, p-6=24px) -->
+        <div id="correlation-loading" class="flex flex-col h-full mb-6" style="display: none;">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Boosters Skeleton -->
+                <div class="bg-[#1e293b] rounded-2xl border border-white/10 overflow-hidden animate-pulse flex-1 flex flex-col h-full">
+                    <div class="p-6 border-b border-white/10">
+                        <div class="h-6 bg-slate-700 rounded w-48 mb-2"></div>
+                        <div class="h-4 bg-slate-700 rounded w-full"></div>
+                    </div>
+                    <div class="p-6 flex-1">
+                        <div class="space-y-3">
+                            <div class="h-20 bg-slate-700 rounded"></div>
+                            <div class="h-20 bg-slate-700 rounded"></div>
+                            <div class="h-20 bg-slate-700 rounded"></div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Blockers Skeleton -->
+                <div class="bg-[#1e293b] rounded-2xl border border-white/10 overflow-hidden animate-pulse flex-1 flex flex-col h-full">
+                    <div class="p-6 border-b border-white/10">
+                        <div class="h-6 bg-slate-700 rounded w-48 mb-2"></div>
+                        <div class="h-4 bg-slate-700 rounded w-full"></div>
+                    </div>
+                    <div class="p-6 flex-1">
+                        <div class="space-y-3">
+                            <div class="h-20 bg-slate-700 rounded"></div>
+                            <div class="h-20 bg-slate-700 rounded"></div>
+                            <div class="h-20 bg-slate-700 rounded"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Filtered Events Info Banner -->
+        <div id="correlationFilteredInfo" class="hidden mb-4"></div>
+        
+        <!-- Correlation Data (PERF-023) | Spacing: 8px grid (mb-6=24px, gap-6=24px, p-6=24px) -->
+        <div id="correlation-data" class="flex flex-col h-full mb-6" style="display: none;">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Conversion Boosters Card -->
+            <div class="bg-[#1e293b] rounded-2xl border border-white/10 overflow-hidden flex flex-col h-full">
+                <div class="p-6 border-b border-white/10">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-lg font-bold text-slate-50">Conversion Boosters</h3>
+                        <span class="px-2 py-0.5 text-sm bg-emerald-500/15 text-emerald-400 rounded-full font-medium">⬆ Promote These</span>
+                    </div>
+                    <p class="text-sm text-slate-400 mt-1">Events where sessions convert <strong class="text-emerald-400">more often</strong>. Sessions <strong class="text-emerald-400">with</strong> this event vs sessions <strong class="text-slate-300">without</strong>. Only events with <strong>10+ sessions</strong> and <strong>+10% lift</strong> are shown.</p>
+                    <p class="text-sm text-slate-500 mt-2">💡 Each session is unique. These correlations are session-based, not user-based.</p>
+                </div>
+                <div class="p-6 flex-1">
+                    <div id="positiveCorrelations" class="max-h-96 overflow-y-auto pr-2"><div class="text-center text-slate-500 py-4">Loading...</div></div>
+                </div>
+            </div>
+            
+            <!-- Conversion Blockers Card -->
+            <div class="bg-[#1e293b] rounded-2xl border border-white/10 overflow-hidden flex flex-col h-full">
+                <div class="p-6 border-b border-white/10">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-lg font-bold text-slate-50">Conversion Blockers</h3>
+                        <span class="px-2 py-0.5 text-sm bg-rose-500/15 text-rose-400 rounded-full font-medium">⬇ Investigate These</span>
+                    </div>
+                    <p class="text-sm text-slate-400 mt-1">Events where sessions convert <strong class="text-rose-400">less often</strong>. Something about this experience may cause drop-off. Only events with <strong>10+ sessions</strong> and <strong>10%+ drop</strong> are shown.</p>
+                    <p class="text-sm text-slate-500 mt-2">⚠️ Each session is unique. These correlations are session-based, not user-based.</p>
+                </div>
+                <div class="p-6 flex-1">
+                    <div id="negativeCorrelations" class="max-h-96 overflow-y-auto pr-2"><div class="text-center text-slate-500 py-4">Loading...</div></div>
+                </div>
+            </div>
+        </div>
+        </div>
+        
+        <!-- NOTE: Conversion Impact Analysis section removed in v2.0.0 -->
+        <!-- The ConversionSignalsView required cross-session user tracking which -->
+        <!-- is incompatible with session-based analytics. Use Event Correlations -->
+        <!-- (Boosters & Blockers) above for similar conversion driver insights. -->
+        
+    </div>
+    <div id="behavior-error" class="hidden bg-rose-500/15 border border-rose-400/20 rounded-xl p-4"><strong class="text-rose-400">Error:</strong> <span id="behavior-error-msg" class="text-rose-300"></span></div>
+    <div id="behavior-empty" class="hidden text-center py-16">
+        <div class="w-16 h-16 rounded-2xl bg-purple-500/15 flex items-center justify-center mx-auto mb-4">
+            <svg class="w-8 h-8 text-purple-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <h3 class="text-lg font-bold text-slate-50 mb-2">Discover What Drives Conversions</h3>
+        <p class="text-sm text-slate-400 mb-6 max-w-md mx-auto">Select conversion events to unlock powerful behavior insights.</p>
+        <button onclick="toggleEventPopover(); return false;" class="px-6 py-3 bg-purple-600 text-white font-semibold rounded-xl hover:bg-purple-500 transition-colors">Select Conversion Events</button>
+        <p class="text-sm text-slate-500 mt-4">Tip: Compare converting vs non-converting sessions</p>
+    </div>

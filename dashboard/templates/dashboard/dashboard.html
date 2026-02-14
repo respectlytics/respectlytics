@@ -1,0 +1,684 @@
+{% extends 'dashboard/dashboard_base.html' %}
+
+{% block title %}Your Apps - Respectlytics{% endblock %}
+
+{# Hide sidebar on main dashboard - it's not needed here #}
+{% block sidebar %}{% endblock %}
+{% block main_margin %}{% endblock %}
+
+{% block extra_css %}
+<style>
+@keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.8; transform: scale(1.05); }
+}
+.new-events-badge { animation: pulse 2s infinite; }
+.api-key-value { filter: blur(5px); transition: filter 0.2s; }
+.api-key-value.visible { filter: none; }
+</style>
+{% endblock %}
+
+{% block dashboard_content %}
+<!-- Main Content - Full width, centered -->
+<div class="max-w-6xl mx-auto p-4 sm:p-4 lg:p-6">
+    <!-- Header -->
+    <div class="flex flex-wrap justify-between items-center gap-3 mb-4">
+        <h1 class="text-lg font-semibold text-slate-50">Your Apps</h1>
+        <div class="flex items-center gap-3">
+            <span class="hidden sm:inline text-xs text-slate-400">{{ user.email }}</span>
+            <button onclick="showCreateAppModal()" class="px-3 py-1.5 bg-brand-600 text-white text-sm font-semibold rounded-lg hover:bg-brand-700 transition-colors shadow-sm">
+                + New App
+            </button>
+        </div>
+    </div>
+
+    <!-- Billing Status Widget -->
+    {% include 'dashboard/partials/_billing_status.html' %}
+
+    <!-- Apps Card -->
+    <div class="bg-[#1e293b] rounded-xl shadow-lg border border-white/10 p-4 sm:p-5">
+        <div class="flex flex-wrap justify-between items-center gap-3 mb-4">
+            <h2 class="text-base font-semibold text-slate-50">Mobile Apps</h2>
+            <button onclick="showCreateAppModal()" class="px-3 py-1.5 bg-brand-600 text-white text-sm font-semibold rounded-lg hover:bg-brand-700 transition-colors shadow-sm">
+                + Create New App
+            </button>
+        </div>
+
+        {% if apps %}
+        <div class="grid gap-3">
+            {% for app in apps %}
+            <div class="border border-white/10 rounded-lg p-4 hover:border-brand-500 hover:shadow-lg transition-all bg-[#334155]" data-app-id="{{ app.id }}" data-app-slug="{{ app.slug }}">
+                <!-- App Header -->
+                <div class="flex flex-wrap justify-between items-start gap-2 mb-3">
+                    <div class="flex-1 min-w-[200px]">
+                        <div class="flex items-center gap-2">
+                            <h3 class="text-base font-semibold text-slate-50 mb-0.5">{{ app.name }}</h3>
+                            <button onclick="showEditAppModal('{{ app.slug }}', '{{ app.name|escapejs }}')" class="p-1 text-slate-500 hover:text-slate-300 hover:bg-slate-700/50 rounded transition-colors" title="Edit app name">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+                                </svg>
+                            </button>
+                            <button onclick="showDeleteAppModal('{{ app.slug }}', '{{ app.name|escapejs }}')" class="p-1 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded transition-colors" title="Delete app">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        <p class="text-xs text-slate-400">Created {{ app.created_at|date:"M d, Y" }}</p>
+                    </div>
+                    <span id="newEventsBadge{{ forloop.counter }}" class="hidden new-events-badge bg-gradient-to-r from-red-500 to-red-600 text-white px-2 py-0.5 rounded text-xs font-bold shadow-lg">
+                        <span id="newEventsCount{{ forloop.counter }}">0</span> new
+                    </span>
+                </div>
+
+                <!-- API Key Section -->
+                <div class="bg-[#1e293b] border border-white/10 rounded-lg p-3 mb-3">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <div class="flex-1 min-w-[200px]">
+                            <p class="text-xs font-medium text-slate-400 uppercase tracking-wide mb-1.5">API Key</p>
+                            <div class="flex items-center gap-2">
+                                <code id="apiKey{{ forloop.counter }}" class="api-key-value inline-block bg-[#0f172a] px-2 py-1 rounded border border-white/10 font-mono text-xs select-all text-slate-300">{{ app.id }}</code>
+                                <button onclick="showRegenerateKeyModal('{{ app.slug }}', '{{ app.name }}')" class="p-1 text-slate-500 hover:text-slate-300 hover:bg-slate-700/50 rounded transition-colors" title="Regenerate API Key">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="flex gap-1.5">
+                            <button onclick="toggleApiKeyVisibility('apiKey{{ forloop.counter }}', this)" class="px-2.5 py-1 bg-amber-500/20 text-amber-400 font-medium text-xs rounded hover:bg-amber-500/30 transition-colors border border-amber-400/30">Show</button>
+                            <button onclick="copyToClipboard('{{ app.id }}', this)" class="px-2.5 py-1 bg-[#0f172a] border border-white/10 text-slate-300 font-medium text-xs rounded hover:bg-slate-700 transition-colors">Copy</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="flex justify-end">
+                    <a href="{% url 'dashboard:stats' app.slug %}" class="px-3 py-1.5 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors shadow-md shadow-purple-900/50">
+                        View Analytics →
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <!-- Empty State -->
+        <div class="text-center py-8 px-6 bg-gradient-to-br from-brand-500/10 to-purple-500/10 rounded-lg border border-dashed border-white/20">
+            <div class="text-4xl mb-3 opacity-30">📱</div>
+            <h3 class="text-base font-semibold text-slate-50 mb-2">No Apps Yet</h3>
+            <p class="text-sm text-slate-400 mb-4 max-w-md mx-auto">Create your first mobile app to start tracking events, analyzing user behavior, and building conversion funnels.</p>
+            <button onclick="showCreateAppModal()" class="px-4 py-2 bg-brand-600 text-white text-sm font-semibold rounded hover:bg-brand-700 transition-colors">
+                + Create Your First App
+            </button>
+            
+            <!-- AI Integration Hint -->
+            <div class="mt-8 pt-6 border-t border-white/10">
+                <div class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-purple-500/10 border border-purple-500/20">
+                    <span class="text-lg">🤖</span>
+                    <span class="text-xs text-slate-300"><strong class="text-purple-400">Vibe coders:</strong> Use our <a href="https://respectlytics.com/sdk/#ai-integration" class="text-purple-400 hover:text-purple-300 underline underline-offset-2">AI Integration Prompt</a> to set up tracking in seconds</span>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Create App Modal -->
+    <div id="createAppModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden items-center justify-center">
+        <div class="bg-[#1e293b] rounded-xl p-5 max-w-md w-[90%] shadow-2xl border border-white/10">
+            <!-- Initial State: Create Form -->
+            <div id="createAppFormState">
+                <h3 class="text-lg font-bold text-slate-50 mb-1.5">Create New App</h3>
+                <p class="text-slate-400 mb-4 text-xs">Give your mobile app a name to get started tracking analytics</p>
+
+                <div class="mb-4">
+                    <label for="newAppName" class="block mb-1.5 font-medium text-slate-50 text-xs">App Name</label>
+                    <input type="text" id="newAppName" placeholder="e.g., My iOS App" class="w-full px-3 py-1.5 border border-white/10 rounded text-sm bg-[#0f172a] text-slate-300 placeholder-slate-500 focus:border-brand-500 focus:ring-1 focus:ring-brand-500/20 outline-none transition-all" onkeypress="if(event.key === 'Enter') createApp()">
+                </div>
+
+                <div id="createAppError" class="hidden p-2.5 rounded mb-4 bg-rose-500/15 border border-rose-400/30 text-rose-400 text-xs"></div>
+
+                <div class="flex justify-end gap-2">
+                    <button onclick="hideCreateAppModal()" class="px-3 py-1.5 bg-[#0f172a] border border-white/10 text-slate-300 text-sm font-medium rounded hover:bg-slate-700 transition-colors">Cancel</button>
+                    <button onclick="createApp()" id="createAppBtn" class="px-3 py-1.5 bg-brand-600 text-white text-sm font-medium rounded hover:bg-brand-700 transition-colors">Create App</button>
+                </div>
+            </div>
+            
+            <!-- Success State: Show API Key & Integration Options -->
+            <div id="createAppSuccessState" class="hidden">
+                <div class="text-center mb-4">
+                    <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-emerald-500/20 mb-3">
+                        <svg class="w-6 h-6 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-lg font-bold text-slate-50 mb-1">App Created!</h3>
+                    <p class="text-slate-400 text-xs"><span id="createdAppName" class="text-slate-200"></span> is ready for integration</p>
+                </div>
+                
+                <!-- API Key Display -->
+                <div class="bg-[#0f172a] rounded-lg p-4 mb-4 border border-white/10">
+                    <label class="block text-xs font-medium text-slate-400 mb-2">Your API Key</label>
+                    <code id="createdAppKey" class="block w-full bg-slate-800 px-3 py-2 rounded font-mono text-sm text-emerald-400 select-all border border-emerald-500/30 mb-2"></code>
+                    <button onclick="copyCreatedApiKey()" id="copyCreatedKeyBtn" class="w-full px-3 py-2 bg-slate-700 text-slate-200 text-xs font-medium rounded hover:bg-slate-600 transition-colors">
+                        Copy API Key
+                    </button>
+                    <p class="text-xs text-slate-500 mt-2">⚠️ Save this key securely. You can view it later in your dashboard.</p>
+                </div>
+                
+                <!-- Integration Options -->
+                <p class="text-xs font-medium text-slate-400 mb-3">Next: Integrate the SDK</p>
+                <div class="grid grid-cols-2 gap-3 mb-4">
+                    <a href="https://respectlytics.com/sdk/#ai-integration" class="flex flex-col items-center gap-2 p-4 rounded-lg bg-purple-500/10 border border-purple-500/30 hover:bg-purple-500/20 hover:border-purple-400/50 transition-all group">
+                        <span class="text-2xl">🤖</span>
+                        <span class="text-xs font-semibold text-purple-300 group-hover:text-purple-200">AI Integration</span>
+                        <span class="text-[10px] text-slate-400">Recommended</span>
+                    </a>
+                    <a href="https://respectlytics.com/sdk/" class="flex flex-col items-center gap-2 p-4 rounded-lg bg-slate-700/50 border border-white/10 hover:bg-slate-700 hover:border-white/20 transition-all group">
+                        <span class="text-2xl">📚</span>
+                        <span class="text-xs font-semibold text-slate-300 group-hover:text-slate-200">Manual Setup</span>
+                        <span class="text-[10px] text-slate-400">SDK Docs</span>
+                    </a>
+                </div>
+                
+                <button onclick="closeAndRefresh()" class="w-full px-3 py-2 bg-brand-600 text-white text-sm font-medium rounded hover:bg-brand-700 transition-colors">
+                    Go to Dashboard
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit App Modal -->
+    <div id="editAppModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden items-center justify-center">
+        <div class="bg-[#1e293b] rounded-xl p-5 max-w-md w-[90%] shadow-2xl border border-white/10">
+            <h3 class="text-lg font-bold text-slate-50 mb-1.5">Edit App Name</h3>
+            <p class="text-slate-400 mb-4 text-xs">Change the display name for your app. The API key and URL will remain unchanged.</p>
+
+            <div class="mb-4">
+                <label for="editAppName" class="block mb-1.5 font-medium text-slate-50 text-xs">App Name</label>
+                <input type="text" id="editAppName" placeholder="e.g., My iOS App" class="w-full px-3 py-1.5 border border-white/10 rounded text-sm bg-[#0f172a] text-slate-300 placeholder-slate-500 focus:border-brand-500 focus:ring-1 focus:ring-brand-500/20 outline-none transition-all" onkeypress="if(event.key === 'Enter') updateAppName()">
+            </div>
+
+            <div id="editAppError" class="hidden p-2.5 rounded mb-4 bg-rose-500/15 border border-rose-400/30 text-rose-400 text-xs"></div>
+            <div id="editAppSuccess" class="hidden p-2.5 rounded mb-4 bg-emerald-500/15 border border-emerald-400/30 text-emerald-400 text-xs"></div>
+
+            <div class="flex justify-end gap-2">
+                <button onclick="hideEditAppModal()" class="px-3 py-1.5 bg-[#0f172a] border border-white/10 text-slate-300 text-sm font-medium rounded hover:bg-slate-700 transition-colors">Cancel</button>
+                <button onclick="updateAppName()" id="editAppBtn" class="px-3 py-1.5 bg-brand-600 text-white text-sm font-medium rounded hover:bg-brand-700 transition-colors">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Regenerate Key Modal -->
+    <div id="regenerateKeyModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden items-center justify-center">
+        <div class="bg-[#1e293b] rounded-xl p-5 max-w-xl w-[90%] shadow-2xl border border-white/10">
+            <h3 class="text-lg font-bold text-red-500 mb-1.5">Regenerate API Key</h3>
+            <p class="text-slate-400 mb-3 text-xs">Are you sure you want to regenerate the API key for <strong class="text-slate-50" id="regenerateAppName"></strong>?</p>
+
+            <div class="bg-amber-500/15 border border-amber-400/30 rounded p-3 mb-4">
+                <p class="font-semibold text-slate-50 mb-1.5 text-xs">Important Warning:</p>
+                <ul class="list-disc pl-4 text-slate-300 text-xs space-y-1">
+                    <li>The current API key will be <strong class="text-slate-50">immediately invalidated</strong></li>
+                    <li>All mobile apps using the old key will <strong class="text-slate-50">stop working</strong></li>
+                    <li>You must <strong class="text-slate-50">update your mobile app</strong> with the new key</li>
+                    <li>Historical events will be preserved</li>
+                </ul>
+            </div>
+
+            <div id="regenerateKeyError" class="hidden p-2.5 rounded mb-4 bg-rose-500/15 border border-rose-400/30 text-rose-400 text-xs"></div>
+            <div id="regenerateKeySuccess" class="hidden p-2.5 rounded mb-4 bg-emerald-500/15 border border-emerald-400/30 text-emerald-400 text-xs"></div>
+
+            <div class="flex justify-end gap-2">
+                <button onclick="hideRegenerateKeyModal()" class="px-3 py-1.5 bg-[#0f172a] border border-white/10 text-slate-300 text-sm font-medium rounded hover:bg-slate-700 transition-colors">Cancel</button>
+                <button onclick="regenerateKey()" id="regenerateKeyBtn" class="px-3 py-1.5 bg-red-600 text-white text-sm font-medium rounded hover:bg-red-700 transition-colors">Yes, Regenerate Key</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete App Modal -->
+    <div id="deleteAppModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden items-center justify-center">
+        <div class="bg-[#1e293b] rounded-xl p-5 max-w-xl w-[90%] shadow-2xl border border-white/10">
+            <h3 class="text-lg font-bold text-red-500 mb-1.5">Delete App</h3>
+            <p class="text-slate-400 mb-3 text-xs">You are about to permanently delete <strong class="text-slate-50" id="deleteAppName"></strong>.</p>
+
+            <div class="bg-rose-500/15 border border-rose-400/30 rounded p-3 mb-4">
+                <p class="font-semibold text-slate-50 mb-1.5 text-xs">⚠️ This action is permanent and cannot be undone:</p>
+                <ul class="list-disc pl-4 text-slate-300 text-xs space-y-1">
+                    <li><span id="deleteEventCountText">All events</span> will be permanently deleted</li>
+                    <li>All analytics data and conversion goals will be lost</li>
+                    <li>The API key will stop working immediately</li>
+                </ul>
+            </div>
+
+            <div class="mb-4">
+                <label class="block text-xs font-medium text-slate-400 mb-1.5">Type <strong class="text-slate-50" id="deleteAppNameConfirm"></strong> to confirm (case-sensitive)</label>
+                <input type="text" id="deleteConfirmationInput" oninput="validateDeleteConfirmation()" class="w-full bg-[#0f172a] border border-white/10 rounded px-3 py-2 text-sm text-slate-50 focus:outline-none focus:border-brand-500" placeholder="Type app name here">
+            </div>
+
+            <div id="deleteAppError" class="hidden p-2.5 rounded mb-4 bg-rose-500/15 border border-rose-400/30 text-rose-400 text-xs"></div>
+            <div id="deleteAppSuccess" class="hidden p-2.5 rounded mb-4 bg-emerald-500/15 border border-emerald-400/30 text-emerald-400 text-xs"></div>
+
+            <div class="flex justify-end gap-2">
+                <button onclick="hideDeleteAppModal()" class="px-3 py-1.5 bg-[#0f172a] border border-white/10 text-slate-300 text-sm font-medium rounded hover:bg-slate-700 transition-colors">Cancel</button>
+                <button onclick="deleteApp()" id="deleteAppBtn" disabled class="px-3 py-1.5 bg-red-600 text-white text-sm font-medium rounded hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-red-600">Delete App</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Help Section -->
+    <div class="mt-6 bg-gradient-to-br from-brand-500/10 to-purple-500/10 rounded-lg p-4 text-center border border-white/10">
+        <h4 class="text-sm font-semibold text-slate-50 mb-1.5">Need Help Getting Started?</h4>
+        <p class="text-xs text-slate-400">Check out our <a href="https://respectlytics.com/sdk/" class="text-brand-400 font-medium hover:underline">SDK Integration Guide</a> for tutorials and examples</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block dashboard_scripts %}
+<script>
+function showCreateAppModal() {
+    const modal = document.getElementById('createAppModal');
+    modal.style.display = 'flex';
+    document.getElementById('newAppName').focus();
+    document.getElementById('createAppError').style.display = 'none';
+    // Reset to form state
+    document.getElementById('createAppFormState').style.display = 'block';
+    document.getElementById('createAppSuccessState').style.display = 'none';
+}
+
+function hideCreateAppModal() {
+    document.getElementById('createAppModal').style.display = 'none';
+    document.getElementById('newAppName').value = '';
+    document.getElementById('createAppError').style.display = 'none';
+    document.getElementById('createAppBtn').disabled = false;
+    document.getElementById('createAppBtn').textContent = 'Create App';
+    // Reset to form state
+    document.getElementById('createAppFormState').style.display = 'block';
+    document.getElementById('createAppSuccessState').style.display = 'none';
+}
+
+function copyCreatedApiKey() {
+    const apiKey = document.getElementById('createdAppKey').textContent;
+    const btn = document.getElementById('copyCreatedKeyBtn');
+    navigator.clipboard.writeText(apiKey).then(() => {
+        btn.textContent = 'Copied!';
+        btn.classList.add('bg-emerald-600');
+        btn.classList.remove('bg-slate-700');
+        setTimeout(() => {
+            btn.textContent = 'Copy';
+            btn.classList.remove('bg-emerald-600');
+            btn.classList.add('bg-slate-700');
+        }, 2000);
+    });
+}
+
+function closeAndRefresh() {
+    window.location.reload();
+}
+
+async function createApp() {
+    const name = document.getElementById('newAppName').value.trim();
+    const errorDiv = document.getElementById('createAppError');
+    const createBtn = document.getElementById('createAppBtn');
+
+    errorDiv.style.display = 'none';
+
+    if (!name) {
+        errorDiv.textContent = 'Please enter an app name';
+        errorDiv.style.display = 'block';
+        return;
+    }
+
+    createBtn.disabled = true;
+    createBtn.textContent = 'Creating...';
+
+    try {
+        const response = await fetch('/api/v1/apps/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({ name })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            // Show success state with API key and integration options
+            document.getElementById('createAppFormState').style.display = 'none';
+            document.getElementById('createAppSuccessState').style.display = 'block';
+            document.getElementById('createdAppName').textContent = data.name;
+            document.getElementById('createdAppKey').textContent = data.app_key;
+        } else {
+            errorDiv.textContent = data.error || data.detail || 'Failed to create app. Please try again.';
+            errorDiv.style.display = 'block';
+            createBtn.disabled = false;
+            createBtn.textContent = 'Create App';
+        }
+    } catch (error) {
+        errorDiv.textContent = 'Network error. Please check your connection and try again.';
+        errorDiv.style.display = 'block';
+        createBtn.disabled = false;
+        createBtn.textContent = 'Create App';
+    }
+}
+
+function toggleApiKeyVisibility(apiKeyId, btn) {
+    const apiKeyElement = document.getElementById(apiKeyId);
+    const isVisible = apiKeyElement.classList.contains('visible');
+
+    if (!isVisible) {
+        apiKeyElement.classList.add('visible');
+        btn.textContent = 'Hide';
+        btn.className = 'px-2.5 py-1 bg-emerald-500/20 text-emerald-400 font-medium text-xs rounded hover:bg-emerald-500/30 transition-colors border border-emerald-400/30';
+    } else {
+        apiKeyElement.classList.remove('visible');
+        btn.textContent = 'Show';
+        btn.className = 'px-2.5 py-1 bg-amber-500/20 text-amber-400 font-medium text-xs rounded hover:bg-amber-500/30 transition-colors border border-amber-400/30';
+    }
+}
+
+function copyToClipboard(text, btn) {
+    navigator.clipboard.writeText(text).then(() => {
+        const originalText = btn.textContent;
+        btn.textContent = 'Copied!';
+        btn.className = 'px-2.5 py-1 bg-emerald-500/20 text-emerald-400 font-medium text-xs rounded border border-emerald-400/30';
+
+        setTimeout(() => {
+            btn.textContent = originalText;
+            btn.className = 'px-2.5 py-1 bg-[#0f172a] border border-white/10 text-slate-300 font-medium text-xs rounded hover:bg-slate-700 transition-colors';
+        }, 2000);
+    });
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+document.getElementById('createAppModal')?.addEventListener('click', function(e) {
+    if (e.target === this) hideCreateAppModal();
+});
+
+document.getElementById('editAppModal')?.addEventListener('click', function(e) {
+    if (e.target === this) hideEditAppModal();
+});
+
+document.getElementById('regenerateKeyModal')?.addEventListener('click', function(e) {
+    if (e.target === this) hideRegenerateKeyModal();
+});
+
+const dashboardApps = [];
+{% for app in apps %}
+dashboardApps.push({
+    id: '{{ app.id }}',
+    slug: '{{ app.slug }}',
+    badgeId: 'newEventsBadge{{ forloop.counter }}',
+    countId: 'newEventsCount{{ forloop.counter }}'
+});
+{% endfor %}
+
+if (dashboardApps.length > 0) {
+    let lastPollTime = new Date().toISOString();
+
+    async function pollDashboard() {
+        for (const app of dashboardApps) {
+            try {
+                const response = await fetch('/api/events/recent-activity/?time_range=1440&since=' + lastPollTime, {
+                    headers: { 'X-App-Key': app.id }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.new_event_count > 0) {
+                        const badge = document.getElementById(app.badgeId);
+                        const count = document.getElementById(app.countId);
+                        if (badge && count) {
+                            count.textContent = data.new_event_count;
+                            badge.style.display = 'inline-block';
+                        }
+                    }
+                }
+            } catch (error) {
+                console.warn('Failed to poll app ' + app.slug + ':', error);
+            }
+        }
+        lastPollTime = new Date().toISOString();
+    }
+
+    setTimeout(pollDashboard, 10000);
+    setInterval(pollDashboard, 60000);
+}
+
+let currentEditSlug = null;
+
+function showEditAppModal(slug, currentName) {
+    currentEditSlug = slug;
+    document.getElementById('editAppName').value = currentName;
+    const modal = document.getElementById('editAppModal');
+    modal.style.display = 'flex';
+    document.getElementById('editAppName').focus();
+    document.getElementById('editAppName').select();
+    document.getElementById('editAppError').style.display = 'none';
+    document.getElementById('editAppSuccess').style.display = 'none';
+}
+
+function hideEditAppModal() {
+    document.getElementById('editAppModal').style.display = 'none';
+    currentEditSlug = null;
+    document.getElementById('editAppError').style.display = 'none';
+    document.getElementById('editAppSuccess').style.display = 'none';
+}
+
+async function updateAppName() {
+    if (!currentEditSlug) return;
+
+    const name = document.getElementById('editAppName').value.trim();
+    const errorDiv = document.getElementById('editAppError');
+    const successDiv = document.getElementById('editAppSuccess');
+    const editBtn = document.getElementById('editAppBtn');
+
+    errorDiv.style.display = 'none';
+    successDiv.style.display = 'none';
+
+    if (!name) {
+        errorDiv.textContent = 'Please enter an app name';
+        errorDiv.style.display = 'block';
+        return;
+    }
+
+    editBtn.disabled = true;
+    editBtn.textContent = 'Saving...';
+
+    try {
+        const response = await fetch('/dashboard/api/apps/' + currentEditSlug + '/update/', {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({ name })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            successDiv.textContent = 'App name updated successfully! Refreshing...';
+            successDiv.style.display = 'block';
+            setTimeout(() => { window.location.reload(); }, 1000);
+        } else {
+            errorDiv.textContent = data.error || data.detail || 'Failed to update app name. Please try again.';
+            errorDiv.style.display = 'block';
+            editBtn.disabled = false;
+            editBtn.textContent = 'Save Changes';
+        }
+    } catch (error) {
+        errorDiv.textContent = 'Network error. Please check your connection and try again.';
+        errorDiv.style.display = 'block';
+        editBtn.disabled = false;
+        editBtn.textContent = 'Save Changes';
+    }
+}
+
+let currentRegenerateSlug = null;
+
+function showRegenerateKeyModal(slug, appName) {
+    currentRegenerateSlug = slug;
+    document.getElementById('regenerateAppName').textContent = appName;
+    const modal = document.getElementById('regenerateKeyModal');
+    modal.style.display = 'flex';
+    document.getElementById('regenerateKeyError').style.display = 'none';
+    document.getElementById('regenerateKeySuccess').style.display = 'none';
+}
+
+function hideRegenerateKeyModal() {
+    document.getElementById('regenerateKeyModal').style.display = 'none';
+    currentRegenerateSlug = null;
+    document.getElementById('regenerateKeyError').style.display = 'none';
+    document.getElementById('regenerateKeySuccess').style.display = 'none';
+}
+
+async function regenerateKey() {
+    if (!currentRegenerateSlug) return;
+
+    const errorDiv = document.getElementById('regenerateKeyError');
+    const successDiv = document.getElementById('regenerateKeySuccess');
+    const regenerateBtn = document.getElementById('regenerateKeyBtn');
+
+    errorDiv.style.display = 'none';
+    successDiv.style.display = 'none';
+    regenerateBtn.disabled = true;
+    regenerateBtn.textContent = 'Regenerating...';
+
+    try {
+        const response = await fetch('/api/v1/apps/' + currentRegenerateSlug + '/regenerate-key/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            credentials: 'same-origin'
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            successDiv.innerHTML = '<p class="font-semibold mb-2">API Key Regenerated Successfully!</p><p class="mb-1"><strong>New API Key:</strong></p><code class="block bg-[#0f172a] p-2 rounded font-mono select-all mb-2 text-emerald-400 border border-emerald-400/30">' + data.new_app_key + '</code><p class="text-sm text-slate-300">Save this key now! Update your mobile app immediately.</p>';
+            successDiv.style.display = 'block';
+            regenerateBtn.style.display = 'none';
+            setTimeout(() => { window.location.reload(); }, 5000);
+        } else {
+            errorDiv.textContent = data.error || data.detail || 'Failed to regenerate key. Please try again.';
+            errorDiv.style.display = 'block';
+            regenerateBtn.disabled = false;
+            regenerateBtn.textContent = 'Yes, Regenerate Key';
+        }
+    } catch (error) {
+        errorDiv.textContent = 'Network error. Please check your connection and try again.';
+        errorDiv.style.display = 'block';
+        regenerateBtn.disabled = false;
+        regenerateBtn.textContent = 'Yes, Regenerate Key';
+    }
+}
+
+// Delete App Modal
+let currentDeleteSlug = '';
+let currentDeleteName = '';
+
+async function showDeleteAppModal(slug, name) {
+    currentDeleteSlug = slug;
+    currentDeleteName = name;
+    
+    const modal = document.getElementById('deleteAppModal');
+    document.getElementById('deleteAppName').textContent = name;
+    document.getElementById('deleteAppNameConfirm').textContent = name;
+    document.getElementById('deleteConfirmationInput').value = '';
+    document.getElementById('deleteAppBtn').disabled = true;
+    document.getElementById('deleteAppError').style.display = 'none';
+    document.getElementById('deleteAppSuccess').style.display = 'none';
+    
+    // Fetch event count
+    try {
+        const response = await fetch('/dashboard/api/apps/' + slug + '/event-count/');
+        const data = await response.json();
+        const count = data.count || 0;
+        if (count > 0) {
+            document.getElementById('deleteEventCountText').innerHTML = 'All <strong class="text-slate-50">' + count.toLocaleString() + '</strong> events';
+        } else {
+            document.getElementById('deleteEventCountText').textContent = 'All events';
+        }
+    } catch (error) {
+        document.getElementById('deleteEventCountText').textContent = 'All events';
+    }
+    
+    modal.style.display = 'flex';
+    document.getElementById('deleteConfirmationInput').focus();
+}
+
+function hideDeleteAppModal() {
+    const modal = document.getElementById('deleteAppModal');
+    modal.style.display = 'none';
+    currentDeleteSlug = '';
+    currentDeleteName = '';
+}
+
+function validateDeleteConfirmation() {
+    const input = document.getElementById('deleteConfirmationInput').value;
+    const btn = document.getElementById('deleteAppBtn');
+    btn.disabled = input !== currentDeleteName;
+}
+
+async function deleteApp() {
+    const errorDiv = document.getElementById('deleteAppError');
+    const successDiv = document.getElementById('deleteAppSuccess');
+    const deleteBtn = document.getElementById('deleteAppBtn');
+
+    errorDiv.style.display = 'none';
+    successDiv.style.display = 'none';
+    deleteBtn.disabled = true;
+    deleteBtn.textContent = 'Deleting...';
+
+    try {
+        const response = await fetch('/dashboard/api/apps/' + currentDeleteSlug + '/delete/', {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({ confirmation_name: currentDeleteName }),
+            credentials: 'same-origin'
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            successDiv.textContent = data.message || 'App deleted successfully.';
+            successDiv.style.display = 'block';
+            deleteBtn.style.display = 'none';
+            setTimeout(() => { window.location.reload(); }, 1500);
+        } else {
+            errorDiv.textContent = data.error || data.detail || 'Failed to delete app. Please try again.';
+            errorDiv.style.display = 'block';
+            deleteBtn.disabled = false;
+            deleteBtn.textContent = 'Delete App';
+        }
+    } catch (error) {
+        errorDiv.textContent = 'Network error. Please check your connection and try again.';
+        errorDiv.style.display = 'block';
+        deleteBtn.disabled = false;
+        deleteBtn.textContent = 'Delete App';
+    }
+}
+</script>
+{% endblock %}

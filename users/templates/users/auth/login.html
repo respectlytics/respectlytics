@@ -1,0 +1,81 @@
+{% extends 'users/auth_base.html' %}
+
+{% block title %}Sign In - Respectlytics{% endblock %}
+{% block subtitle %}Welcome back{% endblock %}
+
+{% block extra_head %}
+<link rel="canonical" href="https://respectlytics.com/login/">
+<meta name="robots" content="noindex, follow">
+{% endblock %}
+
+{% block content %}
+{% if account_locked %}
+<div class="mb-6 p-4 bg-rose-500/10 border border-rose-500/30 rounded-lg">
+    <div class="flex items-start gap-3">
+        <svg class="w-5 h-5 text-rose-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+        </svg>
+        <div>
+            <p class="text-rose-300 font-semibold">Account Locked</p>
+            <p class="text-rose-400/80 text-sm mt-1">Too many failed login attempts. Please wait 30 minutes or <a href="{% url 'password_reset' %}" class="underline hover:text-rose-300">reset your password</a>.</p>
+        </div>
+    </div>
+</div>
+{% elif rate_limited %}
+<div class="mb-6 p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+    <div class="flex items-start gap-3">
+        <svg class="w-5 h-5 text-amber-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+        </svg>
+        <div>
+            <p class="text-amber-300 font-semibold">Too many attempts</p>
+            <p class="text-amber-400/80 text-sm mt-1">Please wait 10 minutes before trying again. This helps protect your account.</p>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<form method="post" action="{% url 'login' %}" class="space-y-6">
+    {% csrf_token %}
+    
+    <div>
+        <label for="id_username" class="block mb-2 text-slate-50 font-semibold text-base">Email Address</label>
+        <input type="text" name="username" id="id_username" 
+               class="w-full px-5 py-4 border border-white/10 bg-slate-900 text-slate-50 placeholder:text-slate-500 rounded-lg text-lg transition-all duration-200 focus:outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15"
+               {% if form.username.value %}value="{{ form.username.value }}"{% endif %}
+               required>
+        {% if form.username.errors %}
+        <ul class="mt-2 space-y-1">
+            {% for error in form.username.errors %}
+            <li class="text-rose-400 text-base font-medium">{{ error }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+    </div>
+    
+    <div>
+        <label for="id_password" class="block mb-2 text-slate-50 font-semibold text-base">Password</label>
+        <input type="password" name="password" id="id_password" 
+               class="w-full px-5 py-4 border border-white/10 bg-slate-900 text-slate-50 placeholder:text-slate-500 rounded-lg text-lg transition-all duration-200 focus:outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15"
+               required>
+        {% if form.password.errors %}
+        <ul class="mt-2 space-y-1">
+            {% for error in form.password.errors %}
+            <li class="text-rose-400 text-base font-medium">{{ error }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+    </div>
+    
+    <button type="submit" 
+            class="w-full py-4 px-6 btn-gradient text-white border-none rounded-lg text-xl font-bold cursor-pointer transition-all duration-200 shadow-lg hover:-translate-y-0.5 active:translate-y-0">
+        Sign In
+    </button>
+    
+    <div class="mt-8 text-center text-base text-slate-400 leading-relaxed">
+        <a href="{% url 'password_reset' %}" class="text-indigo-400 no-underline font-semibold hover:underline">Forgot password?</a>
+        <br><br>
+        Don't have an account? <a href="{% url 'register' %}" class="text-indigo-400 no-underline font-semibold hover:underline">Create one</a>
+    </div>
+</form>
+{% endblock %}

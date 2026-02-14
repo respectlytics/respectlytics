@@ -1,0 +1,74 @@
+{% extends 'users/account/base.html' %}
+
+{% block account_content %}
+<div class="space-y-5">
+  
+  <!-- Email Preferences Section -->
+  <div>
+    <h2 class="text-lg font-bold text-slate-50 mb-2">Email Notifications</h2>
+    <p class="text-slate-400 text-xs mb-4">
+      Choose which emails you'd like to receive. Transactional emails (payment confirmations, security alerts) will always be sent.
+    </p>
+    
+    <form method="post" class="space-y-3">
+      {% csrf_token %}
+      
+      {% if messages %}
+      <div class="mb-3">
+        {% for message in messages %}
+        <div class="p-3 rounded-lg text-sm bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+          {{ message }}
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+      
+      <!-- Important Updates -->
+      <label class="flex items-start gap-2.5 p-3 bg-slate-800/50 rounded-lg border border-white/5 cursor-pointer hover:bg-slate-800 transition-colors">
+        <input type="checkbox" name="email_important_updates" {% if preferences.email_important_updates %}checked{% endif %}
+               class="mt-0.5 w-4 h-4 text-purple-600 bg-slate-700 border-slate-600 rounded focus:ring-purple-500">
+        <div class="flex-1">
+          <div class="text-sm font-medium text-slate-50">Important Updates</div>
+          <div class="text-xs text-slate-400 mt-0.5">
+            Quota warnings (70%, 90%, 100%), trial expiry notifications, and service alerts
+          </div>
+        </div>
+      </label>
+      
+      <!-- Product News -->
+      <label class="flex items-start gap-2.5 p-3 bg-slate-800/50 rounded-lg border border-white/5 cursor-pointer hover:bg-slate-800 transition-colors">
+        <input type="checkbox" name="email_product_news" {% if preferences.email_product_news %}checked{% endif %}
+               class="mt-0.5 w-4 h-4 text-purple-600 bg-slate-700 border-slate-600 rounded focus:ring-purple-500">
+        <div class="flex-1">
+          <div class="text-sm font-medium text-slate-50">Product News</div>
+          <div class="text-xs text-slate-400 mt-0.5">
+            New features, tips, and product announcements
+          </div>
+        </div>
+      </label>
+      
+      <div class="pt-1">
+        <button type="submit" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium rounded-lg transition-colors">
+          Save Preferences
+        </button>
+      </div>
+    </form>
+  </div>
+  
+  <!-- Always Sent Notice -->
+  <div class="p-3 bg-slate-800/30 rounded-lg border border-white/5">
+    <div class="flex items-start gap-2">
+      <svg class="w-4 h-4 text-slate-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      <div>
+        <div class="font-medium text-slate-400 text-xs">Always Sent</div>
+        <div class="text-xs text-slate-500 mt-0.5">
+          These emails cannot be disabled: password reset, email verification, payment confirmations, and subscription changes.
+        </div>
+      </div>
+    </div>
+  </div>
+  
+</div>
+{% endblock %}

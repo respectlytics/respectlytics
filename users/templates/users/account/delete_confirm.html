@@ -1,0 +1,141 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Delete Account - Respectlytics{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-slate-950 py-6">
+  <div class="max-w-lg mx-auto px-4">
+    
+    <!-- Back Link -->
+    <a href="{% url 'account_security' %}" class="inline-flex items-center text-sm text-slate-400 hover:text-slate-50 mb-5 transition-colors">
+      <svg class="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+      </svg>
+      Back to Security Settings
+    </a>
+    
+    <!-- Main Card -->
+    <div class="bg-[#1e293b] border border-red-500/30 rounded-xl p-5">
+      
+      <!-- Header -->
+      <div class="flex items-center gap-2.5 mb-5">
+        <div class="p-2 bg-red-500/10 rounded-full">
+          <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-xl font-bold text-red-400">Delete Account</h1>
+          <p class="text-slate-400 text-xs">This action cannot be undone</p>
+        </div>
+      </div>
+      
+      {% if has_active_subscription %}
+      <!-- Active Subscription Warning -->
+      <div class="mb-4 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+        <div class="flex items-start gap-2">
+          <svg class="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+          </svg>
+          <div>
+            <h3 class="text-amber-400 text-sm font-semibold">Active Subscription</h3>
+            <p class="text-slate-300 text-xs mt-0.5">
+              You have an active <strong>{{ plan_name }}</strong> subscription. 
+              Deleting your account will immediately cancel your subscription and you will not be charged again.
+            </p>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+      
+      <!-- What Gets Deleted -->
+      <div class="mb-4">
+        <h3 class="text-sm text-slate-50 font-semibold mb-2">What will be permanently deleted:</h3>
+        <ul class="space-y-1.5 text-slate-400 text-xs">
+          <li class="flex items-center gap-1.5">
+            <svg class="w-3.5 h-3.5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+            Your account and login credentials
+          </li>
+          <li class="flex items-center gap-1.5">
+            <svg class="w-3.5 h-3.5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+            All your apps and their API keys
+          </li>
+          <li class="flex items-center gap-1.5">
+            <svg class="w-3.5 h-3.5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+            All analytics events and data
+          </li>
+          {% if has_active_subscription %}
+          <li class="flex items-center gap-1.5">
+            <svg class="w-3.5 h-3.5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+            Your subscription (cancelled immediately)
+          </li>
+          {% endif %}
+        </ul>
+      </div>
+      
+      <!-- What's Preserved (for transparency) -->
+      <div class="mb-4 p-3 bg-slate-800/50 rounded-lg">
+        <h3 class="text-slate-300 font-medium mb-1.5 text-xs">For your peace of mind:</h3>
+        <ul class="space-y-1 text-slate-500 text-xs">
+          <li class="flex items-center gap-2">
+            <svg class="w-3 h-3 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+            Your Stripe payment history is preserved (accessible via Stripe)
+          </li>
+          <li class="flex items-center gap-2">
+            <svg class="w-3 h-3 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+            If you return with the same email, your payment method can be restored
+          </li>
+        </ul>
+      </div>
+      
+      <!-- Confirmation Form -->
+      <form method="post" class="space-y-3">
+        {% csrf_token %}
+        
+        {% if form.errors %}
+        <div class="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+          {% for field, errors in form.errors.items %}
+            {% for error in errors %}
+              <div>{{ error }}</div>
+            {% endfor %}
+          {% endfor %}
+        </div>
+        {% endif %}
+        
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1.5">
+            Enter your password to confirm deletion
+          </label>
+          {{ form.password }}
+        </div>
+        
+        <div class="flex gap-2 pt-3">
+          <a href="{% url 'account_security' %}" 
+             class="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 text-sm font-medium rounded-lg transition-colors text-center">
+            Cancel
+          </a>
+          <button type="submit" 
+                  class="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors">
+            Delete My Account
+          </button>
+        </div>
+      </form>
+      
+    </div>
+    
+  </div>
+</div>
+{% endblock %}

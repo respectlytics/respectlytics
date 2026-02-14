@@ -1,0 +1,60 @@
+{% extends "admin/index.html" %}
+{% load i18n static %}
+
+{% block content %}
+{{ block.super }}
+
+<!-- SEC-011: Security Dashboard Link -->
+<div class="module" style="margin-top: 20px;">
+    <h2>🛡️ Security</h2>
+    <table style="width: 100%;">
+        <tbody>
+            <tr style="background: #fce4ec;">
+                <th scope="row">
+                    <a href="{% url 'admin:security-dashboard' %}" style="font-size: 15px;">
+                        🛡️ Security Dashboard
+                    </a>
+                </th>
+                <td style="color: #666; font-size: 14px;">
+                    <strong>Monitor security</strong> - View banned IPs, locked accounts, and security events
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<div class="module" style="margin-top: 20px;">
+    <h2>📚 API Documentation</h2>
+    <table style="width: 100%;">
+        <caption>
+            <div style="text-align: left; padding: 10px; background: #f8f9fa; border-radius: 4px; margin-bottom: 10px;">
+                <strong>API Documentation</strong><br>
+                <small style="color: #666;">Complete API reference available at /api/v1/reference/</small>
+            </div>
+        </caption>
+        <tbody>
+            <tr style="background: #e8f5e9;">
+                <th scope="row">
+                    <a href="{% url 'public-schema-redoc' %}" target="_blank" style="font-size: 15px;">
+                        📚 API Reference (ReDoc)
+                    </a>
+                </th>
+                <td style="color: #666; font-size: 14px;">
+                    <strong>Documentation</strong> - Full API reference with examples
+                </td>
+            </tr>
+            <tr style="background: #e8f5e9;">
+                <th scope="row">
+                    <a href="{% url 'public-schema-swagger-ui' %}" target="_blank" style="font-size: 15px;">
+                        🧪 Swagger UI
+                    </a>
+                </th>
+                <td style="color: #666; font-size: 14px;">
+                    <strong>Interactive testing</strong> - Test all API endpoints directly
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+{% endblock %}

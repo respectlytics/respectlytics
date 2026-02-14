@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Respectlytics{% endblock %}</title>
+    <style>
+        :root {
+            --primary-500: #667eea;
+            --primary-600: #5b6fd8;
+            --primary-700: #4c5ec7;
+            --error-500: #ef4444;
+            --success-500: #10b981;
+            --info-500: #3b82f6;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-300: #d1d5db;
+            --gray-600: #4b5563;
+            --gray-900: #111827;
+            --space-2: 0.5rem;
+            --space-3: 0.75rem;
+            --space-4: 1rem;
+            --space-5: 1.25rem;
+            --space-6: 1.5rem;
+            --space-8: 2rem;
+            --space-10: 2.5rem;
+            --space-12: 3rem;
+            --radius-md: 0.5rem;
+            --radius-lg: 0.75rem;
+            --radius-xl: 1rem;
+            --radius-2xl: 1.5rem;
+            --shadow-lg: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: var(--space-6);
+        }
+        
+        .auth-container {
+            background: white;
+            border-radius: var(--radius-2xl);
+            box-shadow: var(--shadow-xl);
+            width: 100%;
+            max-width: 480px;
+            padding: var(--space-12) var(--space-10);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .logo {
+            text-align: center;
+            margin-bottom: var(--space-10);
+        }
+        
+        .logo h1 {
+            font-size: 2.25rem;
+            background: linear-gradient(135deg, var(--primary-500) 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 900;
+            margin-bottom: var(--space-3);
+            letter-spacing: -0.02em;
+        }
+        
+        .logo p {
+            color: var(--gray-600);
+            font-size: 1.0625rem;
+            font-weight: 500;
+        }
+        
+        .form-group {
+            margin-bottom: var(--space-6);
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: var(--space-2);
+            color: #0a0a14;
+            font-weight: 600;
+            font-size: 0.9375rem;
+        }
+        
+        .form-control, input[type="text"], input[type="email"], input[type="password"] {
+            width: 100%;
+            padding: var(--space-4) var(--space-5);
+            border: 2px solid var(--gray-300);
+            border-radius: var(--radius-lg);
+            font-size: 1rem;
+            transition: all 0.2s;
+            font-family: inherit;
+            background: white;
+            color: #0a0a14;
+        }
+        
+        .form-control:focus, input[type="text"]:focus, input[type="email"]:focus, input[type="password"]:focus {
+            outline: none;
+            border-color: var(--primary-500);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+        }
+        
+        .help-text {
+            font-size: 0.8125rem;
+            color: var(--gray-600);
+            margin-top: var(--space-2);
+            line-height: 1.5;
+        }
+        
+        .btn {
+            width: 100%;
+            padding: var(--space-4) var(--space-6);
+            background: linear-gradient(135deg, var(--primary-500) 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: var(--radius-lg);
+            font-size: 1.0625rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .messages {
+            margin-bottom: var(--space-6);
+        }
+        
+        .message {
+            padding: var(--space-4) var(--space-5);
+            border-radius: var(--radius-lg);
+            margin-bottom: var(--space-4);
+            font-size: 0.9375rem;
+            font-weight: 500;
+        }
+        
+        .message.success {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success-500);
+            border: 2px solid var(--success-500);
+        }
+        
+        .message.error {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--error-500);
+            border: 2px solid var(--error-500);
+        }
+        
+        .message.info {
+            background: rgba(59, 130, 246, 0.1);
+            color: var(--info-500);
+            border: 2px solid var(--info-500);
+        }
+        
+        .form-footer {
+            margin-top: var(--space-8);
+            text-align: center;
+            font-size: 0.9375rem;
+            color: var(--gray-600);
+            line-height: 1.8;
+        }
+        
+        .form-footer a {
+            color: var(--primary-600);
+            text-decoration: none;
+            font-weight: 600;
+        }
+        
+        .form-footer a:hover {
+            text-decoration: underline;
+        }
+        
+        .errorlist {
+            list-style: none;
+            margin: var(--space-2) 0 0 0;
+            padding: 0;
+        }
+        
+        .errorlist li {
+            color: var(--error-500);
+            font-size: 0.875rem;
+            margin-top: var(--space-2);
+            font-weight: 500;
+        }
+        
+        .divider {
+            text-align: center;
+            margin: var(--space-6) 0;
+            position: relative;
+        }
+        
+        .divider::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            width: 100%;
+            height: 1px;
+            background: var(--gray-200);
+        }
+        
+        .divider span {
+            background: white;
+            padding: 0 var(--space-4);
+            position: relative;
+            color: var(--gray-600);
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-container">
+        <div class="logo">
+            <h1>Respectlytics</h1>
+            <p>{% block subtitle %}Privacy-First Analytics{% endblock %}</p>
+        </div>
+        
+        {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+            <div class="message {{ message.tags }}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
+        {% block content %}{% endblock %}
+    </div>
+</body>
+</html>

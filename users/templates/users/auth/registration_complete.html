@@ -1,0 +1,84 @@
+{% extends "users/auth_base.html" %}
+
+{% block title %}Check Your Email - Respectlytics{% endblock %}
+
+{% block content %}
+<div class="text-center">
+    <div class="text-6xl mb-4">📧</div>
+    <h2 class="text-gray-800 mb-2 text-3xl font-semibold">Almost There!</h2>
+    <p class="text-gray-500 mb-6 text-base leading-relaxed">
+        We've sent a verification email to your inbox. Please check your email and click the verification link to activate your account.
+    </p>
+    
+    <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6 text-left">
+        <p class="text-slate-400 text-base mb-2">
+            <strong>📬 Didn't receive the email?</strong>
+        </p>
+        <ul class="text-gray-500 text-base ml-5 list-disc space-y-1.5">
+            <li>Check your <strong>spam or junk folder</strong></li>
+            <li>Wait a few minutes – emails can take time to arrive</li>
+            <li>Make sure you entered the correct email address</li>
+            <li>Check your email filters or blocklist settings</li>
+        </ul>
+    </div>
+
+    <div class="mt-6 flex flex-col gap-3 items-center">
+        <form method="post" action="{% url 'resend_verification' %}" class="w-full max-w-[280px]" id="resendForm">
+            {% csrf_token %}
+            <input type="hidden" name="email" id="userEmail" value="">
+            <button type="button" onclick="showResendForm()" id="resendBtn" 
+                    class="block w-full py-3 px-8 btn-gradient text-white no-underline rounded-lg text-lg font-medium text-center border-none cursor-pointer">
+                📧 Resend Verification Email
+            </button>
+        </form>
+        
+        <div id="emailInputSection" class="hidden w-full max-w-[280px]">
+            <input type="email" id="emailInput" placeholder="Enter your email" 
+                   class="w-full p-3 border-2 border-gray-200 rounded-lg text-base mb-2" required>
+            <button onclick="submitResend()" 
+                    class="block w-full py-3 px-8 btn-gradient text-white no-underline rounded-lg text-lg font-medium text-center border-none cursor-pointer">
+                Send Email
+            </button>
+            <button onclick="hideResendForm()" 
+                    class="block w-full py-2 bg-transparent text-gray-500 text-base border-none cursor-pointer mt-2">
+                Cancel
+            </button>
+        </div>
+        
+        <a href="{% url 'login' %}" 
+           class="block w-full max-w-[280px] py-3 px-8 bg-transparent text-brand-500 no-underline rounded-lg text-lg font-medium border-2 border-brand-500 text-center">
+            Back to Sign In
+        </a>
+        <a href="/" 
+           class="block w-full max-w-[280px] py-3 px-8 bg-transparent text-gray-400 no-underline rounded-lg text-lg font-medium border-2 border-white/10 text-center">
+            Go to Homepage
+        </a>
+    </div>
+</div>
+
+<script>
+function showResendForm() {
+    document.getElementById('resendBtn').style.display = 'none';
+    document.getElementById('emailInputSection').classList.remove('hidden');
+}
+
+function hideResendForm() {
+    document.getElementById('resendBtn').style.display = 'block';
+    document.getElementById('emailInputSection').classList.add('hidden');
+}
+
+function submitResend() {
+    const email = document.getElementById('emailInput').value.trim();
+    if (!email) {
+        showToast('Please enter your email address', 'warning');
+        return;
+    }
+    if (!email.includes('@')) {
+        showToast('Please enter a valid email address', 'warning');
+        return;
+    }
+    document.getElementById('userEmail').value = email;
+    document.getElementById('resendForm').submit();
+}
+</script>
+{% endblock %}

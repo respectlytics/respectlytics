@@ -1,0 +1,720 @@
+/**
+ * Stats Page Styles - Dark Theme
+ * Refactored for permanent dark mode with 8px grid system
+ * Part of: UI/Design System Backlog - Task UI-005
+ */
+
+/* ==========================================================================
+   Sidebar Navigation Styles - Dark theme
+   ========================================================================== */
+
+.sidebar-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;  /* 12px */
+    width: 100%;
+    padding: 0.625rem 1rem;  /* 10px 16px */
+    border-radius: 0.5rem;  /* 8px */
+    font-size: 0.875rem;  /* 14px */
+    font-weight: 500;
+    color: #94a3b8;  /* Slate 400 */
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: left;
+}
+
+.sidebar-nav-item:hover {
+    background: rgba(51, 65, 85, 0.5);  /* Slate 700/50 */
+    color: #f8fafc;  /* Slate 50 */
+}
+
+.sidebar-nav-item.active {
+    background: rgba(99, 102, 241, 0.15);  /* Indigo 500/15 - luminous */
+    color: #818cf8;  /* Indigo 400 */
+    font-weight: 600;
+}
+
+.sidebar-nav-icon {
+    width: 1.25rem;  /* 20px */
+    height: 1.25rem;  /* 20px */
+    flex-shrink: 0;
+}
+
+.sidebar-divider {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.1);
+    margin: 1rem 0.75rem;  /* 16px 12px */
+}
+
+/* ==========================================================================
+   App Switcher Styles
+   ========================================================================== */
+
+.sidebar-app-option {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;  /* 12px */
+    width: 100%;
+    padding: 0.625rem 0.75rem;  /* 10px 12px */
+    border-radius: 0.5rem;  /* 8px */
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: #cbd5e1;  /* Slate 300 */
+    transition: all 0.2s;
+}
+
+.sidebar-app-option:hover {
+    background: rgba(51, 65, 85, 0.5);  /* Slate 700/50 */
+}
+
+.sidebar-app-option.active {
+    background: rgba(99, 102, 241, 0.15);  /* Indigo 500/15 */
+}
+
+.sidebar-app-option-icon {
+    width: 2rem;  /* 32px */
+    height: 2rem;  /* 32px */
+    border-radius: 0.5rem;  /* 8px */
+    background: linear-gradient(135deg, #6366F1, #8B5CF6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 0.8125rem;  /* 13px */
+    color: white;
+}
+
+.sidebar-app-option-name {
+    flex: 1;
+    text-align: left;
+    font-weight: 500;
+}
+
+.sidebar-app-option-check {
+    width: 1.125rem;  /* 18px */
+    height: 1.125rem;  /* 18px */
+    color: #34d399;  /* Emerald 400 */
+    display: none;
+}
+
+.sidebar-app-option.active .sidebar-app-option-check {
+    display: block;
+}
+
+/* ==========================================================================
+   Tab & UI Components
+   ========================================================================== */
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+.pill-tab.active {
+    background: #1e293b;  /* Slate 800 */
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #818cf8;  /* Indigo 400 */
+}
+
+.event-status-popover.active {
+    display: block !important;
+}
+
+.collapsible-section.collapsed .collapsible-content {
+    display: none;
+}
+
+.collapsible-section.collapsed .collapsible-toggle {
+    transform: rotate(-90deg);
+}
+
+/* ==========================================================================
+   Globe Section
+   ========================================================================== */
+
+#globeSection {
+    background: linear-gradient(180deg, #0a0e27 0%, #1a1f3a 100%);
+}
+
+/* ==========================================================================
+   Skeleton Loading Animations - Dark theme
+   ========================================================================== */
+
+@keyframes shimmer {
+    0% {
+        background-position: -200% 0;
+    }
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+.skeleton {
+    background: linear-gradient(90deg, #334155 25%, #475569 50%, #334155 75%);  /* Slate 700/600 gradient */
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 4px;
+}
+
+.skeleton-line--lg {
+    height: 24px;
+    width: 60%;
+    margin-bottom: 12px;  /* 8px grid */
+}
+
+.skeleton-line--sm {
+    height: 16px;
+    width: 40%;
+    margin-bottom: 8px;  /* 8px grid */
+}
+
+.skeleton-chart {
+    height: 200px;
+    width: 100%;
+}
+
+.skeleton-stat {
+    height: 80px;
+    width: 100%;
+}
+
+.skeleton-card {
+    padding: 24px;  /* 8px grid */
+    background: #1e293b;  /* Slate 800 */
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    margin-bottom: 16px;  /* 8px grid */
+}
+
+.skeleton-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;  /* 8px grid */
+}
+
+/* ==========================================================================
+   Warning Banner - Luminous amber theme
+   ========================================================================== */
+
+.warning-banner {
+    display: none;
+    background: rgba(251, 191, 36, 0.15);  /* Amber luminous */
+    border: 1px solid rgba(251, 191, 36, 0.3);
+    color: #fcd34d;  /* Amber 300 */
+    padding: 16px 24px;  /* 8px grid */
+    border-radius: 12px;
+    margin-bottom: 24px;  /* 8px grid */
+    align-items: center;
+    gap: 16px;  /* 8px grid */
+}
+
+.warning-banner.visible {
+    display: flex;
+}
+
+/* ==========================================================================
+   Cohort Table Heatmap - Luminous colors
+   ========================================================================== */
+
+.cohort-cell {
+    display: inline-block;
+    padding: 4px 8px;  /* 8px grid */
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.cohort-cell--high {
+    background: rgba(16, 185, 129, 0.15);  /* Emerald luminous */
+    color: #34d399;  /* Emerald 400 */
+}
+
+.cohort-cell--medium {
+    background: rgba(251, 191, 36, 0.15);  /* Amber luminous */
+    color: #fcd34d;  /* Amber 300 */
+}
+
+.cohort-cell--low {
+    background: rgba(244, 63, 94, 0.15);  /* Rose luminous */
+    color: #fb7185;  /* Rose 400 */
+}
+
+.cohort-cell--none {
+    background: rgba(51, 65, 85, 0.5);  /* Slate 700/50 */
+    color: #64748b;  /* Slate 500 */
+}
+
+/* ==========================================================================
+   Live Activity Section
+   ========================================================================== */
+
+.live-metric {
+    transition: color 0.2s;
+}
+
+.live-metric.zero-value {
+    color: #64748b;  /* Slate 500 */
+}
+
+/* Live Activity - compact inline badges */
+.live-event-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;  /* 8px grid */
+    padding: 2px 8px;  /* 8px grid */
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    font-size: 11px;
+    white-space: nowrap;
+}
+
+.live-event-badge .event-name {
+    color: #e5e7eb;  /* Gray 200 */
+    font-weight: 500;
+    max-width: 80px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.live-event-badge .event-flag {
+    font-size: 12px;
+}
+
+.live-event-badge .event-time {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.live-empty {
+    color: #64748b;  /* Slate 500 */
+    font-size: 11px;
+    font-style: italic;
+}
+
+/* ==========================================================================
+   Conversion Tab - Session Bars
+   ========================================================================== */
+
+.session-bar-new {
+    background: linear-gradient(to top, #6366f1, #818cf8);  /* Indigo gradient */
+    border-radius: 6px;
+    min-height: 24px;  /* 8px grid */
+    transition: height 0.3s ease;
+}
+
+/* ==========================================================================
+   Scrollable Table
+   ========================================================================== */
+
+.scrollable-table {
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #475569 transparent;  /* Slate 600 */
+}
+
+/* ==========================================================================
+   Sortable Table Headers
+   ========================================================================== */
+
+.sortable-header {
+    cursor: pointer;
+    user-select: none;
+    transition: color 0.15s;
+}
+
+.sortable-header:hover {
+    color: #818cf8;  /* Indigo 400 */
+}
+
+.sortable-header .sort-icon {
+    opacity: 0.3;
+    transition: opacity 0.15s;
+}
+
+.sortable-header:hover .sort-icon {
+    opacity: 0.6;
+}
+
+.sortable-header.sort-active {
+    color: #818cf8;  /* Indigo 400 */
+}
+
+.sortable-header.sort-active .sort-icon {
+    opacity: 1;
+}
+
+/* ==========================================================================
+   Info Tooltip - Dark theme
+   ========================================================================== */
+
+.info-tooltip {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #94a3b8;  /* Slate 400 */
+    background: rgba(51, 65, 85, 0.5);  /* Slate 700/50 */
+    border-radius: 50%;
+    cursor: help;
+    transition: all 0.15s;
+}
+
+.info-tooltip:hover {
+    background: #334155;  /* Slate 700 */
+    color: #f8fafc;  /* Slate 50 */
+}
+
+.info-tooltip::after {
+    content: attr(data-tip);
+    position: absolute;
+    top: calc(100% + 8px);  /* 8px grid */
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 10px 14px;
+    background: #334155;  /* Slate 700 - Overlay color */
+    color: #f8fafc;  /* Slate 50 */
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1.5;
+    white-space: normal;
+    width: 240px;
+    max-width: 280px;
+    text-align: left;
+    border-radius: 8px;  /* 8px grid */
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.1s, visibility 0.1s;
+    z-index: 1000;
+    pointer-events: none;
+}
+
+.info-tooltip::before {
+    content: '';
+    position: absolute;
+    top: calc(100% + 2px);
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-bottom-color: #334155;  /* Slate 700 */
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.1s, visibility 0.1s;
+    z-index: 1000;
+}
+
+.info-tooltip:hover::after,
+.info-tooltip:hover::before {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Tooltip alignment variants for edge columns */
+.info-tooltip.tooltip-left::after {
+    left: auto;
+    right: 0;
+    transform: translateX(0);
+}
+
+.info-tooltip.tooltip-left::before {
+    left: auto;
+    right: 12px;
+    transform: translateX(0);
+}
+
+.info-tooltip.tooltip-right::after {
+    left: auto;
+    right: 0;
+    transform: translateX(0);
+}
+
+.info-tooltip.tooltip-right::before {
+    left: auto;
+    right: 12px;
+    transform: translateX(0);
+}
+
+/* Globe panel tooltip trigger - JS-based floating tooltip */
+.globe-tooltip-trigger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    font-size: 10px;
+    font-weight: 600;
+    color: #94a3b8;  /* Slate 400 */
+    background: rgba(51, 65, 85, 0.8);  /* Slate 700/80 */
+    border-radius: 50%;
+    cursor: help;
+    transition: all 0.15s;
+}
+
+.globe-tooltip-trigger:hover {
+    background: #475569;  /* Slate 600 */
+    color: #f8fafc;  /* Slate 50 */
+}
+
+/* ==========================================================================
+   Behavior Tab - Lift Items (Boosters/Blockers)
+   ========================================================================== */
+
+.lift-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;  /* 8px grid */
+    padding: 12px 0;  /* 8px grid */
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.lift-item:last-child {
+    border-bottom: none;
+}
+
+.lift-event {
+    flex-shrink: 0;
+    width: 120px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #cbd5e1;  /* Slate 300 */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.lift-bar-container {
+    flex: 1;
+    height: 8px;  /* 8px grid */
+    background: rgba(51, 65, 85, 0.5);  /* Slate 700/50 */
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.lift-bar {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+.lift-bar--positive {
+    background: linear-gradient(90deg, #10b981, #34d399);  /* Emerald gradient */
+}
+
+.lift-bar--negative {
+    background: linear-gradient(90deg, #f43f5e, #fb7185);  /* Rose gradient */
+}
+
+.lift-value {
+    flex-shrink: 0;
+    min-width: 52px;
+    text-align: right;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.lift-value--positive {
+    color: #34d399;  /* Emerald 400 */
+}
+
+.lift-value--negative {
+    color: #fb7185;  /* Rose 400 */
+}
+
+/* New detailed lift items for Behavior tab */
+.lift-item-detailed {
+    padding: 12px 0;  /* 8px grid */
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.lift-item-detailed:last-of-type {
+    border-bottom: none;
+}
+
+/* ==========================================================================
+   Behavior Tab - Signal Cards
+   ========================================================================== */
+
+.signal-card {
+    background: #1e293b;  /* Slate 800 */
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 16px;  /* 8px grid */
+    transition: all 0.2s;
+}
+
+.signal-card:hover {
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.signal-card--boost {
+    border-left: 3px solid #34d399;  /* Emerald 400 */
+    padding-left: 20px;
+}
+
+.signal-card--hurt {
+    border-left: 3px solid #fb7185;  /* Rose 400 */
+    padding-left: 20px;
+}
+
+.signal-event {
+    font-size: 14px;
+    font-weight: 600;
+    color: #f8fafc;  /* Slate 50 */
+    margin-bottom: 8px;  /* 8px grid */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.signal-adjustment {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 8px;  /* 8px grid */
+}
+
+.signal-adjustment--positive {
+    color: #34d399;  /* Emerald 400 */
+}
+
+.signal-adjustment--negative {
+    color: #fb7185;  /* Rose 400 */
+}
+
+.signal-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;  /* 8px grid */
+    flex-wrap: wrap;
+    font-size: 11px;
+    color: #94a3b8;  /* Slate 400 */
+}
+
+.signal-confidence {
+    letter-spacing: -1px;
+}
+
+.signal-early {
+    background: rgba(251, 191, 36, 0.15);  /* Amber luminous */
+    border: 1px solid rgba(251, 191, 36, 0.3);
+    color: #fcd34d;  /* Amber 300 */
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 500;
+    position: relative;
+    cursor: help;
+}
+
+.signal-early::after {
+    content: attr(data-tip);
+    position: absolute;
+    bottom: calc(100% + 8px);  /* 8px grid */
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 8px 12px;  /* 8px grid */
+    background: #334155;  /* Slate 700 */
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #f8fafc;  /* Slate 50 */
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1.4;
+    white-space: nowrap;
+    border-radius: 6px;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.1s, visibility 0.1s;
+    z-index: 50;
+    pointer-events: none;
+}
+
+.signal-early::before {
+    content: '';
+    position: absolute;
+    bottom: calc(100% + 2px);
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: #334155;  /* Slate 700 */
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.1s, visibility 0.1s;
+    z-index: 50;
+}
+
+.signal-early:hover::after,
+.signal-early:hover::before {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* ==========================================================================
+   Retention Tab Styles
+   ========================================================================== */
+
+.retention-granularity-btn {
+    transition: all 0.2s ease;
+}
+
+.retention-granularity-btn.active {
+    background: #1e293b;  /* Slate 800 */
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #a78bfa;  /* Purple 400 */
+    font-weight: 600;
+}
+
+.retention-table {
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.retention-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.retention-table tbody tr:hover {
+    background: rgba(139, 92, 246, 0.15) !important;  /* Purple luminous */
+}
+
+/* Engagement Chart Styles */
+#engagementChart {
+    position: relative;
+}
+
+#engagementLabels {
+    display: flex;
+    justify-content: space-around;
+    margin-top: 12px;  /* 8px grid */
+}
+
+/* Purple theme color variants - Dark theme adjusted */
+.text-purple-50 { color: #f3e8ff; }
+.text-purple-100 { color: #e9d5ff; }
+.text-purple-600 { color: #a78bfa; }  /* Purple 400 for dark backgrounds */
+.text-purple-700 { color: #8b5cf6; }  /* Purple 500 */
+.text-purple-800 { color: #7c3aed; }  /* Purple 600 */
+.text-purple-900 { color: #6d28d9; }  /* Purple 700 */
+
+.bg-purple-50 { background-color: rgba(139, 92, 246, 0.15); }  /* Purple luminous */
+.bg-purple-100 { background-color: rgba(139, 92, 246, 0.2); }
+.bg-purple-600 { background-color: #8b5cf6; }
+.bg-purple-700 { background-color: #7c3aed; }
+
+.border-purple-100 { border-color: rgba(139, 92, 246, 0.3); }
+
+.hover\:bg-purple-50\/30:hover {
+    background-color: rgba(139, 92, 246, 0.15);
+}
+
+.hover\:bg-purple-700:hover {
+    background-color: #7c3aed;
+}

@@ -1,0 +1,34 @@
+{% extends "emails/base_email.html" %}
+{% block title %}Account Locked - Security Alert{% endblock %}
+
+{% block content %}
+<h1>🚨 Account Lockout Alert</h1>
+
+<div class="alert alert-danger">
+    <p style="margin: 0;"><strong>An account has been locked due to failed login attempts.</strong></p>
+</div>
+
+<div class="card">
+    <p><strong>Account:</strong> {{ email }}</p>
+    <p><strong>IP Address:</strong> {{ ip_address }}</p>
+    <p><strong>Failed Attempts:</strong> {{ attempt_count }}</p>
+    <p><strong>Lockout Duration:</strong> {{ lockout_duration }}</p>
+    <p class="mb-0"><strong>Time:</strong> {{ timestamp|date:"F j, Y, g:i a" }} UTC</p>
+</div>
+
+<p>This could indicate:</p>
+<ul style="color: #cbd5e1; margin-left: 20px;">
+    <li>A brute force attack against this account</li>
+    <li>A user who forgot their password</li>
+    <li>Someone else trying to access the account</li>
+</ul>
+
+<p class="text-muted">
+    The account will automatically unlock after {{ lockout_duration }}. 
+    You can manually unlock it from the Django admin if needed.
+</p>
+
+<p class="text-center mt-24">
+    <a href="{{ base_url }}/nidibatisinizadmin/auth/user/" class="btn btn-primary" style="color: #ffffff !important;">View in Admin</a>
+</p>
+{% endblock %}

@@ -1,0 +1,245 @@
+{# Overview Tab Content - Extracted from stats.html #}
+<!-- Live Activity Bar - compact single row | Spacing: 8px grid (px-4=16px, py-3=12px, mb-6=24px, gap-4=16px) -->
+<div id="last30Section" class="bg-[#1e293b] rounded-xl border border-white/10 px-4 py-3 mb-6">
+    <div class="flex items-center gap-4 flex-wrap">
+        <!-- Live indicator + count -->
+        <div class="flex items-center gap-2 shrink-0">
+            <span class="relative flex h-2 w-2">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
+            <span class="text-slate-50 font-semibold text-sm"><span id="last30Events" class="live-metric">-</span> events</span>
+            <span class="text-slate-400 text-sm">in last 30 min</span>
+        </div>
+        <!-- Divider -->
+        <div class="h-4 w-px bg-white/10 hidden sm:block"></div>
+        <!-- View activity link with popover -->
+        <div class="relative">
+            <button id="viewActivityBtn" onclick="toggleActivityPopover()" class="text-sm text-indigo-400 hover:text-indigo-300 font-medium transition-colors flex items-center gap-1">
+                <span id="viewActivityLabel">View activity</span>
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+            <!-- Activity Popover -->
+            <div id="activityPopover" class="hidden absolute left-0 top-full mt-2 w-80 bg-[#1e293b] rounded-xl shadow-2xl border border-white/10 z-50 overflow-hidden">
+                <div class="flex items-center justify-between px-4 py-3 bg-slate-800/50 border-b border-white/10">
+                    <span class="font-semibold text-slate-50 text-sm">Recent Activity</span>
+                    <button onclick="toggleActivityPopover()" class="text-slate-400 hover:text-slate-50 transition-colors">
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                    </button>
+                </div>
+                <div id="activityPopoverContent" class="p-2">
+                    <div class="text-slate-400 text-sm text-center py-4">Loading...</div>
+                </div>
+            </div>
+        </div>
+        <!-- Spacer -->
+        <div class="flex-1"></div>
+        <!-- Time range -->
+        <span id="last30TimeRange" class="text-sm text-slate-400 shrink-0 hidden sm:inline">--:--</span>
+    </div>
+</div>
+
+<!-- Key Metrics Section | Spacing: 8px grid (mb-6=24px, mb-4=16px, gap-2=8px, px-3=12px, py-1=4px) -->
+<div class="mb-6">
+    <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-bold text-slate-50 flex items-center gap-2">
+            <span>Key Metrics</span>
+        </h2>
+        <span class="px-3 py-1 text-sm font-medium bg-emerald-500/15 text-emerald-400 rounded-full" id="scopeBadgeMetrics">⚡ Last 30 min</span>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <!-- Total Events Card -->
+        <div class="bg-[#1e293b] rounded-2xl p-5 border border-white/10 hover:border-white/20 transition-all">
+            <div class="flex items-center gap-3 mb-3">
+                <div class="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center flex-shrink-0">
+                    <svg class="w-5 h-5 text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+                </div>
+                <div class="text-3xl font-bold text-slate-50" id="totalEvents">-</div>
+            </div>
+            <div class="text-sm font-medium text-slate-400 flex items-center gap-1 whitespace-nowrap">
+                Total Events
+                <span class="info-tooltip" data-tip="Total number of events tracked from your app">?</span>
+            </div>
+        </div>
+        
+        <!-- Event Types Card -->
+        <div class="bg-[#1e293b] rounded-2xl p-5 border border-white/10 hover:border-white/20 transition-all">
+            <div class="flex items-center gap-3 mb-3">
+                <div class="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center flex-shrink-0">
+                    <svg class="w-5 h-5 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+                </div>
+                <div class="text-3xl font-bold text-slate-50" id="eventTypes">-</div>
+            </div>
+            <div class="text-sm font-medium text-slate-400 flex items-center gap-1 whitespace-nowrap">
+                Event Types
+                <span class="info-tooltip" data-tip="Number of unique event types recorded">?</span>
+            </div>
+        </div>
+        
+        <!-- Countries Card -->
+        <div class="bg-[#1e293b] rounded-2xl p-5 border border-white/10 hover:border-white/20 transition-all">
+            <div class="flex items-center gap-3 mb-3">
+                <div class="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center flex-shrink-0">
+                    <svg class="w-5 h-5 text-cyan-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                </div>
+                <div class="text-3xl font-bold text-slate-50" id="countries">-</div>
+            </div>
+            <div class="text-sm font-medium text-slate-400 flex items-center gap-1 whitespace-nowrap">
+                Countries
+                <span class="info-tooltip" data-tip="Number of different countries">?</span>
+            </div>
+        </div>
+        
+        <!-- Daily Sessions Card -->
+        <div class="bg-[#1e293b] rounded-2xl p-5 border border-white/10 hover:border-white/20 transition-all">
+            <div class="flex items-center gap-3 mb-3">
+                <div class="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center flex-shrink-0">
+                    <svg class="w-5 h-5 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                </div>
+                <div class="text-3xl font-bold text-slate-50" id="activeSessions">-</div>
+            </div>
+            <div class="text-sm font-medium text-slate-400 flex items-center gap-1 whitespace-nowrap">
+                <span id="activeSessionsLabel">Daily Sessions</span>
+                <span class="info-tooltip" data-tip="Unique sessions with at least one event (2-hour window)">?</span>
+            </div>
+        </div>
+        
+        <!-- Avg Session Length Card -->
+        <div class="bg-[#1e293b] rounded-2xl p-5 border border-white/10 hover:border-white/20 transition-all">
+            <div class="flex items-center gap-3 mb-3">
+                <div class="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center flex-shrink-0">
+                    <svg class="w-5 h-5 text-purple-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                </div>
+                <div class="text-3xl font-bold text-slate-50" id="avgSessionLength">-</div>
+            </div>
+            <div class="text-xs font-medium text-slate-400 flex items-center gap-1 whitespace-nowrap">
+                Avg Session Length
+                <span class="info-tooltip tooltip-left" data-tip="Average time between first and last event per session (multi-event sessions only)">?</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<hr class="border-white/10 my-6">
+
+<!-- Globe Section | Spacing: 8px grid (mb-6=24px, p-4=16px, gap-3=12px, px-3=12px, py-1=4px) -->
+<div class="bg-[#1e293b] rounded-2xl border border-white/10 overflow-hidden mb-6">
+    <div class="flex items-center justify-between p-4 border-b border-white/10">
+        <h3 class="text-lg font-bold text-slate-50">Session Activity by Location</h3>
+        <div class="flex items-center gap-3">
+            <span class="px-3 py-1 text-sm font-medium bg-emerald-500/15 text-emerald-400 rounded-full" id="scopeBadgeGlobe">⚡ Today</span>
+            <span id="globeLastUpdated" class="text-sm text-slate-400">Updated: --</span>
+        </div>
+    </div>
+    <div id="globeSection" class="relative rounded-b-2xl" style="padding: 8px;">
+        <!-- Map Controls | Spacing: 8px grid (top-3=12px, right-3=12px) -->
+        <div class="absolute top-3 right-3 z-10 flex gap-2">
+            <button onclick="toggleGlobeFullscreen()" id="globeFullscreenBtn" title="Toggle Fullscreen" class="w-8 h-8 bg-slate-800/50 border border-white/20 text-slate-300 rounded-lg flex items-center justify-center hover:bg-slate-700/50 transition-all backdrop-blur-sm">⛶</button>
+        </div>
+
+        <div id="globeViz" class="w-full" style="height: 380px;"></div>
+    </div>
+</div>
+
+<!-- Map Stats Cards - Below Map -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+    <!-- Top Converters Card -->
+    <div class="bg-[#1e293b] rounded-xl border border-white/10 p-4">
+        <h3 class="text-sm font-bold text-slate-50 mb-1 flex items-center gap-2">
+            🏆 <span>Top Converters</span>
+            <span class="info-tooltip" data-tip="Countries ranked by conversion rate. Rate = conversion events ÷ unique sessions.">?</span>
+        </h3>
+        <p class="text-xs text-slate-400 mb-3">By conversion rate (conversions/sessions)</p>
+        <div id="top-converters-list" class="flex gap-2 overflow-x-auto pb-2 scrollbar-thin">
+            <span class="text-xs text-slate-500">Loading...</span>
+        </div>
+    </div>
+    
+    <!-- Top Activity Card -->
+    <div class="bg-[#1e293b] rounded-xl border border-white/10 p-4">
+        <h3 class="text-sm font-bold text-slate-50 mb-1 flex items-center gap-2">
+            🔥 <span>Top Activity</span>
+            <span class="info-tooltip" data-tip="Countries ranked by total events. Each session is a 2-hour activity window.">?</span>
+        </h3>
+        <p class="text-xs text-slate-400 mb-3">By total event count</p>
+        <div id="top-activity-list" class="flex gap-2 overflow-x-auto pb-2 scrollbar-thin">
+            <span class="text-xs text-slate-500">Loading...</span>
+        </div>
+    </div>
+</div>
+
+<!-- Granularity Toggle for Time-based Charts | Spacing: 8px grid -->
+<div class="flex items-center justify-between mb-6">
+    <div>
+        <h2 class="text-lg font-bold text-slate-50">Time-Series Data</h2>
+        <p class="text-sm text-slate-400">Events, sessions, and period breakdown</p>
+    </div>
+    <div class="flex items-center gap-3">
+        <span id="overviewGranularityAutoLabel" class="text-xs text-slate-500 hidden">Auto-selected</span>
+        <div class="inline-flex rounded-lg bg-slate-800 p-1 gap-1 border border-slate-700">
+            <button class="overview-granularity-btn px-4 py-2 text-sm font-medium rounded-md bg-slate-700 text-slate-200 shadow-sm transition-all" data-granularity="day">Daily</button>
+            <button class="overview-granularity-btn px-4 py-2 text-sm font-medium rounded-md text-slate-400 hover:text-slate-200 hover:bg-slate-700/50 transition-all" data-granularity="week">Weekly</button>
+            <button class="overview-granularity-btn px-4 py-2 text-sm font-medium rounded-md text-slate-400 hover:text-slate-200 hover:bg-slate-700/50 transition-all" data-granularity="month">Monthly</button>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Grid | Spacing: 8px grid (gap-6=24px, mb-8=32px) -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 lg:items-stretch">
+    <!-- Events Over Time | Spacing: 8px grid (p-6=24px, mb-4=16px, px-3=12px, py-1=4px) -->
+    <div class="bg-[#1e293b] rounded-2xl p-6 border border-white/10 flex flex-col h-full">
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                <h2 id="eventsChartTitle" class="text-lg font-bold text-slate-50">Events Over Time</h2>
+                <p id="eventsChartSubtitle" class="text-sm text-slate-400">Total events tracked per day</p>
+            </div>
+            <span class="px-3 py-1 text-sm font-medium bg-emerald-500/15 text-emerald-400 rounded-full" id="scopeBadgeChart">⚡ Today</span>
+        </div>
+        <div class="flex-1">
+            <canvas id="eventsChart" class="w-full h-72"></canvas>
+        </div>
+    </div>
+    <!-- Daily Sessions | Spacing: 8px grid (p-6=24px, mb-4=16px, px-3=12px, py-1=4px) -->
+    <div class="bg-[#1e293b] rounded-2xl p-6 border border-white/10 flex flex-col h-full">
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                <h2 id="sessionsChartTitle" class="text-lg font-bold text-slate-50">Sessions & Duration</h2>
+                <p id="sessionsChartSubtitle" class="text-sm text-slate-400">Unique sessions and average duration per day</p>
+            </div>
+            <span class="px-3 py-1 text-sm font-medium bg-emerald-500/15 text-emerald-400 rounded-full" id="scopeBadgeDAU">⚡ Today</span>
+        </div>
+        <div class="flex-1">
+            <canvas id="dauChart" class="w-full h-72"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Second Charts Grid | Spacing: 8px grid (gap-6=24px, mb-8=32px) -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 lg:items-stretch">
+    <div class="bg-[#1e293b] rounded-2xl p-8 border border-white/10 flex flex-col h-full">
+        <h2 class="text-lg font-bold text-slate-50 mb-1">Events by Type</h2>
+        <p class="text-sm text-slate-400 mb-6">Distribution of your top 10 event types</p>
+        <div class="flex-1 min-h-[18rem]">
+            <canvas id="eventsTypeChart" class="w-full h-full"></canvas>
+        </div>
+    </div>
+    <div class="bg-[#1e293b] rounded-2xl p-8 border border-white/10 flex flex-col h-full">
+        <h2 class="text-lg font-bold text-slate-50 mb-1">Top Countries</h2>
+        <p class="text-sm text-slate-400 mb-6">Top 10 countries by event count</p>
+        <div class="flex-1 min-h-[18rem]">
+            <canvas id="countriesChart" class="w-full h-full"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Period Details Section | Spacing: 8px grid (mb-8=32px, p-6=24px) -->
+<div class="bg-[#1e293b] rounded-2xl border border-white/10 mb-8 overflow-hidden">
+    <div class="p-6 border-b border-white/10">
+        <div>
+            <h2 id="periodBreakdownTitle" class="text-lg font-bold text-slate-50"><span>Period Details</span></h2>
+            <p id="periodBreakdownSubtitle" class="text-sm text-slate-400 mt-1">Day-by-day statistics with change indicators</p>
+        </div>
+    </div>
+    <div id="dailyTable" class="scrollable-table overflow-x-auto overflow-y-auto" style="max-height: 480px;"></div>
+</div>

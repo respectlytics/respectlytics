@@ -1,0 +1,22 @@
+SECURITY ALERT: IP Address Banned
+==================================
+
+An IP address has been banned for suspicious activity.
+
+IP Address: {{ ip_address }}
+Reason: {{ reason }}
+{% if details %}Details: {{ details }}{% endif %}
+Ban Duration: {{ ban_duration }}
+Time: {{ timestamp|date:"F j, Y, g:i a" }} UTC
+
+{% if reason == 'attack_path' %}
+This IP was immediately banned for probing a known attack path (e.g., /wp-admin, /.env, /phpmyadmin).
+{% elif reason == 'excessive_404s' %}
+This IP was banned for generating too many 404 errors, indicating path scanning or enumeration attempts.
+{% endif %}
+
+The IP will be automatically unbanned after {{ ban_duration }}.
+No action is required unless you see repeated patterns from the same IP range.
+
+---
+Respectlytics Security System

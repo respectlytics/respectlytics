@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Database
+db.sqlite3
+db.sqlite3-journal
+
+# GeoIP (download via: python manage.py update_geoip)
+geoip_data/*.mmdb
+
+# Django
+staticfiles/
+media/
+logs/*.log
+logs/*.log.*
+
+# Node
+node_modules/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+.docker/
+
+# Test
+.coverage
+htmlcov/
+.pytest_cache/

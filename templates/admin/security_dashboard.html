@@ -1,0 +1,359 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}Security Dashboard - {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">Home</a> &rsaquo; Security Dashboard
+</div>
+{% endblock %}
+
+{% block content %}
+<style>
+    .security-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 15px;
+        margin-bottom: 30px;
+    }
+    .stat-card {
+        background: #f8f9fa;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 15px;
+        text-align: center;
+    }
+    .stat-card.warning {
+        background: #fff3cd;
+        border-color: #ffc107;
+    }
+    .stat-card.danger {
+        background: #f8d7da;
+        border-color: #dc3545;
+    }
+    .stat-card.success {
+        background: #d4edda;
+        border-color: #28a745;
+    }
+    .stat-value {
+        font-size: 2em;
+        font-weight: bold;
+        color: #333;
+    }
+    .stat-label {
+        font-size: 0.9em;
+        color: #666;
+        margin-top: 5px;
+    }
+    .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin: 25px 0 15px 0;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #417690;
+    }
+    .section-header h2 {
+        margin: 0;
+        color: #417690;
+    }
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 20px;
+    }
+    .data-table th {
+        background: #417690;
+        color: white;
+        padding: 10px;
+        text-align: left;
+        font-weight: normal;
+    }
+    .data-table td {
+        padding: 10px;
+        border-bottom: 1px solid #ddd;
+    }
+    .data-table tr:hover {
+        background: #f5f5f5;
+    }
+    .data-table .empty {
+        text-align: center;
+        color: #666;
+        font-style: italic;
+        padding: 30px;
+    }
+    .badge {
+        display: inline-block;
+        padding: 3px 8px;
+        border-radius: 4px;
+        font-size: 0.8em;
+        font-weight: bold;
+    }
+    .badge-warning { background: #ffc107; color: #000; }
+    .badge-danger { background: #dc3545; color: #fff; }
+    .badge-info { background: #17a2b8; color: #fff; }
+    .badge-success { background: #28a745; color: #fff; }
+    .badge-secondary { background: #6c757d; color: #fff; }
+    .action-btn {
+        padding: 5px 12px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.85em;
+    }
+    .action-btn-danger {
+        background: #dc3545;
+        color: white;
+    }
+    .action-btn-danger:hover {
+        background: #c82333;
+    }
+    .action-btn-success {
+        background: #28a745;
+        color: white;
+    }
+    .action-btn-success:hover {
+        background: #218838;
+    }
+    .event-log {
+        max-height: 500px;
+        overflow-y: auto;
+        background: #1e1e1e;
+        color: #d4d4d4;
+        font-family: 'Consolas', 'Monaco', monospace;
+        font-size: 12px;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+    .event-line {
+        padding: 3px 0;
+        border-bottom: 1px solid #333;
+    }
+    .event-line:last-child {
+        border-bottom: none;
+    }
+    .event-time { color: #6a9955; }
+    .event-level-INFO { color: #4fc3f7; }
+    .event-level-WARNING { color: #ffb74d; }
+    .event-level-ERROR { color: #ef5350; }
+    .event-level-CRITICAL { color: #ff1744; font-weight: bold; }
+    .event-type { color: #c586c0; }
+    .event-ip { color: #ce9178; }
+    .event-email { color: #9cdcfe; }
+    .refresh-info {
+        color: #666;
+        font-size: 0.85em;
+        margin-left: 15px;
+    }
+    .info-box {
+        background: #e7f3ff;
+        border-left: 4px solid #2196F3;
+        padding: 15px;
+        margin-bottom: 20px;
+        border-radius: 0 4px 4px 0;
+    }
+</style>
+
+<h1>🛡️ Security Dashboard</h1>
+
+<div class="info-box">
+    <strong>Security Overview</strong> — This dashboard shows security events from the last 24 hours.
+    Data is refreshed on each page load. Use the actions to unban IPs or unlock accounts.
+</div>
+
+<!-- Statistics Cards -->
+<div class="security-stats">
+    <div class="stat-card {% if stats.login_failures > 10 %}danger{% elif stats.login_failures > 0 %}warning{% else %}success{% endif %}">
+        <div class="stat-value">{{ stats.login_failures }}</div>
+        <div class="stat-label">Failed Logins</div>
+    </div>
+    <div class="stat-card {% if stats.rate_limited > 5 %}danger{% elif stats.rate_limited > 0 %}warning{% else %}success{% endif %}">
+        <div class="stat-value">{{ stats.rate_limited }}</div>
+        <div class="stat-label">Rate Limited</div>
+    </div>
+    <div class="stat-card {% if stats.ips_banned > 0 %}danger{% else %}success{% endif %}">
+        <div class="stat-value">{{ stats.ips_banned }}</div>
+        <div class="stat-label">IPs Banned</div>
+    </div>
+    <div class="stat-card {% if stats.blocked_requests > 5 %}warning{% else %}success{% endif %}">
+        <div class="stat-value">{{ stats.blocked_requests }}</div>
+        <div class="stat-label">Blocked Requests</div>
+    </div>
+    <div class="stat-card {% if stats.accounts_locked > 0 %}danger{% else %}success{% endif %}">
+        <div class="stat-value">{{ stats.accounts_locked }}</div>
+        <div class="stat-label">Accounts Locked</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{ stats.attack_path_probes }}</div>
+        <div class="stat-label">Attack Path Probes</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{ stats.unique_ips }}</div>
+        <div class="stat-label">Unique IPs</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{ stats.total_events }}</div>
+        <div class="stat-label">Total Events (24h)</div>
+    </div>
+</div>
+
+<!-- Banned IPs Section -->
+<div class="section-header">
+    <h2>🚫 Currently Banned IPs</h2>
+    <span class="refresh-info">{{ banned_ips|length }} active ban(s)</span>
+</div>
+
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>IP Address</th>
+            <th>Banned At / Expires</th>
+            <th>Reason</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% if banned_ips %}
+            {% for ip_info in banned_ips %}
+            <tr>
+                <td><code>{{ ip_info.ip }}</code></td>
+                <td>
+                    {% if ip_info.banned_at %}
+                        {{ ip_info.banned_at }}
+                    {% elif ip_info.expires %}
+                        Expires: {{ ip_info.expires }}
+                    {% else %}
+                        —
+                    {% endif %}
+                </td>
+                <td>{{ ip_info.reason|default:"—" }}</td>
+                <td>
+                    <form method="post" action="{% url 'admin:security-unban-ip' %}" style="display: inline;">
+                        {% csrf_token %}
+                        <input type="hidden" name="ip" value="{{ ip_info.ip }}">
+                        <button type="submit" class="action-btn action-btn-success" onclick="return confirm('Unban {{ ip_info.ip }}?')">
+                            ✓ Unban
+                        </button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        {% else %}
+            <tr>
+                <td colspan="4" class="empty">✅ No IPs currently banned</td>
+            </tr>
+        {% endif %}
+    </tbody>
+</table>
+
+<!-- Locked Accounts Section -->
+<div class="section-header">
+    <h2>🔒 Locked Accounts</h2>
+    <span class="refresh-info">{{ locked_accounts|length }} locked account(s)</span>
+</div>
+
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Email</th>
+            <th>Expires</th>
+            <th>Failed Attempts</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% if locked_accounts %}
+            {% for account in locked_accounts %}
+            <tr>
+                <td><code>{{ account.email }}</code></td>
+                <td>{{ account.expires|default:"—" }}</td>
+                <td>{{ account.attempts|default:"—" }}</td>
+                <td>
+                    <form method="post" action="{% url 'admin:security-unlock-account' %}" style="display: inline;">
+                        {% csrf_token %}
+                        <input type="hidden" name="email" value="{{ account.email }}">
+                        <button type="submit" class="action-btn action-btn-success" onclick="return confirm('Unlock {{ account.email }}?')">
+                            🔓 Unlock
+                        </button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        {% else %}
+            <tr>
+                <td colspan="4" class="empty">✅ No accounts currently locked</td>
+            </tr>
+        {% endif %}
+    </tbody>
+</table>
+
+<!-- Recent Security Events -->
+<div class="section-header">
+    <h2>📋 Recent Security Events</h2>
+    <span class="refresh-info">Last {{ events|length }} events (24h)</span>
+</div>
+
+<div class="event-log">
+    {% if events %}
+        {% for event in events %}
+        <div class="event-line">
+            <span class="event-time">[{{ event.timestamp }}]</span>
+            <span class="event-level-{{ event.level }}">{{ event.level }}</span>
+            {% if event.event %}
+                <span class="event-type">{{ event.event }}</span>
+            {% endif %}
+            {% if event.ip %}
+                <span class="event-ip">IP:{{ event.ip }}</span>
+            {% endif %}
+            {% if event.email %}
+                <span class="event-email">{{ event.email }}</span>
+            {% endif %}
+            {% if event.raw_message %}
+                {{ event.raw_message|truncatewords:20 }}
+            {% endif %}
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="event-line" style="color: #6a9955;">No security events in the last 24 hours</div>
+    {% endif %}
+</div>
+
+<!-- Event Type Breakdown -->
+{% if stats.event_counts %}
+<div class="section-header">
+    <h2>📊 Event Breakdown (24h)</h2>
+</div>
+
+<table class="data-table" style="max-width: 500px;">
+    <thead>
+        <tr>
+            <th>Event Type</th>
+            <th>Count</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for event_type, count in stats.event_counts.items %}
+        <tr>
+            <td>
+                {% if event_type == 'login_failure' %}
+                    <span class="badge badge-warning">{{ event_type }}</span>
+                {% elif 'banned' in event_type %}
+                    <span class="badge badge-danger">{{ event_type }}</span>
+                {% elif event_type == 'rate_limited' %}
+                    <span class="badge badge-warning">{{ event_type }}</span>
+                {% elif event_type == 'blocked' %}
+                    <span class="badge badge-info">{{ event_type }}</span>
+                {% else %}
+                    <span class="badge badge-secondary">{{ event_type }}</span>
+                {% endif %}
+            </td>
+            <td>{{ count }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+
+{% endblock %}

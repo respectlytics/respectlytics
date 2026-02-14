@@ -1,0 +1,100 @@
+{% extends 'users/account/base.html' %}
+
+{% block account_content %}
+<div class="space-y-5">
+  
+  <!-- Messages -->
+  {% if messages %}
+  <div class="space-y-2">
+    {% for message in messages %}
+    <div class="p-3 rounded-lg text-sm {% if message.tags == 'success' %}bg-emerald-500/10 border border-emerald-500/20 text-emerald-400{% else %}bg-red-500/10 border border-red-500/20 text-red-400{% endif %}">
+      {{ message }}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  
+  <!-- Account Information Section -->
+  <div>
+    <h2 class="text-lg font-bold text-slate-50 mb-3">Account Information</h2>
+    
+    <div class="space-y-3">
+      <!-- Email -->
+      <div class="p-3 bg-slate-800/50 rounded-lg border border-white/5">
+        <div class="flex items-start justify-between mb-2">
+          <div class="flex-1">
+            <div class="text-xs font-medium text-slate-400 mb-0.5">Email Address</div>
+            <div class="text-sm text-slate-50">{{ user.email }}</div>
+          </div>
+          <button onclick="toggleEmailEdit()" class="text-xs text-purple-400 hover:text-purple-300 transition-colors">
+            Edit
+          </button>
+        </div>
+        
+        <!-- Email Edit Form (Hidden by default) -->
+        <div id="email-edit-form" class="hidden mt-3 pt-3 border-t border-white/5">
+          <form method="post">
+            {% csrf_token %}
+            
+            {% if email_form.errors %}
+            <div class="mb-2 p-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs">
+              {% for field, errors in email_form.errors.items %}
+                {% for error in errors %}
+                  <div>{{ error }}</div>
+                {% endfor %}
+              {% endfor %}
+            </div>
+            {% endif %}
+            
+            <div class="mb-2">
+              <label class="block text-xs font-medium text-slate-300 mb-1.5">New Email Address</label>
+              {{ email_form.email }}
+            </div>
+            
+            <div class="flex gap-2">
+              <button type="submit" class="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-xs font-medium rounded-lg transition-colors">
+                Save Email
+              </button>
+              <button type="button" onclick="toggleEmailEdit()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white text-xs font-medium rounded-lg transition-colors">
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+      
+      <!-- Account Created -->
+      <div class="p-3 bg-slate-800/50 rounded-lg border border-white/5">
+        <div class="text-xs font-medium text-slate-400 mb-0.5">Member Since</div>
+        <div class="text-sm text-slate-50">{{ user.date_joined|date:"F j, Y" }}</div>
+      </div>
+      
+      <!-- Account Status -->
+      <div class="p-3 bg-slate-800/50 rounded-lg border border-white/5">
+        <div class="text-xs font-medium text-slate-400 mb-0.5">Account Status</div>
+        <div class="flex items-center gap-2">
+          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+            Active
+          </span>
+          <span class="text-xs text-slate-400">Email verified</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+</div>
+
+<script>
+function toggleEmailEdit() {
+  const form = document.getElementById('email-edit-form');
+  form.classList.toggle('hidden');
+}
+
+// Auto-show form if there are errors
+{% if email_form.errors %}
+document.addEventListener('DOMContentLoaded', function() {
+  toggleEmailEdit();
+});
+{% endif %}
+</script>
+{% endblock %}

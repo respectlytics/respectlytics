@@ -1,0 +1,198 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_head %}
+<!-- Chart.js for charts -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<!-- Chart.js DataLabels plugin for displaying values on charts -->
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<!-- Chart.js Dark Theme Configuration (load after Chart.js) -->
+<script src="{% static 'js/chart-theme.js' %}"></script>
+<!-- Flatpickr for date pickers -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<!-- RealTimePoller for live updates -->
+<script src="{% static 'js/realtime-polling.js' %}"></script>
+<style>
+/* Hide default footer on dashboard pages */
+footer { display: none; }
+
+/* Scrollbar styling for sidebar */
+.sidebar-scroll::-webkit-scrollbar { width: 4px; }
+.sidebar-scroll::-webkit-scrollbar-track { background: transparent; }
+.sidebar-scroll::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.1); border-radius: 4px; }
+.sidebar-scroll::-webkit-scrollbar-thumb:hover { background: rgba(0, 0, 0, 0.2); }
+
+/* App dropdown animation */
+.app-dropdown-enter { opacity: 0; transform: translateY(-8px); }
+.app-dropdown-active { opacity: 1; transform: translateY(0); }
+</style>
+{% block dashboard_styles %}{% endblock %}
+{% endblock %}
+
+{% block content %}
+<div class="flex min-h-[calc(100vh-65px)] bg-[#0f172a]">
+    {% block sidebar %}
+    <!-- Sidebar Overlay (mobile) -->
+    <div id="sidebarOverlay" 
+         class="fixed inset-0 bg-black/50 backdrop-blur-sm z-30 hidden lg:hidden"
+         onclick="closeSidebar()"></div>
+    
+    <!-- Left Sidebar - Dark theme -->
+    <aside id="dashboardSidebar" 
+           class="fixed top-[65px] left-0 bottom-0 w-64 bg-[#1e293b] border-r border-white/10 z-40 flex flex-col
+                  transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out
+                  sidebar-scroll overflow-y-auto overflow-x-hidden">
+        
+        <!-- App Switcher Header - padding to align with topbar date picker -->
+        <div class="pt-8 pb-4 px-4 border-b border-white/10">
+            {% block sidebar_app_switcher %}
+            <div id="sidebarAppSwitcher" class="relative">
+                <button onclick="toggleSidebarAppSwitcher()" 
+                        class="w-full flex items-center gap-3 p-3 rounded-lg bg-slate-800/50 border border-white/10
+                               hover:bg-slate-700/50 hover:border-white/20 transition-all cursor-pointer">
+                    <span class="w-9 h-9 rounded-lg bg-gradient-to-br from-brand-500 to-purple-500 
+                                 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                        {% block app_icon %}A{% endblock %}
+                    </span>
+                    <div class="flex-1 min-w-0 text-left">
+                        <div class="text-[11px] font-medium text-slate-400 uppercase tracking-wider">Current App</div>
+                        <div class="text-[14px] font-semibold text-slate-50 truncate">{% block app_name %}Select App{% endblock %}</div>
+                    </div>
+                    <svg class="w-4 h-4 text-slate-400 flex-shrink-0 transition-transform duration-200" 
+                         id="appChevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                </button>
+                
+                <!-- App Dropdown -->
+                <div id="sidebarAppDropdown" 
+                     class="absolute top-full left-0 right-0 mt-2 bg-[#334155] border border-white/10 rounded-lg
+                            shadow-xl opacity-0 invisible -translate-y-2 transition-all duration-200 z-50
+                            max-h-72 overflow-y-auto">
+                    {% block app_dropdown %}{% endblock %}
+                </div>
+            </div>
+            {% endblock %}
+        </div>
+        
+        <!-- Navigation -->
+        <nav class="py-4 overflow-y-auto flex-1">
+            {% block sidebar_nav %}
+            <div class="px-3">
+                <div class="text-[12px] font-semibold text-slate-400 uppercase tracking-wider px-3 py-2">
+                    Analytics
+                </div>
+                {% block nav_items %}{% endblock %}
+            </div>
+            {% endblock %}
+        </nav>
+    </aside>
+    {% endblock sidebar %}
+    
+    <!-- Main Content Area -->
+    <main class="flex-1 {% block main_margin %}lg:ml-64{% endblock %} min-h-[calc(100vh-65px)] bg-[#0f172a] flex flex-col overflow-x-hidden">
+        <!-- Top Filter Bar -->
+        {% block topbar %}{% endblock %}
+        
+        <!-- Page Content -->
+        <div class="flex-1 p-4 md:p-6 lg:p-8 lg:px-12 overflow-x-hidden max-w-full">
+            {% block dashboard_content %}{% endblock %}
+        </div>
+    </main>
+    
+    <!-- Mobile Sidebar Toggle (FAB) -->
+    <button onclick="toggleSidebar()" 
+            class="fixed bottom-6 right-6 w-14 h-14 bg-brand-600 rounded-full text-white z-50
+                   flex items-center justify-center shadow-xl hover:bg-brand-700 hover:scale-105 transition-all
+                   lg:hidden"
+            aria-label="Toggle navigation">
+        <svg id="sidebarToggleIcon" class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+    </button>
+</div>
+
+<script>
+// Sidebar toggle for mobile
+function toggleSidebar() {
+    const sidebar = document.getElementById('dashboardSidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    const icon = document.getElementById('sidebarToggleIcon');
+    
+    const isOpen = sidebar.classList.contains('translate-x-0');
+    
+    if (isOpen) {
+        sidebar.classList.remove('translate-x-0');
+        sidebar.classList.add('-translate-x-full');
+        overlay.classList.add('hidden');
+        icon.innerHTML = '<line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line>';
+    } else {
+        sidebar.classList.remove('-translate-x-full');
+        sidebar.classList.add('translate-x-0');
+        overlay.classList.remove('hidden');
+        icon.innerHTML = '<line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>';
+    }
+}
+
+function closeSidebar() {
+    const sidebar = document.getElementById('dashboardSidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    const icon = document.getElementById('sidebarToggleIcon');
+    
+    sidebar.classList.remove('translate-x-0');
+    sidebar.classList.add('-translate-x-full');
+    overlay.classList.add('hidden');
+    icon.innerHTML = '<line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line>';
+}
+
+// App switcher toggle
+function toggleSidebarAppSwitcher() {
+    const switcher = document.getElementById('sidebarAppSwitcher');
+    const dropdown = document.getElementById('sidebarAppDropdown');
+    const chevron = document.getElementById('appChevron');
+    
+    const isOpen = !dropdown.classList.contains('invisible');
+    
+    if (isOpen) {
+        dropdown.classList.add('invisible', 'opacity-0', '-translate-y-2');
+        dropdown.classList.remove('visible', 'opacity-100', 'translate-y-0');
+        chevron.classList.remove('rotate-180');
+    } else {
+        dropdown.classList.remove('invisible', 'opacity-0', '-translate-y-2');
+        dropdown.classList.add('visible', 'opacity-100', 'translate-y-0');
+        chevron.classList.add('rotate-180');
+    }
+}
+
+// Close app switcher when clicking outside
+document.addEventListener('click', function(e) {
+    const switcher = document.getElementById('sidebarAppSwitcher');
+    const dropdown = document.getElementById('sidebarAppDropdown');
+    const chevron = document.getElementById('appChevron');
+    
+    if (switcher && !switcher.contains(e.target)) {
+        dropdown.classList.add('invisible', 'opacity-0', '-translate-y-2');
+        dropdown.classList.remove('visible', 'opacity-100', 'translate-y-0');
+        chevron.classList.remove('rotate-180');
+    }
+});
+
+// Close sidebar on escape
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeSidebar();
+        const dropdown = document.getElementById('sidebarAppDropdown');
+        const chevron = document.getElementById('appChevron');
+        if (dropdown) {
+            dropdown.classList.add('invisible', 'opacity-0', '-translate-y-2');
+            dropdown.classList.remove('visible', 'opacity-100', 'translate-y-0');
+        }
+        if (chevron) chevron.classList.remove('rotate-180');
+    }
+});
+</script>
+{% block dashboard_scripts %}{% endblock %}
+{% endblock %}

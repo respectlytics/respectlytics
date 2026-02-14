@@ -1,0 +1,66 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Respectlytics{% endblock %}</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="{% static 'favicon/favicon.ico' %}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{% static 'favicon/favicon-32x32.png' %}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{% static 'favicon/favicon-16x16.png' %}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{% static 'favicon/apple-touch-icon.png' %}">
+    
+    <!-- Tailwind CSS - Pre-compiled for production -->
+    <link rel="stylesheet" href="{% static 'css/tailwind.css' %}">
+    
+    <!-- SEO: Canonical URL and extra head content -->
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="bg-[#0f172a] min-h-screen flex items-center justify-center p-6 font-sans">
+    <div class="bg-[#1e293b] rounded-3xl border border-white/10 w-full max-w-md py-12 px-10">
+        <!-- Logo + Brand Name (side by side, clickable to home) -->
+        <a href="/" class="flex items-center justify-center gap-4 mb-8 group">
+            <img src="{% static 'images/respectlytics.png' %}" alt="Respectlytics" class="w-14 h-14 object-contain rounded-xl shadow-lg shadow-purple-500/20 group-hover:shadow-purple-500/30 transition-shadow duration-200">
+            <h1 class="text-3xl font-black tracking-tight">
+                <span class="text-slate-50">Respect</span><span class="text-transparent bg-clip-text bg-gradient-to-r from-brand-400 to-purple-400">lytics</span>
+            </h1>
+        </a>
+        <!-- Subtitle -->
+        <p class="text-slate-400 text-lg font-medium text-center mb-10">{% block subtitle %}Privacy-First Analytics{% endblock %}</p>
+        
+        {% if messages %}
+        <div class="mb-6 space-y-4">
+            {% for message in messages %}
+            <div class="px-5 py-4 rounded-lg text-base font-medium
+                {% if message.tags == 'success' %}
+                    bg-emerald-500/15 text-emerald-400 border border-emerald-400/20
+                {% elif message.tags == 'error' %}
+                    bg-rose-500/15 text-rose-400 border border-rose-400/20
+                {% else %}
+                    bg-blue-500/15 text-blue-400 border border-blue-400/20
+                {% endif %}
+            ">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
+        {% block content %}{% endblock %}
+        
+        <!-- Back to home link -->
+        <div class="mt-8 pt-6 border-t border-white/5 text-center">
+            <a href="/" class="text-slate-500 text-sm hover:text-slate-400 transition-colors">
+                ← Back to home
+            </a>
+        </div>
+    </div>
+    
+    <!-- Global Toast Notification System -->
+    <script src="{% static 'js/toast.js' %}"></script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,23 @@
+Suspicious Login Activity Detected
+===================================
+
+Hi{% if user.first_name %} {{ user.first_name }}{% endif %},
+
+We detected {{ attempt_count }} failed login attempts on your Respectlytics account.
+
+IP Address: {{ ip_address }}
+Time: {{ timestamp|date:"F j, Y, g:i a" }} UTC
+
+WAS THIS YOU?
+-------------
+
+If you're trying to log in and forgot your password, you can reset it here:
+{{ password_reset_url }}
+
+If this wasn't you, someone may be trying to access your account.
+Your account will be temporarily locked after 5 failed attempts for your protection.
+
+For your security, we recommend using a strong, unique password and never sharing it with anyone.
+
+---
+Respectlytics - Privacy-first mobile analytics

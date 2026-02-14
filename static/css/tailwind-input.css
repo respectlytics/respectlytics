@@ -1,0 +1,16 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom gradient classes used in auth pages */
+@layer components {
+    .auth-gradient {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    .btn-gradient {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    .btn-gradient:hover {
+        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+    }
+}

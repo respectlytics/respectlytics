@@ -1,0 +1,23 @@
+SECURITY ALERT: Account Locked
+==============================
+
+An account has been locked due to failed login attempts.
+
+Account: {{ email }}
+IP Address: {{ ip_address }}
+Failed Attempts: {{ attempt_count }}
+Lockout Duration: {{ lockout_duration }}
+Time: {{ timestamp|date:"F j, Y, g:i a" }} UTC
+
+This could indicate:
+- A brute force attack against this account
+- A user who forgot their password
+- Someone else trying to access the account
+
+The account will automatically unlock after {{ lockout_duration }}.
+You can manually unlock it from the Django admin if needed.
+
+View in Admin: {{ base_url }}/nidibatisinizadmin/auth/user/
+
+---
+Respectlytics Security System

@@ -1,0 +1,795 @@
+{% extends 'dashboard/dashboard_base.html' %}
+
+{% block dashboard_styles %}
+<style>
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.8;
+        transform: scale(1.05);
+    }
+}
+
+/* App Cards Grid */
+.apps-grid {
+    display: grid;
+    gap: var(--space-6);
+}
+
+.app-card {
+    border: 2px solid var(--gray-200);
+    border-radius: var(--radius-xl);
+    padding: var(--space-8);
+    transition: all 0.3s;
+    background: white;
+}
+
+.app-card:hover {
+    border-color: #5856d6;
+    box-shadow: var(--shadow-lg);
+}
+
+.app-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: var(--space-4);
+    flex-wrap: wrap;
+    gap: var(--space-3);
+}
+
+.app-card-info {
+    flex: 1;
+    min-width: 200px;
+}
+
+.app-card-title {
+    font-size: 1.5rem;
+    color: #0a0a14;
+    margin: 0 0 var(--space-2) 0;
+    font-weight: 700;
+}
+
+.app-card-date {
+    font-size: 0.875rem;
+    color: #888;
+    margin: 0;
+    font-weight: 500;
+}
+
+.new-events-badge {
+    display: none;
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: white;
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-lg);
+    font-size: 0.875rem;
+    font-weight: 700;
+    animation: pulse 2s infinite;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+}
+
+.api-key-section {
+    background: var(--gray-100);
+    padding: var(--space-4);
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--space-6);
+    border: 1px solid var(--gray-200);
+}
+
+.api-key-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+}
+
+.api-key-info {
+    flex: 1;
+    min-width: 200px;
+}
+
+.api-key-label {
+    font-size: 0.8125rem;
+    color: #666;
+    margin: 0 0 var(--space-2) 0;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.api-key-value {
+    background: white;
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-sm);
+    font-family: var(--font-mono);
+    user-select: all;
+    filter: blur(5px);
+    transition: filter 0.2s;
+    font-size: 0.875rem;
+    border: 1px solid var(--gray-300);
+    display: inline-block;
+}
+
+.api-key-buttons {
+    display: flex;
+    gap: var(--space-2);
+}
+
+.api-key-btn {
+    padding: var(--space-2) var(--space-4);
+    border: none;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.api-key-btn-show {
+    background: var(--warning-500);
+    color: white;
+}
+
+.api-key-btn-copy {
+    background: white;
+    border: 2px solid var(--gray-300);
+    color: var(--gray-700);
+}
+
+.app-card-actions {
+    display: flex;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+}
+
+.app-card-actions .btn {
+    padding: var(--space-3) var(--space-6);
+    font-size: 0.9375rem;
+    font-weight: 600;
+}
+
+.regenerate-btn {
+    padding: var(--space-3) var(--space-6);
+    background: transparent;
+    color: var(--gray-700);
+    border: 2px solid var(--gray-300);
+    border-radius: var(--radius-md);
+    font-size: 0.9375rem;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.regenerate-btn:hover {
+    border-color: var(--gray-400);
+    background: var(--gray-50);
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: calc(var(--space-16) * 1.5) var(--space-12);
+    background: linear-gradient(135deg, rgba(88, 86, 214, 0.03) 0%, rgba(124, 58, 237, 0.03) 100%);
+    border-radius: var(--radius-xl);
+    border: 2px dashed var(--gray-300);
+}
+
+.empty-state-icon {
+    font-size: 4rem;
+    margin-bottom: var(--space-6);
+    opacity: 0.3;
+}
+
+.empty-state-title {
+    font-size: 1.75rem;
+    color: #0a0a14;
+    margin-bottom: var(--space-4);
+    font-weight: 700;
+}
+
+.empty-state-description {
+    font-size: 1.125rem;
+    margin-bottom: var(--space-10);
+    color: #666;
+    max-width: 480px;
+    margin-left: auto;
+    margin-right: auto;
+    line-height: 1.7;
+}
+
+/* Modal Styles */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+}
+
+.modal-content {
+    background: white;
+    border-radius: var(--radius-2xl);
+    padding: var(--space-12);
+    max-width: 540px;
+    width: 90%;
+    box-shadow: var(--shadow-xl);
+    border: 1px solid var(--gray-200);
+}
+
+.modal-content.wide {
+    max-width: 600px;
+}
+
+.modal-title {
+    font-size: 2rem;
+    color: #0a0a14;
+    margin-bottom: var(--space-3);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+}
+
+.modal-title.danger {
+    color: var(--error-500);
+}
+
+.modal-description {
+    color: #666;
+    margin-bottom: var(--space-8);
+    font-size: 1.0625rem;
+    line-height: 1.7;
+}
+
+.modal-input-group {
+    margin-bottom: var(--space-6);
+}
+
+.modal-label {
+    display: block;
+    margin-bottom: var(--space-3);
+    font-weight: 600;
+    color: #0a0a14;
+    font-size: 0.9375rem;
+}
+
+.modal-input {
+    width: 100%;
+    padding: var(--space-4);
+    border: 2px solid var(--gray-300);
+    border-radius: var(--radius-lg);
+    font-size: 1rem;
+    box-sizing: border-box;
+    font-family: var(--font-body);
+    transition: all 0.2s;
+}
+
+.modal-input:focus {
+    border-color: #5856d6;
+    box-shadow: 0 0 0 3px rgba(88, 86, 214, 0.1);
+    outline: none;
+}
+
+.modal-alert {
+    display: none;
+    padding: var(--space-4);
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--space-6);
+    font-size: 0.9375rem;
+    font-weight: 500;
+}
+
+.modal-alert.error {
+    background: rgba(239, 68, 68, 0.1);
+    border: 2px solid var(--error-500);
+    color: var(--error-500);
+}
+
+.modal-alert.success {
+    background: rgba(16, 185, 129, 0.1);
+    border: 2px solid var(--success-500);
+    color: var(--success-500);
+}
+
+.modal-warning {
+    background: rgba(255, 193, 7, 0.1);
+    border: 2px solid var(--warning-500);
+    border-radius: var(--radius-lg);
+    padding: var(--space-6);
+    margin-bottom: var(--space-8);
+}
+
+.modal-warning-title {
+    margin: 0 0 var(--space-4) 0;
+    font-weight: 700;
+    color: #0a0a14;
+    font-size: 1rem;
+}
+
+.modal-warning-list {
+    margin: 0;
+    padding-left: var(--space-6);
+    color: #666;
+    font-size: 0.9375rem;
+    line-height: 1.8;
+}
+
+.modal-warning-list li {
+    margin-bottom: var(--space-2);
+}
+
+.modal-actions {
+    display: flex;
+    gap: var(--space-4);
+    justify-content: flex-end;
+}
+
+.modal-btn {
+    padding: var(--space-4) var(--space-8);
+    font-size: 1rem;
+    border: none;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.modal-btn-danger {
+    background: var(--error-500);
+    color: white;
+    font-weight: 700;
+    box-shadow: var(--shadow-md);
+}
+
+/* Help Section */
+.help-section {
+    background: linear-gradient(135deg, rgba(88, 86, 214, 0.05) 0%, rgba(124, 58, 237, 0.05) 100%);
+    border-radius: var(--radius-xl);
+    padding: var(--space-10);
+    text-align: center;
+    border: 1px solid rgba(88, 86, 214, 0.15);
+    margin-top: var(--space-12);
+}
+
+.help-section-title {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #0a0a14;
+    margin-bottom: var(--space-4);
+}
+
+.help-section-text {
+    color: #666;
+    font-size: 1rem;
+    margin: 0;
+    line-height: 1.7;
+}
+
+.help-section-text a {
+    color: #5856d6;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.help-section-text a:hover {
+    text-decoration: underline;
+}
+</style>
+{% endblock %}
+
+{% block app_icon %}
+<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M4 6a2 2 0 012-2h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6z"/>
+</svg>
+{% endblock %}
+
+{% block app_name %}Dashboard{% endblock %}
+
+{% block app_dropdown %}
+<!-- No dropdown on main dashboard - we are not in a specific app context -->
+{% endblock %}
+
+{% block nav_items %}
+<div class="sidebar-nav-section">
+    <div class="sidebar-nav-section-title">Navigation</div>
+    <a href="{% url 'dashboard:dashboard' %}" class="sidebar-nav-item active">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="7"></rect>
+            <rect x="14" y="3" width="7" height="7"></rect>
+            <rect x="14" y="14" width="7" height="7"></rect>
+            <rect x="3" y="14" width="7" height="7"></rect>
+        </svg>
+        Your Apps
+    </a>
+</div>
+
+<div class="sidebar-nav-section">
+    <div class="sidebar-nav-section-title">Resources</div>
+    <a href="{% url 'website:docs' %}" class="sidebar-nav-item">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+        </svg>
+        API Docs
+    </a>
+    <a href="/swagger/" class="sidebar-nav-item">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="16 18 22 12 16 6"></polyline>
+            <polyline points="8 6 2 12 8 18"></polyline>
+        </svg>
+        Swagger
+    </a>
+    <a href="/redoc/" class="sidebar-nav-item">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+        </svg>
+        ReDoc
+    </a>
+</div>
+{% endblock %}
+
+{% block topbar %}
+<div style="display: flex; align-items: center; justify-content: space-between; flex: 1;">
+    <div style="display: flex; align-items: center; gap: var(--space-4);">
+        <h1 style="font-size: 1.5rem; font-weight: 700; color: #0a0a14; margin: 0;">Your Apps</h1>
+    </div>
+    <div style="display: flex; align-items: center; gap: var(--space-4);">
+        <span style="font-size: 0.875rem; color: #666;">{{ user.email }}</span>
+        <button onclick="showCreateAppModal()" class="btn" style="padding: var(--space-2) var(--space-6); font-size: 0.875rem; font-weight: 600;">
+            + New App
+        </button>
+    </div>
+</div>
+{% endblock %}
+
+{% block dashboard_content %}
+<div style="padding: var(--space-8);">
+    <!-- Apps Section -->
+    <div style="background: white; border-radius: var(--radius-2xl); box-shadow: var(--shadow-lg); padding: var(--space-8); border: 1px solid var(--gray-200);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-8); flex-wrap: wrap; gap: var(--space-4);">
+            <h2 style="font-size: 1.5rem; color: #0a0a14; margin: 0; font-weight: 700;">Mobile Apps</h2>
+            <button onclick="showCreateAppModal()" class="btn" style="padding: var(--space-3) var(--space-6); font-size: 0.9375rem; font-weight: 700;">
+                + Create New App
+            </button>
+        </div>
+        
+        {% if apps %}
+        <div class="apps-grid">
+            {% for app in apps %}
+            <div class="app-card" data-app-id="{{ app.id }}" data-app-slug="{{ app.slug }}">
+                <div class="app-card-header">
+                    <div class="app-card-info">
+                        <h3 class="app-card-title">{{ app.name }}</h3>
+                        <p class="app-card-date">Created {{ app.created_at|date:"M d, Y" }}</p>
+                    </div>
+                    <span id="newEventsBadge{{ forloop.counter }}" class="new-events-badge">
+                        <span id="newEventsCount{{ forloop.counter }}">0</span> new events
+                    </span>
+                </div>
+                <div class="api-key-section">
+                    <div class="api-key-row">
+                        <div class="api-key-info">
+                            <p class="api-key-label">API Key</p>
+                            <code id="apiKey{{ forloop.counter }}" class="api-key-value">{{ app.id }}</code>
+                        </div>
+                        <div class="api-key-buttons">
+                            <button onclick="toggleApiKeyVisibility(this.parentElement.parentElement.querySelector('code').id, this.id)" id="toggleBtn{{ forloop.counter }}" class="api-key-btn api-key-btn-show">Show</button>
+                            <button onclick="copyToClipboard('{{ app.id }}', this.id)" id="copyBtn{{ forloop.counter }}" class="api-key-btn api-key-btn-copy">Copy</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="app-card-actions">
+                    <a href="{% url 'dashboard:stats' app.slug %}" class="btn">View Analytics</a>
+                    <a href="{% url 'dashboard:funnel' app.slug %}" class="btn btn-secondary">Funnel Analysis</a>
+                    <button onclick="showRegenerateKeyModal('{{ app.slug }}', '{{ app.name }}')" class="regenerate-btn">Regenerate Key</button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">📱</div>
+            <h3 class="empty-state-title">No Apps Yet</h3>
+            <p class="empty-state-description">Create your first mobile app to start tracking events, analyzing user behavior, and building conversion funnels.</p>
+            <button onclick="showCreateAppModal()" class="btn btn-lg" style="padding: var(--space-5) var(--space-12); font-size: 1.125rem; font-weight: 700; box-shadow: var(--shadow-primary);">
+                + Create Your First App
+            </button>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Create App Modal -->
+    <div id="createAppModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 class="modal-title">Create New App</h3>
+            <p class="modal-description">Give your mobile app a name to get started tracking analytics</p>
+            
+            <div class="modal-input-group">
+                <label for="newAppName" class="modal-label">App Name</label>
+                <input type="text" id="newAppName" placeholder="e.g., My iOS App" class="modal-input" onkeypress="if(event.key === 'Enter') createApp()">
+            </div>
+            
+            <div id="createAppError" class="modal-alert error"></div>
+            <div id="createAppSuccess" class="modal-alert success"></div>
+            
+            <div class="modal-actions">
+                <button onclick="hideCreateAppModal()" class="btn btn-secondary modal-btn">Cancel</button>
+                <button onclick="createApp()" id="createAppBtn" class="btn modal-btn" style="font-weight: 700;">Create App</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Regenerate Key Modal -->
+    <div id="regenerateKeyModal" class="modal-overlay">
+        <div class="modal-content wide">
+            <h3 class="modal-title danger">Regenerate API Key</h3>
+            <p class="modal-description" style="margin-bottom: var(--space-6);">Are you sure you want to regenerate the API key for <strong style="color: #0a0a14;" id="regenerateAppName"></strong>?</p>
+            
+            <div class="modal-warning">
+                <p class="modal-warning-title">Important Warning:</p>
+                <ul class="modal-warning-list">
+                    <li>The current API key will be <strong style="color: #0a0a14;">immediately invalidated</strong></li>
+                    <li>All mobile apps using the old key will <strong style="color: #0a0a14;">stop working</strong></li>
+                    <li>You must <strong style="color: #0a0a14;">update your mobile app</strong> with the new key</li>
+                    <li>Historical events will be preserved</li>
+                </ul>
+            </div>
+            
+            <div id="regenerateKeyError" class="modal-alert error"></div>
+            <div id="regenerateKeySuccess" class="modal-alert success"></div>
+            
+            <div class="modal-actions">
+                <button onclick="hideRegenerateKeyModal()" class="btn btn-secondary modal-btn">Cancel</button>
+                <button onclick="regenerateKey()" id="regenerateKeyBtn" class="modal-btn modal-btn-danger">Yes, Regenerate Key</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Help Section -->
+    <div class="help-section">
+        <h4 class="help-section-title">Need Help Getting Started?</h4>
+        <p class="help-section-text">Check out our <a href="{% url 'website:docs' %}">API Documentation</a>, <a href="/swagger/">Interactive API (Swagger)</a>, or <a href="/redoc/">API Reference (ReDoc)</a></p>
+    </div>
+</div>
+{% endblock %}
+
+{% block dashboard_scripts %}
+<script>
+function showCreateAppModal() {
+    document.getElementById('createAppModal').style.display = 'flex';
+    document.getElementById('newAppName').focus();
+    document.getElementById('createAppError').style.display = 'none';
+    document.getElementById('createAppSuccess').style.display = 'none';
+}
+
+function hideCreateAppModal() {
+    document.getElementById('createAppModal').style.display = 'none';
+    document.getElementById('newAppName').value = '';
+    document.getElementById('createAppError').style.display = 'none';
+    document.getElementById('createAppSuccess').style.display = 'none';
+}
+
+async function createApp() {
+    const name = document.getElementById('newAppName').value.trim();
+    const errorDiv = document.getElementById('createAppError');
+    const successDiv = document.getElementById('createAppSuccess');
+    const createBtn = document.getElementById('createAppBtn');
+    
+    errorDiv.style.display = 'none';
+    successDiv.style.display = 'none';
+    
+    if (!name) {
+        errorDiv.textContent = 'Please enter an app name';
+        errorDiv.style.display = 'block';
+        return;
+    }
+    
+    createBtn.disabled = true;
+    createBtn.textContent = 'Creating...';
+    
+    try {
+        const response = await fetch('/api/v1/apps/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({ name })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            successDiv.textContent = 'App created successfully! Refreshing...';
+            successDiv.style.display = 'block';
+            setTimeout(() => { window.location.reload(); }, 1000);
+        } else {
+            errorDiv.textContent = data.error || data.detail || 'Failed to create app. Please try again.';
+            errorDiv.style.display = 'block';
+            createBtn.disabled = false;
+            createBtn.textContent = 'Create App';
+        }
+    } catch (error) {
+        errorDiv.textContent = 'Network error. Please check your connection and try again.';
+        errorDiv.style.display = 'block';
+        createBtn.disabled = false;
+        createBtn.textContent = 'Create App';
+    }
+}
+
+function toggleApiKeyVisibility(apiKeyId, btnId) {
+    const apiKeyElement = document.getElementById(apiKeyId);
+    const toggleBtn = document.getElementById(btnId);
+    
+    if (apiKeyElement.style.filter === 'blur(5px)' || !apiKeyElement.style.filter) {
+        apiKeyElement.style.filter = 'none';
+        toggleBtn.textContent = 'Hide';
+        toggleBtn.style.background = '#d4edda';
+        toggleBtn.style.borderColor = '#28a745';
+        toggleBtn.style.color = '#155724';
+    } else {
+        apiKeyElement.style.filter = 'blur(5px)';
+        toggleBtn.textContent = 'Show';
+        toggleBtn.style.background = '#fff3cd';
+        toggleBtn.style.borderColor = '#ffc107';
+        toggleBtn.style.color = '#856404';
+    }
+}
+
+function copyToClipboard(text, btnId) {
+    navigator.clipboard.writeText(text).then(() => {
+        const btn = document.getElementById(btnId);
+        const originalText = btn.textContent;
+        btn.textContent = 'Copied!';
+        btn.style.background = '#e8f5e9';
+        btn.style.borderColor = '#28a745';
+        btn.style.color = '#2e7d32';
+        
+        setTimeout(() => {
+            btn.textContent = originalText;
+            btn.style.background = '#f0f0f0';
+            btn.style.borderColor = '#ddd';
+            btn.style.color = '';
+        }, 2000);
+    });
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+document.getElementById('createAppModal')?.addEventListener('click', function(e) {
+    if (e.target === this) { hideCreateAppModal(); }
+});
+
+document.getElementById('regenerateKeyModal')?.addEventListener('click', function(e) {
+    if (e.target === this) { hideRegenerateKeyModal(); }
+});
+
+const dashboardApps = [];
+{% for app in apps %}
+dashboardApps.push({
+    id: '{{ app.id }}',
+    slug: '{{ app.slug }}',
+    badgeId: 'newEventsBadge{{ forloop.counter }}',
+    countId: 'newEventsCount{{ forloop.counter }}'
+});
+{% endfor %}
+
+if (dashboardApps.length > 0) {
+    let lastPollTime = new Date().toISOString();
+    
+    async function pollDashboard() {
+        for (const app of dashboardApps) {
+            try {
+                const response = await fetch('/api/events/recent-activity/?time_range=1440&since=' + lastPollTime, {
+                    headers: { 'X-App-Key': app.id }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.new_event_count > 0) {
+                        const badge = document.getElementById(app.badgeId);
+                        const count = document.getElementById(app.countId);
+                        if (badge && count) {
+                            count.textContent = data.new_event_count;
+                            badge.style.display = 'inline-block';
+                        }
+                    }
+                }
+            } catch (error) {
+                console.warn('Failed to poll app ' + app.slug + ':', error);
+            }
+        }
+        lastPollTime = new Date().toISOString();
+    }
+    
+    setTimeout(pollDashboard, 10000);
+    setInterval(pollDashboard, 60000);
+}
+
+let currentRegenerateSlug = null;
+
+function showRegenerateKeyModal(slug, appName) {
+    currentRegenerateSlug = slug;
+    document.getElementById('regenerateAppName').textContent = appName;
+    document.getElementById('regenerateKeyModal').style.display = 'flex';
+    document.getElementById('regenerateKeyError').style.display = 'none';
+    document.getElementById('regenerateKeySuccess').style.display = 'none';
+}
+
+function hideRegenerateKeyModal() {
+    document.getElementById('regenerateKeyModal').style.display = 'none';
+    currentRegenerateSlug = null;
+    document.getElementById('regenerateKeyError').style.display = 'none';
+    document.getElementById('regenerateKeySuccess').style.display = 'none';
+}
+
+async function regenerateKey() {
+    if (!currentRegenerateSlug) return;
+    
+    const errorDiv = document.getElementById('regenerateKeyError');
+    const successDiv = document.getElementById('regenerateKeySuccess');
+    const regenerateBtn = document.getElementById('regenerateKeyBtn');
+    
+    errorDiv.style.display = 'none';
+    successDiv.style.display = 'none';
+    regenerateBtn.disabled = true;
+    regenerateBtn.textContent = 'Regenerating...';
+    
+    try {
+        const response = await fetch('/api/v1/apps/' + currentRegenerateSlug + '/regenerate-key/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            credentials: 'same-origin'
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            successDiv.innerHTML = '<p style="margin: 0 0 12px 0; font-weight: 600;">API Key Regenerated Successfully!</p><p style="margin: 0 0 8px 0;"><strong>New API Key:</strong></p><code style="display: block; background: #fff; padding: 8px; border-radius: 4px; font-family: monospace; user-select: all; margin-bottom: 8px; color: #333; border: 1px solid #4caf50;">' + data.new_app_key + '</code><p style="margin: 0; font-size: 12px; color: #666;">Save this key now! Update your mobile app immediately.</p>';
+            successDiv.style.display = 'block';
+            regenerateBtn.style.display = 'none';
+            setTimeout(() => { window.location.reload(); }, 5000);
+        } else {
+            errorDiv.textContent = data.error || data.detail || 'Failed to regenerate key. Please try again.';
+            errorDiv.style.display = 'block';
+            regenerateBtn.disabled = false;
+            regenerateBtn.textContent = 'Yes, Regenerate Key';
+        }
+    } catch (error) {
+        errorDiv.textContent = 'Network error. Please check your connection and try again.';
+        errorDiv.style.display = 'block';
+        regenerateBtn.disabled = false;
+        regenerateBtn.textContent = 'Yes, Regenerate Key';
+    }
+}
+</script>
+{% endblock %}

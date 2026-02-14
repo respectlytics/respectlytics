@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Bad Request - Respectlytics{% endblock %}
+
+{% block extra_head %}
+<meta name="robots" content="noindex, nofollow">
+{% endblock %}
+
+{% block content %}
+<section class="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] min-h-[70vh] flex items-center justify-center bg-slate-900">
+    <div class="max-w-2xl mx-auto px-6 text-center">
+        <!-- Error Code -->
+        <div class="text-9xl font-black text-blue-500/20 mb-4 select-none">400</div>
+
+        <!-- Icon -->
+        <div class="text-6xl mb-6">🤔</div>
+
+        <!-- Title -->
+        <h1 class="text-4xl md:text-5xl font-black text-slate-50 mb-4 tracking-tight">
+            Bad Request
+        </h1>
+
+        <!-- Description -->
+        <p class="text-xl text-slate-400 mb-8 leading-relaxed">
+            The request couldn't be understood. This might be due to
+            invalid data or a malformed request.
+        </p>
+
+        <!-- Actions -->
+        <div class="flex flex-col sm:flex-row gap-4 justify-center">
+            <a href="/" class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-purple-700 text-white text-lg font-bold py-4 px-8 rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 no-underline">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+                </svg>
+                Go Home
+            </a>
+            <button onclick="history.back()" class="inline-flex items-center justify-center gap-2 bg-slate-800 text-slate-300 text-lg font-bold py-4 px-8 rounded-xl border-2 border-slate-600 hover:bg-slate-700 hover:-translate-y-0.5 transition-all duration-300 cursor-pointer">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                </svg>
+                Go Back
+            </button>
+        </div>
+    </div>
+</section>
+{% endblock %}

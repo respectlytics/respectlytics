@@ -1,0 +1,277 @@
+{% extends 'users/account/base.html' %}
+
+{% block account_content %}
+{% if subscription %}
+<div class="space-y-6">
+    
+    <!-- Current Plan Overview -->
+    <div>
+        <h2 class="text-lg font-bold text-slate-50 mb-3">Current Plan</h2>
+        <div class="bg-slate-900/50 rounded-xl border border-white/10 p-5">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
+                <div>
+                    <div class="flex items-center gap-2 mb-0.5 flex-wrap">
+                        <h3 class="text-xl font-bold text-slate-50">{{ subscription.get_plan_display }}</h3>
+                        {% if subscription.status == 'trial' %}
+                        <span class="px-2 py-0.5 bg-purple-500/20 text-purple-400 text-xs font-semibold rounded-full border border-purple-500/30">
+                            Trial
+                        </span>
+                        {% elif subscription.status == 'active' %}
+                        <span class="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 text-xs font-semibold rounded-full border border-emerald-500/30">
+                            Active
+                        </span>
+                        {% elif subscription.status == 'past_due' %}
+                        <span class="px-2 py-0.5 bg-amber-500/20 text-amber-400 text-xs font-semibold rounded-full border border-amber-500/30">
+                            Past Due
+                        </span>
+                        {% elif subscription.status == 'cancelled' %}
+                        <span class="px-2 py-0.5 bg-red-500/20 text-red-400 text-xs font-semibold rounded-full border border-red-500/30">
+                            Cancelled
+                        </span>
+                        {% endif %}
+                        {% if subscription.is_granted_access_boosting %}
+                        <span class="px-2 py-0.5 bg-amber-500/20 text-amber-400 text-xs font-semibold rounded-full border border-amber-500/30">
+                            🎁 Granted Access
+                        </span>
+                        {% endif %}
+                    </div>
+                    <p class="text-sm text-slate-400">
+                        {% if subscription.effective_monthly_limit == -1 %}
+                        Unlimited events per month
+                        {% else %}
+                        {{ subscription.effective_monthly_limit|floatformat:0 }} events per month
+                        {% endif %}
+                    </p>
+                </div>
+                
+                <div class="flex gap-2">
+                    {% if subscription.status == 'trial' %}
+                    <a href="/" 
+                       class="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold rounded-lg transition-colors">
+                        Upgrade Now
+                    </a>
+                    {% else %}
+                    <a href="/" 
+                       class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white text-xs font-medium rounded-lg transition-colors border border-white/10">
+                        View Plans
+                    </a>
+                    {% if subscription.can_access_stripe_portal %}
+                    <a href="/" 
+                       class="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold rounded-lg transition-colors">
+                        Manage Subscription
+                    </a>
+                    {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Granted Access Boost Banner -->
+            {% if subscription.is_granted_access_boosting %}
+            <div class="bg-amber-500/10 rounded-lg border border-amber-500/30 p-3 mb-4">
+                <div class="flex items-start gap-2">
+                    <span class="text-amber-400 text-lg leading-none">🎁</span>
+                    <div class="flex-1">
+                        <p class="text-sm text-slate-300">
+                            <span class="font-semibold text-amber-400">Boosted to {{ subscription.free_monthly_limit|floatformat:0 }} events/month</span>
+                            until {{ subscription.free_access_end|date:"M d, Y" }}.
+                        </p>
+                        <p class="text-xs text-slate-400 mt-0.5">
+                            Your base plan limit is {{ subscription.monthly_event_limit|floatformat:0 }} events. After the boost period ends, your limit will return to normal.
+                        </p>
+                        {% if subscription.granted_access_days_remaining is not None and subscription.granted_access_days_remaining <= 7 and subscription.granted_access_days_remaining > 0 %}
+                        <p class="text-xs text-amber-400 mt-1.5 font-medium">
+                            ⚠️ Granted access expires in {{ subscription.granted_access_days_remaining }} day{{ subscription.granted_access_days_remaining|pluralize }}.
+                        </p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Usage Bar -->
+            <div class="mb-3">
+                <div class="flex items-center justify-between text-xs mb-1.5">
+                    <span class="text-slate-400">Events Used This Period</span>
+                    <span class="text-slate-300 font-medium">
+                        {{ usage.events_used|floatformat:0 }} / 
+                        {% if usage.events_limit == -1 %}
+                        Unlimited
+                        {% else %}
+                        {{ usage.events_limit|floatformat:0 }}
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                    <div class="h-full rounded-full transition-all duration-500 
+                        {% if usage.usage_percent >= 90 %}bg-red-500{% elif usage.usage_percent >= 75 %}bg-amber-500{% else %}bg-purple-500{% endif %}"
+                        style="width: {{ usage.usage_percent|floatformat:0 }}%"></div>
+                </div>
+                {% if usage.usage_percent >= 90 %}
+                <p class="text-xs text-red-400 mt-1.5">
+                    ⚠️ You're approaching your event limit. Consider upgrading your plan.
+                </p>
+                {% elif usage.usage_percent >= 75 %}
+                <p class="text-xs text-amber-400 mt-1.5">
+                    You've used {{ usage.usage_percent|floatformat:0 }}% of your monthly events.
+                </p>
+                {% endif %}
+            </div>
+            
+            <!-- Billing Period -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 pt-3 border-t border-white/10">
+                <div>
+                    <div class="text-xs text-slate-400 mb-0.5">
+                        {% if subscription.status == 'trial' %}Trial Started{% else %}Billing Started{% endif %}
+                    </div>
+                    <div class="text-sm text-slate-50 font-medium">
+                        {% if subscription.status == 'trial' %}
+                        {{ subscription.trial_start|date:"M d, Y" }}
+                        {% elif subscription.current_period_start %}
+                        {{ subscription.current_period_start|date:"M d, Y" }}
+                        {% else %}
+                        -
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div>
+                    <div class="text-xs text-slate-400 mb-0.5">
+                        {% if subscription.status == 'trial' %}Trial Ends{% elif subscription.cancellation_pending or subscription.status == 'cancelled' %}Access Until{% else %}Next Billing{% endif %}
+                    </div>
+                    <div class="text-sm text-slate-50 font-medium">
+                        {% if subscription.status == 'trial' and subscription.trial_end %}
+                        {{ subscription.trial_end|date:"M d, Y" }}
+                        {% elif subscription.current_period_end %}
+                        {{ subscription.current_period_end|date:"M d, Y" }}
+                        {% else %}
+                        -
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div>
+                    <div class="text-xs text-slate-400 mb-0.5">Billing Interval</div>
+                    <div class="text-sm text-slate-50 font-medium">
+                        {% if subscription.status == 'trial' %}
+                        Trial Period
+                        {% elif subscription.billing_interval == 'annual' %}
+                        Annual
+                        {% else %}
+                        Monthly
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Scheduled Plan Change Banner (BILL-017) -->
+    {% if subscription.scheduled_plan %}
+    <div class="bg-amber-500/10 rounded-xl border border-amber-500/30 p-4">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div class="flex items-start gap-2">
+                <div class="p-1.5 bg-amber-500/20 rounded-lg">
+                    <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="text-sm font-bold text-slate-50 mb-0.5">Scheduled Plan Change</h3>
+                    <p class="text-xs text-slate-300">
+                        Your plan will change from <span class="font-semibold text-slate-50">{{ subscription.get_plan_display }}</span> 
+                        to <span class="font-semibold text-amber-400">{{ subscription.get_scheduled_plan_display }}</span>
+                        {% if subscription.scheduled_change_date %}
+                        on <span class="font-semibold text-slate-50">{{ subscription.scheduled_change_date|date:"M d, Y" }}</span>
+                        {% else %}
+                        at the end of your billing period
+                        {% endif %}.
+                    </p>
+                </div>
+            </div>
+            {% if subscription.can_access_stripe_portal %}
+            <a href="/" 
+               class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 text-xs font-medium rounded-lg border border-amber-500/30 transition-colors whitespace-nowrap">
+                Cancel Change
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Cancellation Pending Banner -->
+    {% if subscription.cancellation_pending %}
+    <div class="bg-amber-500/10 rounded-xl border border-amber-500/30 p-4">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div class="flex items-start gap-2">
+                <div class="p-1.5 bg-amber-500/20 rounded-lg">
+                    <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="text-sm font-bold text-slate-50 mb-0.5">Subscription Ending</h3>
+                    <p class="text-xs text-slate-300">
+                        Your subscription is scheduled to end on 
+                        <span class="font-semibold text-amber-400">{{ subscription.current_period_end|date:"M d, Y" }}</span>.
+                        You'll continue to have access until then.
+                    </p>
+                </div>
+            </div>
+            {% if subscription.can_access_stripe_portal %}
+            <a href="/" 
+               class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 text-xs font-medium rounded-lg border border-amber-500/30 transition-colors whitespace-nowrap">
+                Keep My Subscription
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Trial-specific CTA -->
+    {% if subscription.status == 'trial' %}
+    <div class="bg-gradient-to-br from-purple-600/20 to-purple-900/20 rounded-xl border border-purple-500/30 p-4">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div>
+                <h3 class="text-sm font-bold text-slate-50 mb-0.5">Ready to unlock unlimited potential?</h3>
+                <p class="text-xs text-slate-300">Upgrade now to get unlimited apps and higher event limits.</p>
+            </div>
+            <a href="/" 
+               class="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold rounded-lg transition-colors whitespace-nowrap">
+                Choose a Plan
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
+                </svg>
+            </a>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Support -->
+    <div class="text-center text-xs text-slate-400 pt-3 border-t border-white/10">
+        <p>
+            Have questions about billing? 
+            <a href="mailto:respectlytics@loheden.com" class="text-purple-400 hover:text-purple-300 transition-colors">
+                Contact our support team
+            </a>
+        </p>
+    </div>
+    
+</div>
+{% else %}
+<!-- No subscription found -->
+<div class="text-center py-8">
+    <svg class="w-12 h-12 mx-auto mb-3 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+    <h3 class="text-base font-medium text-slate-50 mb-1">No Subscription Found</h3>
+    <p class="text-sm text-slate-400 mb-4">You don't have an active subscription yet.</p>
+    <a href="/" 
+       class="inline-flex items-center gap-1.5 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold rounded-lg transition-colors">
+        View Pricing
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
+        </svg>
+    </a>
+</div>
+{% endif %}
+{% endblock %}

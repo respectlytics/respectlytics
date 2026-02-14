@@ -1,0 +1,258 @@
+/**
+ * Respectlytics Dark Theme - Design System Variables
+ * 
+ * Part of: UI/Design System Backlog - Task UI-002
+ * Documentation: .github/design-system/
+ * 
+ * This file defines CSS custom properties for the permanent dark theme.
+ * All color tokens, spacing, and chart variables are centralized here.
+ */
+
+/* Global scale-down: 14px base (default 16px) reduces all rem-based sizes by ~12% */
+html {
+  font-size: 15px;
+  min-height: 100vh;
+}
+
+:root {
+  /* ============================================
+     COLOR PALETTE - DARK THEME
+     ============================================ */
+  
+  /* Layering Colors (Slate) */
+  --color-canvas: #0f172a;        /* Slate 900 - Page background */
+  --color-surface: #1e293b;       /* Slate 800 - Card backgrounds */
+  --color-overlay: #334155;       /* Slate 700 - Elevated elements (dropdowns, tooltips) */
+  
+  /* Border Colors */
+  --color-border: rgba(255, 255, 255, 0.1);      /* Subtle separation */
+  --color-border-strong: rgba(255, 255, 255, 0.2);  /* Hover states */
+  --color-border-focus: rgba(16, 185, 129, 0.5);    /* Focus states (emerald) */
+  
+  /* Text Colors */
+  --color-text-primary: #f8fafc;   /* Slate 50 - Headings, important labels */
+  --color-text-secondary: #94a3b8; /* Slate 400 - Body text, descriptions */
+  --color-text-tertiary: #64748b;  /* Slate 500 - Captions, metadata */
+  --color-text-muted: #475569;     /* Slate 600 - Disabled text */
+  
+  /* Brand Colors (Indigo - unchanged) */
+  --color-brand: #6366f1;          /* Indigo 500 - Primary brand color */
+  --color-brand-hover: #4f46e5;    /* Indigo 600 - Hover state */
+  --color-brand-light: #818cf8;    /* Indigo 400 - Light variant */
+  --color-brand-dark: #4338ca;     /* Indigo 700 - Dark variant */
+  
+  /* ============================================
+     SEMANTIC COLORS - LUMINOUS PATTERN
+     text-{color}-400 on bg-{color}-500/15
+     ============================================ */
+  
+  /* Success (Emerald) */
+  --color-success-text: #34d399;   /* Emerald 400 */
+  --color-success-bg: rgba(16, 185, 129, 0.15);
+  --color-success-hover: rgba(16, 185, 129, 0.2);
+  --color-success-border: rgba(16, 185, 129, 0.3);
+  
+  /* Error (Rose/Red) */
+  --color-error-text: #fb7185;     /* Rose 400 */
+  --color-error-bg: rgba(244, 63, 94, 0.15);
+  --color-error-hover: rgba(244, 63, 94, 0.2);
+  --color-error-border: rgba(244, 63, 94, 0.3);
+  
+  /* Warning (Amber) */
+  --color-warning-text: #fcd34d;   /* Amber 300 - brighter for readability */
+  --color-warning-bg: rgba(251, 191, 36, 0.15);
+  --color-warning-hover: rgba(251, 191, 36, 0.2);
+  --color-warning-border: rgba(251, 191, 36, 0.3);
+  
+  /* Info (Blue) */
+  --color-info-text: #60a5fa;      /* Blue 400 */
+  --color-info-bg: rgba(59, 130, 246, 0.15);
+  --color-info-hover: rgba(59, 130, 246, 0.2);
+  --color-info-border: rgba(59, 130, 246, 0.3);
+  
+  /* Neutral (Slate) */
+  --color-neutral-text: #cbd5e1;   /* Slate 300 */
+  --color-neutral-bg: rgba(51, 65, 85, 0.5);  /* Slate 700/50 */
+  
+  /* ============================================
+     SPACING SYSTEM - 8px GRID
+     ============================================ */
+  
+  --space-0: 0;              /* 0px - Reset */
+  --space-xs: 0.5rem;        /* 8px - Tight spacing (icon gaps, inline elements) */
+  --space-sm: 0.75rem;       /* 12px - Compact spacing (form fields) */
+  --space-md: 1rem;          /* 16px - Standard spacing (card padding, list items) */
+  --space-lg: 1.5rem;        /* 24px - Section spacing (between components) */
+  --space-xl: 2rem;          /* 32px - Large spacing (page margins, major sections) */
+  --space-2xl: 2.5rem;       /* 40px - Extra large spacing */
+  --space-3xl: 3rem;         /* 48px - Extra large spacing (hero sections) */
+  
+  /* Legacy spacing variables (for backwards compatibility) */
+  --space-1: 0.25rem;        /* 4px - deprecated, use xs */
+  --space-2: 0.5rem;         /* 8px - maps to xs */
+  --space-3: 0.75rem;        /* 12px - maps to sm */
+  --space-4: 1rem;           /* 16px - maps to md */
+  --space-5: 1.25rem;        /* 20px - deprecated */
+  --space-6: 1.5rem;         /* 24px - maps to lg */
+  --space-8: 2rem;           /* 32px - maps to xl */
+  --space-10: 2.5rem;        /* 40px - maps to 2xl */
+  --space-12: 3rem;          /* 48px - maps to 3xl */
+  --space-16: 4rem;          /* 64px */
+  --space-20: 5rem;          /* 80px */
+  
+  /* ============================================
+     BORDER RADIUS
+     ============================================ */
+  
+  --radius-sm: 0.375rem;     /* 6px - Small elements */
+  --radius-md: 0.5rem;       /* 8px - Buttons, inputs */
+  --radius-lg: 0.75rem;      /* 12px - Cards, containers */
+  --radius-xl: 1rem;         /* 16px - Large cards */
+  --radius-2xl: 1.5rem;      /* 24px - Hero cards */
+  --radius-full: 9999px;     /* Circular elements */
+  
+  /* ============================================
+     CHART COLORS (Chart.js Integration)
+     ============================================ */
+  
+  --chart-grid: rgba(255, 255, 255, 0.05);       /* Grid lines */
+  --chart-text: #94a3b8;                         /* Slate 400 - Labels, legends */
+  --chart-tooltip-bg: #1e293b;                   /* Slate 800 - Tooltip background */
+  --chart-tooltip-border: rgba(255, 255, 255, 0.1);
+  --chart-tooltip-text: #f8fafc;                 /* Slate 50 */
+  
+  /* Chart Dataset Colors (optimized for dark backgrounds) */
+  --chart-color-1: #8b5cf6;  /* Purple 500 */
+  --chart-color-2: #06b6d4;  /* Cyan 500 */
+  --chart-color-3: #f59e0b;  /* Amber 500 */
+  --chart-color-4: #10b981;  /* Emerald 500 */
+  --chart-color-5: #ef4444;  /* Red 500 */
+  --chart-color-6: #ec4899;  /* Pink 500 */
+  --chart-color-7: #6366f1;  /* Indigo 500 */
+  --chart-color-8: #14b8a6;  /* Teal 500 */
+  
+  /* ============================================
+     SHADOWS (Deprecated - Use borders instead)
+     ============================================ */
+  
+  /* Note: Shadows removed in dark theme redesign.
+     Use border-white/10 for subtle separation instead. */
+  --shadow-none: none;
+  
+  /* ============================================
+     Z-INDEX SCALE
+     ============================================ */
+  
+  --z-base: 1;
+  --z-dropdown: 10;
+  --z-sticky: 20;
+  --z-fixed: 30;
+  --z-modal-backdrop: 40;
+  --z-modal: 50;
+  --z-popover: 60;
+  --z-tooltip: 70;
+}
+
+/* ============================================
+   GLOBAL STYLES - DARK THEME APPLICATION
+   ============================================ */
+
+/* Apply dark theme to body */
+body {
+  background-color: var(--color-canvas);
+  color: var(--color-text-secondary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Main content area fills available space */
+main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Selection colors */
+::selection {
+  background-color: var(--color-brand);
+  color: white;
+}
+
+::-moz-selection {
+  background-color: var(--color-brand);
+  color: white;
+}
+
+/* ============================================
+   UTILITY CLASSES
+   ============================================ */
+
+/* Surface colors */
+.bg-canvas {
+  background-color: var(--color-canvas);
+}
+
+.bg-surface {
+  background-color: var(--color-surface);
+}
+
+.bg-overlay {
+  background-color: var(--color-overlay);
+}
+
+/* Text colors */
+.text-primary {
+  color: var(--color-text-primary);
+}
+
+.text-secondary {
+  color: var(--color-text-secondary);
+}
+
+.text-tertiary {
+  color: var(--color-text-tertiary);
+}
+
+/* Semantic backgrounds (luminous pattern) */
+.bg-success-luminous {
+  background-color: var(--color-success-bg);
+  color: var(--color-success-text);
+}
+
+.bg-error-luminous {
+  background-color: var(--color-error-bg);
+  color: var(--color-error-text);
+}
+
+.bg-warning-luminous {
+  background-color: var(--color-warning-bg);
+  color: var(--color-warning-text);
+}
+
+.bg-info-luminous {
+  background-color: var(--color-info-bg);
+  color: var(--color-info-text);
+}
+
+/* Focus styles */
+.focus-ring:focus {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+}
+
+.focus-ring-emerald:focus {
+  outline: 2px solid var(--color-success-text);
+  outline-offset: 2px;
+}
+
+/* ============================================
+   END OF FILE
+   ============================================ */

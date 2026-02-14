@@ -1,0 +1,31 @@
+{% extends "emails/base_email.html" %}
+{% block title %}Suspicious Login Activity - Respectlytics{% endblock %}
+
+{% block content %}
+<h1>⚠️ Suspicious login activity detected</h1>
+
+<p>Hi{% if user.first_name %} {{ user.first_name }}{% endif %},</p>
+
+<p>We detected {{ attempt_count }} failed login attempts on your Respectlytics account.</p>
+
+<div class="card">
+    <p><strong>IP Address:</strong> {{ ip_address }}</p>
+    <p class="mb-0"><strong>Time:</strong> {{ timestamp|date:"F j, Y, g:i a" }} UTC</p>
+</div>
+
+<div class="alert alert-warning">
+    <p style="margin: 0;"><strong>Was this you?</strong></p>
+</div>
+
+<p><strong>If you're trying to log in</strong> and forgot your password, you can reset it here:</p>
+
+<p class="text-center">
+    <a href="{{ password_reset_url }}" class="btn btn-primary" style="color: #ffffff !important;">Reset Password</a>
+</p>
+
+<p><strong>If this wasn't you</strong>, someone may be trying to access your account. Your account will be temporarily locked after 5 failed attempts for your protection.</p>
+
+<p class="text-muted text-small">
+    For your security, we recommend using a strong, unique password and never sharing it with anyone.
+</p>
+{% endblock %}

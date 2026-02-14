@@ -1,0 +1,321 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ title }}{% endblock %}</title>
+
+    {% block extra_head %}{% endblock %}
+
+    {% block favicon %}
+        <!-- Branded Favicons -->
+        <link rel="icon" type="image/x-icon" href="{% static 'favicon/favicon.ico' %}">
+        <link rel="icon" type="image/png" sizes="32x32" href="{% static 'favicon/favicon-32x32.png' %}">
+        <link rel="icon" type="image/png" sizes="16x16" href="{% static 'favicon/favicon-16x16.png' %}">
+        <link rel="apple-touch-icon" sizes="180x180" href="{% static 'favicon/apple-touch-icon.png' %}">
+        <link rel="manifest" href="{% static 'favicon/site.webmanifest' %}">
+        <meta name="theme-color" content="#5856d6">
+    {% endblock %}
+
+    <!-- SEO Meta Tags (public Swagger only) -->
+    {% if request.path|default:''|slice:':22' == '/api/v1/reference/swag' %}
+    <meta name="description" content="Try the Respectlytics REST API interactively. Send live requests, inspect responses, and test authentication. Privacy-first analytics Swagger UI →">
+    <meta name="keywords" content="respectlytics api, swagger ui, interactive api docs, rest api testing, mobile analytics api, try api">
+    <meta name="author" content="Respectlytics">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://respectlytics.com/api/v1/reference/">
+
+    <!-- OpenGraph -->
+    <meta property="og:title" content="Interactive API Explorer - Swagger UI | Respectlytics">
+    <meta property="og:description" content="Try the Respectlytics REST API interactively. Send requests, inspect responses, and test authentication directly in your browser.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://respectlytics.com/api/v1/reference/swagger/">
+    <meta property="og:image" content="https://respectlytics.com{% static 'images/og/sdk-documentation.png' %}">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="Respectlytics Interactive API Explorer">
+    <meta property="og:site_name" content="Respectlytics">
+    <meta property="og:locale" content="en_US">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Interactive API Explorer - Swagger UI | Respectlytics">
+    <meta name="twitter:description" content="Try the Respectlytics REST API interactively. Send requests, inspect responses, and test authentication directly in your browser.">
+    <meta name="twitter:image" content="https://respectlytics.com{% static 'images/og/sdk-documentation.png' %}">
+    <meta name="twitter:image:alt" content="Respectlytics Interactive API Explorer">
+
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "TechArticle",
+      "name": "Respectlytics Interactive API Explorer",
+      "headline": "Interactive API Explorer - Swagger UI",
+      "description": "Try the Respectlytics REST API interactively. Send live requests, inspect responses, and test authentication with the Swagger UI explorer.",
+      "url": "https://respectlytics.com/api/v1/reference/swagger/",
+      "inLanguage": "en",
+      "datePublished": "2025-12-01",
+      "dateModified": "2026-02-10",
+      "author": {
+        "@type": "Organization",
+        "name": "Respectlytics",
+        "url": "https://respectlytics.com"
+      },
+      "publisher": {
+        "@type": "Organization",
+        "name": "Respectlytics",
+        "url": "https://respectlytics.com"
+      },
+      "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": "https://respectlytics.com/api/v1/reference/swagger/"
+      }
+    }
+    </script>
+    {% else %}
+    <meta name="robots" content="noindex, nofollow">
+    {% endif %}
+
+    {% block main_styles %}
+        <link rel="stylesheet" type="text/css" href="{% static 'drf-yasg/style.css' %}"/>
+        <link rel="stylesheet" type="text/css" href="{% static 'drf-yasg/swagger-ui-dist/swagger-ui.css' %}">
+    {% endblock %}
+
+    {% block extra_styles %}
+    <style>
+        :root {
+            --primary-500: #667eea;
+            --primary-600: #5b6fd8;
+            --slate-900: #0f172a;
+            --slate-800: #1e293b;
+            --slate-700: #334155;
+            --slate-600: #475569;
+            --slate-500: #64748b;
+            --slate-400: #94a3b8;
+            --slate-300: #cbd5e1;
+            --slate-200: #e2e8f0;
+            --slate-100: #f1f5f9;
+            --slate-50: #f8fafc;
+            --indigo-400: #818cf8;
+            --indigo-500: #6366f1;
+            --space-2: 0.5rem;
+            --space-3: 0.75rem;
+            --space-4: 1rem;
+            --space-6: 1.5rem;
+            --space-8: 2rem;
+            --space-12: 3rem;
+            --radius-md: 0.5rem;
+            --radius-lg: 0.75rem;
+        }
+
+        * { box-sizing: border-box; }
+
+        body.swagger-body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: var(--slate-900);
+            overflow: hidden;
+            margin: 0;
+        }
+
+        /* Branded Header - Dark Theme */
+        .header {
+            background: rgba(30, 41, 59, 0.95);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: var(--space-4) 0;
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 var(--space-12);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .logo { font-size: 1.5625rem; font-weight: 900; display: flex; align-items: center; gap: var(--space-2); color: var(--slate-50); text-decoration: none; letter-spacing: -0.02em; }
+        .logo-mark { width: 8px; height: 28px; background: linear-gradient(135deg, #5856d6 0%, #7c3aed 100%); border-radius: 2px; }
+        nav { display: flex; align-items: center; gap: var(--space-2); }
+        nav ul { display: flex; list-style: none; gap: var(--space-2); margin-right: var(--space-6); }
+        nav a { color: var(--slate-400); text-decoration: none; padding: var(--space-2) var(--space-4); border-radius: var(--radius-md); transition: all 0.2s; font-weight: 500; font-size: 1rem; }
+        nav a:hover { background: var(--slate-800); color: var(--indigo-400); }
+        nav a.active { background: var(--slate-800); color: var(--indigo-400); }
+        .nav-btn { padding: var(--space-3) var(--space-6) !important; background: linear-gradient(135deg, #5856d6 0%, #7c3aed 100%) !important; color: white !important; font-weight: 700 !important; border-radius: var(--radius-lg) !important; box-shadow: 0 4px 12px rgba(88, 86, 214, 0.3); font-size: 1rem !important; }
+        .nav-btn-secondary { background: transparent !important; color: var(--slate-400) !important; border: 1px solid rgba(255, 255, 255, 0.1) !important; }
+
+        /* Make Swagger UI fill the viewport under header */
+        #swagger-ui {
+            position: fixed;
+            top: 72px; /* header height */
+            left: 0; right: 0; bottom: 0;
+            overflow: auto;
+            padding: 0 24px 24px 24px;
+            background: var(--slate-900);
+        }
+
+        /* Remove Swagger's own topbar; our header replaces it */
+        .swagger-ui .topbar { display: none !important; }
+
+        /* Typography + spacing - Dark Theme */
+        .swagger-ui, .swagger-ui * { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif !important; }
+        .swagger-ui .info { background: var(--slate-900) !important; }
+        .swagger-ui .info .main { background: var(--slate-900) !important; }
+        .swagger-ui .info hgroup.main { background: var(--slate-900) !important; }
+        .swagger-ui .info h2.title { font-weight: 900 !important; letter-spacing: -0.02em; color: var(--slate-50) !important; }
+        .swagger-ui .info p, .swagger-ui .markdown p { color: var(--slate-400) !important; line-height: 1.8 !important; }
+        .swagger-ui .markdown h1, .swagger-ui .markdown h2 { border-bottom: 2px solid rgba(255, 255, 255, 0.1); padding-bottom: .5rem; color: var(--slate-50) !important; }
+        .swagger-ui .markdown h3, .swagger-ui .markdown h4 { color: var(--slate-50) !important; }
+        .swagger-ui .markdown code { background: var(--slate-800) !important; color: var(--indigo-400) !important; padding: 2px 6px; border-radius: 4px; }
+        .swagger-ui .scheme-container { background: var(--slate-900) !important; border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding: 24px !important; }
+        .swagger-ui .scheme-container .schemes { background: var(--slate-800) !important; border: 1px solid rgba(255, 255, 255, 0.1) !important; border-radius: 12px !important; padding: 16px 20px !important; }
+        .swagger-ui .scheme-container .schemes > label { margin-right: 16px !important; color: var(--slate-50) !important; }
+        .swagger-ui .scheme-container .schemes select { background: var(--slate-700) !important; color: var(--slate-50) !important; border: 1px solid rgba(255, 255, 255, 0.1) !important; border-radius: 8px !important; padding: 8px 12px !important; }
+        .swagger-ui .wrapper { background: var(--slate-900) !important; }
+
+        /* Accent color for primary buttons and links */
+        .swagger-ui .btn.execute, .swagger-ui .btn.authorize, .swagger-ui .btn.try-out__btn { background-color: var(--primary-500) !important; border-color: var(--primary-500) !important; color: #fff !important; }
+        .swagger-ui .btn.authorize svg, .swagger-ui .btn.execute svg { fill: #fff !important; }
+        .swagger-ui .opblock .opblock-section-header { background: var(--slate-800) !important; }
+
+        /* Opblock color tweaks - Dark Theme with better contrast */
+        .opblock.opblock-get { border-color: #10b981 !important; background: rgba(16, 185, 129, 0.1) !important; }
+        .opblock.opblock-get .opblock-summary-method { background: #10b981 !important; }
+        .opblock.opblock-post { border-color: #6366f1 !important; background: rgba(99, 102, 241, 0.1) !important; }
+        .opblock.opblock-post .opblock-summary-method { background: #6366f1 !important; }
+        .opblock.opblock-put { border-color: #f59e0b !important; background: rgba(245, 158, 11, 0.1) !important; }
+        .opblock.opblock-put .opblock-summary-method { background: #f59e0b !important; }
+        .opblock.opblock-delete { border-color: #ef4444 !important; background: rgba(239, 68, 68, 0.1) !important; }
+        .opblock.opblock-delete .opblock-summary-method { background: #ef4444 !important; }
+        .swagger-ui .opblock-summary-path, .swagger-ui .opblock-summary-description { color: var(--slate-50) !important; }
+        .swagger-ui .opblock .opblock-summary { background: var(--slate-800) !important; border-color: rgba(255, 255, 255, 0.1) !important; }
+        .swagger-ui .opblock-body { background: var(--slate-900) !important; }
+        .swagger-ui .opblock-description-wrapper p { color: var(--slate-400) !important; }
+
+        /* Tables, models, etc. - Dark Theme */
+        .swagger-ui table { border-collapse: separate !important; border-spacing: 0 !important; border-radius: 8px !important; overflow: hidden !important; box-shadow: 0 1px 3px rgba(0,0,0,0.5) !important; background: var(--slate-800) !important; }
+        .swagger-ui table thead th { background: linear-gradient(180deg, #667eea 0%, #5b6fd8 100%) !important; color: #fff !important; text-transform: uppercase; letter-spacing: .05em; font-size: 0.9125rem; }
+        .swagger-ui table td, .swagger-ui table th { padding: 12px 16px !important; border-color: rgba(255, 255, 255, 0.1) !important; color: var(--slate-50) !important; }
+        .swagger-ui table tbody tr { background: var(--slate-800) !important; }
+        .swagger-ui table tbody tr:hover { background: var(--slate-700) !important; }
+        .swagger-ui .model-box { background: var(--slate-800) !important; border-color: rgba(255, 255, 255, 0.1) !important; }
+        .swagger-ui .model { color: var(--slate-50) !important; }
+        .swagger-ui .model-title { color: var(--slate-50) !important; }
+        .swagger-ui .property-row { border-color: rgba(255, 255, 255, 0.1) !important; }
+        .swagger-ui .prop-type { color: var(--indigo-400) !important; }
+        .swagger-ui .prop-format { color: var(--slate-400) !important; }
+
+        /* Code blocks - Dark Theme */
+        .swagger-ui .highlight-code, .swagger-ui pre, .swagger-ui code { font-family: "SF Mono", Monaco, Inconsolata, "Fira Code", "Courier New", monospace !important; }
+        .swagger-ui .highlight-code pre { background: #1a1a2e !important; color: #e2e8f0 !important; border-radius: 8px; padding: 16px; }
+        .swagger-ui .microlight { background: #1a1a2e !important; color: #e2e8f0 !important; border: 1px solid rgba(255, 255, 255, 0.1) !important; }
+        .swagger-ui .response-col_status { color: var(--slate-50) !important; }
+        .swagger-ui .response-col_description { color: var(--slate-400) !important; }
+
+        /* Inputs and search - Dark Theme */
+        .swagger-ui .filter input[type="text"] { border: 1px solid rgba(255, 255, 255, 0.1); background: var(--slate-800); border-radius: 8px; padding: 10px 12px; font-size: 15px; color: var(--slate-50) !important; }
+        .swagger-ui .filter input[type="text"]::placeholder { color: var(--slate-400) !important; }
+        .swagger-ui input[type="text"], .swagger-ui input[type="password"], .swagger-ui textarea, .swagger-ui select { background: var(--slate-800) !important; color: var(--slate-50) !important; border: 1px solid rgba(255, 255, 255, 0.1) !important; }
+        .swagger-ui .parameter__name { color: var(--slate-50) !important; }
+        .swagger-ui .parameter__type { color: var(--indigo-400) !important; }
+        .swagger-ui .parameter__in { color: var(--slate-400) !important; }
+        .swagger-ui .response .response-col_links { color: var(--indigo-400) !important; }
+        
+        /* Auth modal - Dark Theme */
+        .swagger-ui .dialog-ux .modal-ux { background: var(--slate-800) !important; border: 1px solid rgba(255, 255, 255, 0.1) !important; }
+        .swagger-ui .dialog-ux .modal-ux-header { background: var(--slate-700) !important; color: var(--slate-50) !important; border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important; }
+        .swagger-ui .dialog-ux .modal-ux-content { color: var(--slate-300) !important; }
+        .swagger-ui .dialog-ux .modal-ux-content h4 { color: var(--slate-50) !important; }
+        .swagger-ui .btn.cancel { background: var(--slate-700) !important; color: var(--slate-300) !important; border-color: rgba(255, 255, 255, 0.1) !important; }
+
+        /* Scrollbar styling for dark theme */
+        #swagger-ui::-webkit-scrollbar { width: 12px; }
+        #swagger-ui::-webkit-scrollbar-track { background: var(--slate-900); }
+        #swagger-ui::-webkit-scrollbar-thumb { background: var(--slate-700); border-radius: 6px; }
+        #swagger-ui::-webkit-scrollbar-thumb:hover { background: var(--slate-600); }
+
+        @media (max-width: 768px) { .container { padding: 0 var(--space-4); } nav ul { display: none; } }
+    </style>
+    {% endblock %}
+</head>
+<body class="swagger-body">
+    {% block extra_body %}{% endblock %}
+
+    <!-- Branded header -->
+    <header class="header">
+        <div class="container">
+            <a href="/" class="logo">
+                <span class="logo-mark"></span>
+                <span>Respectlytics</span>
+                {% if request.path|default:''|slice:':5' == '/swag' %}
+                <span style="margin-left:8px; font-size:13px; font-weight:700; color:#4338ca; background:#eef2ff; border:1px solid #e0e7ff; padding:2px 8px; border-radius:999px;">ADMIN</span>
+                {% endif %}
+            </a>
+            <nav>
+                <ul>
+                    <li><a href="/">Home</a></li>
+                    <li><a href="/sdk/">SDK Docs</a></li>
+                    {% if request.path|default:''|slice:':5' == '/swag' %}
+                        <li><a href="/swagger/" class="active">Swagger</a></li>
+                        <li><a href="/redoc/">API Reference (Admin)</a></li>
+                    {% else %}
+                        <li><a href="/api/v1/reference/swagger/" class="active">Swagger</a></li>
+                        <li><a href="/api/v1/reference/">API Reference</a></li>
+                    {% endif %}
+                </ul>
+                <a href="/login/" class="nav-btn-secondary">Sign In</a>
+                <a href="/register/" class="nav-btn">Get Started</a>
+            </nav>
+        </div>
+    </header>
+
+    <div id="swagger-ui"></div>
+
+    {% block footer %}{% endblock %}
+
+    <script id="swagger-settings" type="application/json">{{ swagger_settings | safe }}</script>
+    <script id="oauth2-config" type="application/json">{{ oauth2_config | safe }}</script>
+
+    {% block main_scripts %}
+        <script src="{% static 'drf-yasg/swagger-ui-dist/swagger-ui-bundle.js' %}"></script>
+        <script src="{% static 'drf-yasg/swagger-ui-dist/swagger-ui-standalone-preset.js' %}"></script>
+        <script src="{% static 'drf-yasg/insQ.min.js' %}"></script>
+        <script src="{% static 'drf-yasg/immutable.min.js' %}"></script>
+        <script src="{% static 'drf-yasg/swagger-ui-init.js' %}"></script>
+    {% endblock %}
+    {% block extra_scripts %}{% endblock %}
+
+    <a id="oauth2-redirect-url" href="{% static 'drf-yasg/swagger-ui-dist/oauth2-redirect.html' %}" class="hidden"></a>
+    {% if USE_SESSION_AUTH %}
+        <div id="django-session-auth" class="hidden">
+            {% block session_auth_button %}
+                {% csrf_token %}
+                {% block user_context_message %}
+                    {% if request.user.is_authenticated %}
+                        <div class="hello">
+                            <span class="django-session">Django</span>
+                            <span class="label label-primary">{{ request.user }}</span>
+                        </div>
+                    {% endif %}
+                {% endblock %}
+                {% if request.user.is_authenticated %}
+                    <div class='btn authorize'>
+                        <a id="auth" class="header__btn" href="{{ LOGOUT_URL }}?next={{ request.path }}" data-sw-translate>
+                            {% block django_logout_message %}Django Logout{% endblock %}
+                        </a>
+                    </div>
+                {% else %}
+                    <div class='btn authorize'>
+                        <a id="auth" class="header__btn" href="{{ LOGIN_URL }}?next={{ request.path }}" data-sw-translate>
+                            {% block django_login_message %}Django Login{% endblock %}
+                        </a>
+                    </div>
+                {% endif %}
+            {% endblock %}
+        </div>
+    {% endif %}
+</body>
+</html>

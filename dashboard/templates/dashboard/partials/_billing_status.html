@@ -1,0 +1,161 @@
+{% load static %}
+
+<!-- Scheduled Plan Change Banner (BILL-017) -->
+{% if subscription.scheduled_plan %}
+<div class="bg-amber-500/10 rounded-xl border border-amber-500/30 p-4 mb-4">
+    <div class="flex items-center gap-3">
+        <div class="p-1.5 bg-amber-500/20 rounded-lg flex-shrink-0">
+            <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+        </div>
+        <div class="flex-1 min-w-0">
+            <p class="text-sm text-slate-300">
+                <span class="font-medium text-amber-400">Scheduled:</span>
+                {{ subscription.get_plan_display }} → {{ subscription.get_scheduled_plan_display }}
+                {% if subscription.scheduled_change_date %}on {{ subscription.scheduled_change_date|date:"M d" }}{% endif %}
+            </p>
+        </div>
+        {% if subscription.can_access_stripe_portal %}
+        <a href="/" class="text-xs text-amber-400 hover:text-amber-300 font-medium whitespace-nowrap">
+            Cancel
+        </a>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Granted Access Expiration Warning (7 days) -->
+{% if subscription.is_granted_access_boosting and subscription.granted_access_days_remaining is not None and subscription.granted_access_days_remaining <= 7 and subscription.granted_access_days_remaining > 0 %}
+<div class="bg-amber-500/10 rounded-xl border border-amber-500/30 p-4 mb-4">
+    <div class="flex items-center gap-3">
+        <div class="p-1.5 bg-amber-500/20 rounded-lg flex-shrink-0">
+            <span class="text-amber-400">🎁</span>
+        </div>
+        <div class="flex-1 min-w-0">
+            <p class="text-sm text-slate-300">
+                <span class="font-medium text-amber-400">Granted access expires in {{ subscription.granted_access_days_remaining }} day{{ subscription.granted_access_days_remaining|pluralize }}</span>
+                — your limit will return to {{ subscription.monthly_event_limit|floatformat:0 }} events/month.
+            </p>
+        </div>
+        <a href="/" class="text-xs text-amber-400 hover:text-amber-300 font-medium whitespace-nowrap">
+            Upgrade
+        </a>
+    </div>
+</div>
+{% endif %}
+
+<!-- Billing Status Widget - Compact & Elegant -->
+<div class="bg-[#1e293b] rounded-xl border border-white/10 p-4 mb-6">
+    <!-- Header Row: Plan + Status Badge + Action -->
+    <div class="flex items-center justify-between mb-3">
+        <div class="flex items-center gap-2 flex-wrap">
+            <h2 class="text-sm font-semibold text-slate-50">{{ subscription.get_plan_display }}</h2>
+            {% if subscription.status == 'trial' or subscription.plan == 'trial' and subscription.status == 'cancelled' %}
+            <span class="px-2 py-0.5 bg-purple-500/20 text-purple-400 text-xs font-semibold rounded-full border border-purple-500/30">
+                Trial
+            </span>
+            {% elif subscription.status == 'active' %}
+            <span class="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 text-xs font-semibold rounded-full border border-emerald-500/30">
+                Active
+            </span>
+            {% elif subscription.status == 'past_due' %}
+            <span class="px-2 py-0.5 bg-yellow-500/20 text-yellow-400 text-xs font-semibold rounded-full border border-yellow-500/30">
+                Past Due
+            </span>
+            {% elif subscription.status == 'cancelled' %}
+            <span class="px-2 py-0.5 bg-red-500/20 text-red-400 text-xs font-semibold rounded-full border border-red-500/30">
+                Cancelled
+            </span>
+            {% endif %}
+            {% if subscription.is_granted_access_boosting %}
+            <span class="px-2 py-0.5 bg-amber-500/20 text-amber-400 text-xs font-semibold rounded-full border border-amber-500/30">
+                🎁 Boosted
+            </span>
+            {% endif %}
+        </div>
+        
+        <!-- Action Buttons - Inline -->
+        <div class="flex items-center gap-2">
+            {% if subscription.status == 'trial' or subscription.plan == 'trial' or subscription.plan == 'starter' or subscription.plan == 'indie' %}
+            <a href="/" 
+               class="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold rounded-lg transition-all">
+                Upgrade
+            </a>
+            {% endif %}
+            
+            {% if subscription.can_access_stripe_portal %}
+            <a href="/" 
+               class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white text-xs font-medium rounded-lg transition-all border border-white/10">
+                Manage
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Usage Row -->
+    {% if subscription.status == 'cancelled' and not subscription.free_access_end %}
+    {# BILL-023: Show "No active subscription" for cancelled users without free access #}
+    <div class="space-y-2">
+        <div class="flex items-center justify-center py-4">
+            <div class="text-center">
+                <p class="text-sm text-slate-400 mb-2">No active subscription</p>
+                <a href="/" class="text-xs text-purple-400 hover:text-purple-300 font-medium">
+                    Resubscribe to continue tracking events
+                </a>
+            </div>
+        </div>
+        {% if subscription.deletion_scheduled_for %}
+        <div class="flex items-center justify-between text-xs pt-1 border-t border-white/5">
+            <span class="text-slate-400">Data deletion</span>
+            <span class="font-medium text-red-400">{{ subscription.deletion_scheduled_for|date:"M d, Y" }}</span>
+        </div>
+        {% endif %}
+    </div>
+    {% else %}
+    <div class="space-y-2">
+        <div class="flex items-center justify-between text-xs">
+            <span class="text-slate-400">Events Used</span>
+            <span class="font-medium text-slate-300">
+                {{ usage.events_used|default:0|floatformat:0 }} / 
+                {% if subscription.effective_monthly_limit == -1 or subscription.plan == 'enterprise' %}
+                Unlimited
+                {% else %}
+                {{ subscription.effective_monthly_limit|floatformat:0 }}
+                {% endif %}
+            </span>
+        </div>
+        
+        {% if subscription.effective_monthly_limit > 0 %}
+        <div class="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden">
+            {% widthratio usage.events_used subscription.effective_monthly_limit 100 as usage_percent %}
+            <div class="h-full rounded-full transition-all duration-300
+                {% if usage_percent >= 90 %}bg-red-500
+                {% elif usage_percent >= 75 %}bg-yellow-500
+                {% else %}bg-emerald-500{% endif %}"
+                style="width: {{ usage_percent|default:0 }}%"></div>
+        </div>
+        {% endif %}
+        
+        <!-- Expiry/Billing Date - Single Row -->
+        <div class="flex items-center justify-between text-xs pt-1">
+            {% if subscription.trial_end and subscription.plan == 'trial' %}
+            <span class="text-slate-400">Trial ends</span>
+            <span class="font-medium text-purple-400">{{ subscription.trial_end|date:"M d, Y" }}</span>
+            {% elif subscription.status == 'active' and subscription.current_period_end %}
+            <span class="text-slate-400">Next billing</span>
+            <span class="font-medium text-slate-300">{{ subscription.current_period_end|date:"M d, Y" }}</span>
+            {% endif %}
+        </div>
+        
+        <!-- Warning Messages -->
+        {% if subscription.effective_monthly_limit > 0 %}
+            {% if usage_percent >= 90 %}
+            <p class="text-xs text-red-400 pt-1">⚠️ Approaching limit - consider upgrading</p>
+            {% elif usage_percent >= 75 %}
+            <p class="text-xs text-yellow-400 pt-1">Getting close to your limit</p>
+            {% endif %}
+        {% endif %}
+    </div>
+    {% endif %}
+</div>

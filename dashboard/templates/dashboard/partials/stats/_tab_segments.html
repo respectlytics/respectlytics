@@ -1,0 +1,271 @@
+{# Segments Tab Content - Partial #}
+
+<div id="segments-content" class="hidden">
+    <!-- Section Header --> {# Spacing: 8px grid (mb-5=20px) #}
+    <div class="flex items-center justify-between mb-5">
+        <div>
+            <h2 class="text-lg font-bold text-slate-50">Segment Analysis</h2>
+            <p class="text-xs text-slate-400 mt-1">Compare how different session segments convert</p>
+        </div>
+        <span class="px-3 py-1 text-sm font-medium bg-purple-500/15 text-purple-400 rounded-full" id="scopeBadgeSegments">⚡ Today</span>
+    </div>
+
+    <!-- Session-Scope Notice --> {# Spacing: 8px grid (p-3=12px, mb-5=20px, gap-2=8px) #}
+    <div class="bg-purple-500/15 border border-purple-400/20 rounded-xl p-3 mb-5 flex items-start gap-2" id="segmentsDataQualityBanner">
+        <div class="w-6 h-6 rounded-lg bg-purple-400/15 flex items-center justify-center flex-shrink-0">
+            <svg class="w-3.5 h-3.5 text-purple-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M12 16v-4"/>
+                <path d="M12 8h.01"/>
+            </svg>
+        </div>
+        <div class="flex-1">
+            <div class="text-sm font-bold text-purple-300 mb-0.5">Session-Based Conversion Rates</div>
+            <div class="text-xs text-purple-400" id="segmentsDataQualityText">
+                Conversion rates are calculated <strong>per session</strong>, not per user. Since we don't track users across sessions (for privacy compliance), rates may appear lower than user-based analytics tools—this is expected and accurate for session-level measurement.
+            </div>
+        </div>
+    </div>
+
+    <!-- Conversion Events Notice --> {# Spacing: 8px grid (p-3=12px, mb-5=20px, gap-2=8px) #}
+    <div class="bg-purple-500/15 border border-purple-400/20 rounded-xl p-3 mb-5 flex items-start gap-2" id="segmentsTabNotice">
+        <div class="w-6 h-6 rounded-lg bg-purple-400/15 flex items-center justify-center flex-shrink-0">
+            <svg class="w-3.5 h-3.5 text-purple-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+            </svg>
+        </div>
+        <div class="text-xs text-purple-400">Comparing conversion rates for: <strong id="segmentsTabEvents">No events selected</strong></div>
+    </div>
+
+    <!-- Processing Status Banner (PERF-024) --> {# Spacing: 8px grid #}
+    <div id="segments-processing-banner" class="bg-blue-500/15 border border-blue-400/20 rounded-xl p-4 mb-6" style="display: none;">
+        <div class="flex items-center gap-3">
+            <div class="flex-shrink-0">
+                <svg class="animate-spin h-5 w-5 text-blue-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+            </div>
+            <div class="flex-1">
+                <div class="text-sm font-medium text-blue-300">
+                    Processing <span id="segments-event-count" class="font-bold">0</span> events...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Cards Loading Skeleton (PERF-024) --> {# Spacing: 8px grid (p-6=24px, gap-4=16px, mb-6=24px) #}
+    <div id="summary-loading" class="bg-[#1e293b] rounded-2xl border border-white/10 mb-6 animate-pulse" style="display: none; overflow: visible;">
+        <div class="p-6 border-b border-white/10">
+            <div class="h-6 bg-slate-700 rounded w-48 mb-2"></div>
+            <div class="h-4 bg-slate-700 rounded w-full"></div>
+        </div>
+        <div class="grid grid-cols-3 gap-4 p-6">
+            <div class="bg-slate-700 rounded-xl p-4 h-24"></div>
+            <div class="bg-slate-700 rounded-xl p-4 h-24"></div>
+            <div class="bg-slate-700 rounded-xl p-4 h-24"></div>
+        </div>
+    </div>
+
+    <!-- Segment Type Selector + Granularity (PERF-024: wrapped in summary-data) --> {# Spacing: 8px grid (p-6=24px, gap-4=16px, mb-6=24px) #}
+    <div id="summary-data" class="bg-[#1e293b] rounded-2xl border border-white/10 mb-6" style="display: none; overflow: visible;">
+        <div class="p-6 border-b border-white/10">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <h3 class="text-lg font-bold text-slate-50 mb-1">Segment Comparison</h3>
+                    <p class="text-sm text-slate-400" id="segmentTypeDescription">Compare conversion rates across different platforms</p>
+                </div>
+                <div class="flex flex-col sm:flex-row gap-4">
+                    <!-- Segment Type Toggle -->
+                    <div class="inline-flex rounded-lg bg-indigo-900/30 p-1 gap-1 border border-indigo-500/20">
+                        <button class="segments-selector-btn px-4 py-2 text-sm font-medium rounded-md bg-indigo-600 text-white shadow-sm transition-all" data-segment="platform">Platform</button>
+                        <button class="segments-selector-btn px-4 py-2 text-sm font-medium rounded-md text-indigo-200 hover:text-white hover:bg-indigo-500/30 transition-all" data-segment="country">Country</button>
+                        <button class="segments-selector-btn px-4 py-2 text-sm font-medium rounded-md text-indigo-200 hover:text-white hover:bg-indigo-500/30 transition-all" data-segment="depth">Events/Session</button>
+                        <button class="segments-selector-btn px-4 py-2 text-sm font-medium rounded-md text-indigo-200 hover:text-white hover:bg-indigo-500/30 transition-all" data-segment="hour">Hour</button>
+                    </div>
+                    <!-- Granularity Toggle -->
+                    <div class="inline-flex rounded-lg bg-slate-800 p-1 gap-1 border border-slate-700">
+                        <button class="segments-granularity-btn px-4 py-2 text-sm font-medium rounded-md bg-slate-700 text-slate-200 shadow-sm transition-all" data-granularity="day">Daily</button>
+                        <button class="segments-granularity-btn px-4 py-2 text-sm font-medium rounded-md text-slate-400 hover:text-slate-200 hover:bg-slate-700/50 transition-all" data-granularity="week">Weekly</button>
+                        <button class="segments-granularity-btn px-4 py-2 text-sm font-medium rounded-md text-slate-400 hover:text-slate-200 hover:bg-slate-700/50 transition-all" data-granularity="month">Monthly</button>
+                    </div>
+                </div>
+            </div>
+            <!-- Timezone Toggle (only visible for Hour segment) -->
+            <div id="timezoneToggleRow" class="hidden pt-4 border-t border-white/5 mt-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <svg class="w-4 h-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <polyline points="12 6 12 12 16 14"/>
+                        </svg>
+                        <span class="text-sm text-slate-400">Showing hours in</span>
+                        <span id="currentTimezoneLabel" class="text-sm font-medium text-slate-200">UTC</span>
+                    </div>
+                    <button id="timezoneToggleBtn" class="flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white border border-slate-600 transition-all">
+                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 12a9 9 0 0 1-9 9m9-9a9 9 0 0 0-9-9m9 9H3m9 9a9 9 0 0 1-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 0 1 9-9"/>
+                        </svg>
+                        <span id="timezoneToggleBtnText">Switch to Local</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Summary Cards --> {# Spacing: 8px grid (grid gap-4=16px, p-6=24px, p-4=16px) #}
+        <div class="grid grid-cols-3 gap-4 p-6" id="segmentsSummary">
+            <div class="bg-purple-500/15 rounded-xl p-4 text-center border border-purple-400/20">
+                <div class="text-3xl font-bold text-slate-50" id="segmentsTotalCount">-</div>
+                <div class="text-sm text-slate-400" id="segmentLabelText">Segments</div>
+            </div>
+            <div class="bg-purple-500/15 rounded-xl p-4 text-center border border-purple-400/20">
+                <div class="text-3xl font-bold text-slate-50" id="segmentsOverallRate">-</div>
+                <div class="text-sm text-slate-400">Avg. Conversion Rate</div>
+            </div>
+            <div class="bg-purple-500/15 rounded-xl p-4 text-center border border-purple-400/20">
+                <div class="text-3xl font-bold text-slate-50" id="segmentsTopSegment">-</div>
+                <div class="text-sm text-slate-400"><span id="topSegmentLabel">Top Segment</span> <span class="text-emerald-400 font-semibold" id="segmentsTopRate">--</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bar Chart Loading Skeleton (PERF-024) --> {# Spacing: 8px grid (p-6=24px, mb-6=24px) #}
+    <div id="chart-loading" class="bg-[#1e293b] rounded-2xl border border-white/10 mb-6 overflow-hidden animate-pulse" style="display: none;">
+        <div class="p-6 border-b border-white/10">
+            <div class="h-6 bg-slate-700 rounded w-48 mb-2"></div>
+            <div class="h-4 bg-slate-700 rounded w-full"></div>
+        </div>
+        <div class="p-6">
+            <div class="h-64 bg-slate-700 rounded"></div>
+        </div>
+    </div>
+
+    <!-- Bar Chart Section (PERF-024: wrapped in chart-data) --> {# Spacing: 8px grid (p-6=24px, mb-6=24px, py-4=16px, gap-2=8px) #}
+    <div id="chart-data" class="bg-[#1e293b] rounded-2xl border border-white/10 mb-6 overflow-hidden" style="display: none;">
+        <div class="p-6 border-b border-white/10">
+            <h4 class="text-lg font-bold text-slate-50 mb-1">Conversion Rate by Segment</h4>
+            <p class="text-sm text-slate-400">Which session groups convert best? Higher bars = more conversions. Focus marketing efforts on top-performing segments while improving underperforming ones.</p>
+        </div>
+        <div class="p-6">
+            <div id="segmentsBarsContainer" class="flex items-end justify-evenly" style="height: 260px;">
+                <div class="text-center text-slate-400">Loading...</div>
+            </div>
+        </div>
+        <div class="px-6 py-4 bg-slate-800/30 border-t border-white/10">
+            <div class="flex items-start gap-2 text-sm text-slate-400">
+                <svg class="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <path d="M12 16v-4"/>
+                    <path d="M12 8h.01"/>
+                </svg>
+                <div id="chartHelpText">
+                    <strong>How to read this chart:</strong> Taller bars indicate higher conversion rates.
+                    <span class="text-purple-400 font-medium">Compare segments to identify your best-performing session groups.</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Breakdown Table Loading Skeleton (PERF-024) --> {# Spacing: 8px grid (p-6=24px, mb-8=32px, space-y-3=12px) #}
+    <div id="table-loading" class="bg-[#1e293b] rounded-2xl border border-white/10 mb-8 animate-pulse" style="display: none; overflow: visible;">
+        <div class="p-6 border-b border-white/10">
+            <div class="h-6 bg-slate-700 rounded w-48 mb-2"></div>
+            <div class="h-4 bg-slate-700 rounded w-full"></div>
+        </div>
+        <div class="p-6">
+            <div class="space-y-3">
+                <div class="h-8 bg-slate-700 rounded"></div>
+                <div class="h-8 bg-slate-700 rounded"></div>
+                <div class="h-8 bg-slate-700 rounded"></div>
+                <div class="h-8 bg-slate-700 rounded"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Breakdown Table Section (PERF-024: wrapped in table-data) --> {# Spacing: 8px grid (p-6=24px, mb-8=32px, px-4=16px, py-2=8px) #}
+    <div id="table-data" class="bg-[#1e293b] rounded-2xl border border-white/10 mb-8" style="display: none; overflow: visible;">
+        <div class="p-6 border-b border-white/10">
+            <h4 class="text-lg font-bold text-slate-50 mb-1" id="tableBreakdownTitle">Segment Breakdown</h4>
+            <p class="text-sm text-slate-400" id="tableBreakdownDesc">Detailed metrics for each segment over time</p>
+        </div>
+        <div class="overflow-x-auto pb-16" style="overflow-y: visible;">
+            <table class="w-full text-sm">
+                <thead class="bg-slate-800">
+                    <tr id="segmentsTableHeader">
+                        <th class="px-4 py-2 text-left font-semibold text-slate-50 sticky left-0 bg-slate-800" id="tableColumnLabel">Segment</th>
+                        <th class="px-4 py-2 text-center font-semibold text-slate-50">Sessions</th>
+                        <th class="px-4 py-2 text-center font-semibold text-slate-50">Conv.</th>
+                        <th class="px-4 py-2 text-center font-semibold text-slate-50">Rate</th>
+                        <th class="px-4 py-2 text-center font-semibold text-slate-50 segment-period-header">Period 1</th>
+                        <th class="px-4 py-2 text-center font-semibold text-slate-50 segment-period-header">Period 2</th>
+                        <th class="px-4 py-2 text-center font-semibold text-slate-50 segment-period-header">Period 3</th>
+                    </tr>
+                </thead>
+                <tbody id="segmentsTableBody">
+                    <tr>
+                        <td colspan="7" class="text-center text-slate-400 py-8">
+                            <div class="flex flex-col items-center gap-2">
+                                <svg class="w-8 h-8 text-slate-400 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+                                </svg>
+                                <span>Loading segment data...</span>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="px-6 py-4 bg-slate-800/30 border-t border-white/10">
+            <div class="flex items-start gap-2 text-sm text-slate-400">
+                <svg class="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                    <line x1="3" y1="9" x2="21" y2="9"/>
+                    <line x1="9" y1="21" x2="9" y2="9"/>
+                </svg>
+                <div>
+                    <strong>How to read this table:</strong> Each row shows a segment's total sessions, conversions, and conversion rate.
+                    Period columns show the rate trend over time—<span class="text-emerald-400 font-medium">green = above average</span>,
+                    <span class="text-rose-400 font-medium">red = below average</span>.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# Error and empty states with luminous colors #} {# Spacing: 8px grid (p-4=16px, py-16=64px, mb-4=16px, gap-2=8px) #}
+<div id="segments-error" class="hidden bg-rose-500/15 border border-rose-400/20 rounded-xl p-4">
+    <strong class="text-rose-400">Error loading segment data:</strong>
+    <span id="segments-error-msg" class="text-rose-400"></span>
+</div>
+
+<div id="segments-empty" class="hidden text-center py-16">
+    <div class="w-16 h-16 rounded-2xl bg-purple-500/15 flex items-center justify-center mx-auto mb-4">
+        <svg class="w-8 h-8 text-purple-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="2" y1="12" x2="22" y2="12"/>
+            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+        </svg>
+    </div>
+    <h3 class="text-lg font-bold text-slate-50 mb-2">Compare Segments by Conversion Rate</h3>
+    <p class="text-sm text-slate-400 mb-6 max-w-md mx-auto">Select conversion events to see how different session segments perform.</p>
+    <button onclick="toggleEventPopover(); return false;" class="px-6 py-3 bg-purple-600 text-white font-semibold rounded-xl hover:bg-purple-500 transition-colors">Select Conversion Events</button>
+    <p class="text-sm text-slate-500 mt-4">Tip: Choose events that represent key conversions in your app</p>
+</div>
+
+<!-- No data state (events selected but API returned empty) -->
+<div id="segments-no-data" class="hidden text-center py-16">
+    <div class="w-16 h-16 rounded-2xl bg-slate-800 flex items-center justify-center mx-auto mb-4">
+        <svg class="w-8 h-8 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+    </div>
+    <h3 class="text-lg font-bold text-slate-50 mb-2">No Segment Data Found</h3>
+    <p class="text-sm text-slate-400 mb-6 max-w-md mx-auto">No sessions with your selected conversion events were found in this date range.</p>
+    <div class="flex flex-col sm:flex-row gap-3 justify-center">
+        <button onclick="setDatePreset('90d'); return false;" class="px-5 py-2.5 bg-slate-700 text-slate-200 font-medium rounded-xl hover:bg-slate-600 transition-colors">Try Last 90 Days</button>
+        <button onclick="toggleEventPopover(); return false;" class="px-5 py-2.5 bg-purple-600 text-white font-medium rounded-xl hover:bg-purple-500 transition-colors">Change Events</button>
+    </div>
+    <p class="text-sm text-slate-500 mt-4">Minimum: 10 sessions with conversion events needed for analysis</p>
+</div>

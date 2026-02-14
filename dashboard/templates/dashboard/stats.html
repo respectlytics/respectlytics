@@ -1,0 +1,3327 @@
+{% extends 'dashboard/dashboard_base.html' %}
+{% load static %}
+
+{% block title %}Stats - Respectlytics{% endblock %}
+
+{# Full-width navbar on pages with sidebar #}
+{% block navbar_container_class %}{% endblock %}
+
+{% block app_icon %}{{ app.name|slice:":1"|upper }}{% endblock %}
+{% block app_name %}{{ app.name }}{% endblock %}
+
+{% block app_dropdown %}
+{% if user_apps and user_apps|length > 1 %}
+{% for user_app in user_apps %}
+<button class="sidebar-app-option {% if user_app.slug == app.slug %}active{% endif %}" onclick="switchApp('{{ user_app.slug }}')">
+    <span class="sidebar-app-option-icon">{{ user_app.name|slice:":1"|upper }}</span>
+    <span class="sidebar-app-option-name">{{ user_app.name }}</span>
+    <svg class="sidebar-app-option-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+</button>
+{% endfor %}
+{% endif %}
+{% endblock %}
+
+{% block nav_items %}
+<!-- Back to Apps Link -->
+<a href="{% url 'dashboard:main' %}" class="sidebar-nav-item mb-2">
+    <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+    All Apps
+</a>
+<div class="sidebar-divider"></div>
+<!-- Analytics Tabs -->
+<button class="sidebar-nav-item active" data-tab="overview" onclick="switchTab('overview')">
+    <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+    Overview
+</button>
+<button class="sidebar-nav-item" data-tab="conversion" onclick="switchTab('conversion')">
+    <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+    Conversion
+</button>
+<button class="sidebar-nav-item" data-tab="behavior" onclick="switchTab('behavior')">
+    <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    Behavior
+</button>
+<button class="sidebar-nav-item" data-tab="segments" onclick="switchTab('segments')">
+    <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+    Segments
+</button>
+<div class="sidebar-divider"></div>
+<a href="{% url 'dashboard:funnel' app.slug %}" class="sidebar-nav-item">
+    <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+    Funnel Analysis
+</a>
+<div class="sidebar-divider"></div>
+<!-- Danger Zone -->
+<button class="sidebar-nav-item text-rose-400 hover:text-rose-300 hover:bg-rose-500/10" onclick="showDeleteEventsModal()">
+    <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+    Delete Events
+</button>
+{% endblock %}
+
+{% block topbar %}
+<div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 md:p-6 lg:py-4 lg:px-12 bg-[#0f172a] border-b border-white/10">
+    <div class="flex items-center gap-2">
+        <!-- Mobile Menu Toggle - shows only on smaller screens -->
+        <button onclick="toggleSidebar()"
+                class="lg:hidden p-2 -ml-2 mr-1 text-slate-400 hover:text-slate-50 hover:bg-slate-700 rounded-lg transition-all"
+                aria-label="Toggle navigation">
+            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="3" y1="12" x2="21" y2="12"></line>
+                <line x1="3" y1="6" x2="21" y2="6"></line>
+                <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
+        </button>
+        <!-- Date Range Pills -->
+        <div class="inline-flex rounded-lg bg-slate-800 p-1" id="datePresetPills">
+            <button class="pill-tab px-3 py-1.5 text-sm font-medium rounded-md transition-all text-slate-400 hover:bg-slate-700 active" data-preset="today" onclick="setDatePreset('today')">Today</button>
+            <button class="pill-tab px-3 py-1.5 text-sm font-medium rounded-md transition-all text-slate-400 hover:bg-slate-700" data-preset="7d" onclick="setDatePreset('7d')">7D</button>
+            <button class="pill-tab px-3 py-1.5 text-sm font-medium rounded-md transition-all text-slate-400 hover:bg-slate-700" data-preset="30d" onclick="setDatePreset('30d')">30D</button>
+            <button class="pill-tab px-3 py-1.5 text-sm font-medium rounded-md transition-all text-slate-400 hover:bg-slate-700" data-preset="90d" onclick="setDatePreset('90d')">90D</button>
+        </div>
+        <input type="text" id="globalDateRange" class="px-3 py-1.5 text-sm border border-white/10 bg-slate-800 text-slate-50 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 w-32" placeholder="Custom..." readonly>
+    </div>
+    <div class="relative">
+        <!-- Event Status Badge -->
+        <button class="event-status-badge inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg border border-white/10 bg-slate-800 hover:bg-slate-700 transition-all" id="eventStatusBadge" onclick="toggleEventPopover()">
+            <span class="event-status-badge-dot w-2 h-2 rounded-full bg-slate-400"></span>
+            <span id="eventStatusLabel" class="text-slate-50">🎯 Select Events</span>
+            <svg class="w-4 h-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </button>
+        <!-- Event Status Popover -->
+        <div class="event-status-popover hidden absolute right-0 top-full mt-2 w-96 bg-[#1e293b] rounded-2xl shadow-2xl border border-white/10 z-50 overflow-hidden" id="eventStatusPopover">
+            <!-- Header -->
+            <div class="flex items-center justify-between px-5 py-3 bg-indigo-500/15 border-b border-white/10">
+                <span class="font-bold text-slate-50 text-base">🎯 Conversion Events</span>
+                <button onclick="toggleEventPopover()" class="w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:text-slate-50 hover:bg-slate-700 transition-all text-xl leading-none">&times;</button>
+            </div>
+            <!-- Content - Scrollable event list -->
+            <div class="px-5 py-4">
+                <p class="text-sm text-slate-400 mb-3">Select which events count as conversions:</p>
+                <!-- Custom event input -->
+                <div class="flex gap-2 mb-3">
+                    <div class="relative flex-1">
+                        <input type="text" 
+                               id="customEventInput" 
+                               list="availableEventsList"
+                               class="w-full px-3 py-2 text-sm bg-slate-800 border border-white/10 rounded-lg text-slate-50 placeholder-slate-500 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                               placeholder="Type event name..."
+                               maxlength="255"
+                               onkeydown="if(event.key === 'Enter') { event.preventDefault(); addCustomConversionEvent(); }">
+                        <datalist id="availableEventsList"></datalist>
+                    </div>
+                    <button onclick="addCustomConversionEvent()" 
+                            class="px-3 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-500 rounded-lg transition-colors whitespace-nowrap">
+                        + Add
+                    </button>
+                </div>
+                <p class="text-xs text-slate-500 mb-3">💡 You can add events that haven't been tracked yet</p>
+                <!-- Event list (inline, not dropdown) -->
+                <div class="border border-white/10 rounded-xl overflow-hidden">
+                    <div class="max-h-64 overflow-y-auto" id="conversionEventList">
+                        <!-- Events will be populated here -->
+                    </div>
+                </div>
+                <!-- Empty state hint -->
+                <div id="conversionEmptyHint" class="text-center py-6" style="display: none;">
+                    <div class="text-3xl mb-2">📭</div>
+                    <p class="font-semibold text-slate-50 mb-1 text-sm">No events yet</p>
+                    <p class="text-sm text-slate-400 mb-3">Send events from your app to see them here</p>
+                    <a href="https://respectlytics.com/sdk/" class="inline-flex items-center gap-1 text-sm font-medium text-indigo-400 hover:text-indigo-300 transition-colors">
+                        📚 View SDK Setup Guide →
+                    </a>
+                </div>
+            </div>
+            <!-- Footer with Save button -->
+            <div class="flex items-center justify-end px-5 py-3 bg-slate-800/50 border-t border-white/10">
+                <button onclick="saveConversionPreferences(); toggleEventPopover();" class="px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-500 rounded-lg transition-colors">Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/stats.css' %}">
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="w-full max-w-full box-border">
+{% if error %}
+<div class="bg-red-50 border-2 border-red-500 rounded-xl p-6 mb-8 text-red-600">
+    <strong>Error:</strong> {{ error }}
+</div>
+{% elif not app_key %}
+<div class="bg-blue-50 border-2 border-blue-500 rounded-xl p-6 mb-8 text-blue-600">
+    <strong>No app selected.</strong> Please go to the <a href="{% url 'dashboard:main' %}" class="font-semibold underline">Dashboard</a> to select an app.
+</div>
+{% else %}
+
+<!-- Warning Banner -->
+<div id="warningBanner" class="warning-banner">
+    <div class="text-3xl">⚠️</div>
+    <div class="flex-1">
+        <strong id="warningTitle">High Traffic Detected</strong>
+        <div id="warningMessage" class="text-base opacity-90"></div>
+    </div>
+    <button onclick="document.getElementById('warningBanner').classList.remove('visible')" class="px-4 py-2 bg-white/20 border border-white/30 text-white rounded-lg font-semibold hover:bg-white/30 transition-all">Dismiss</button>
+</div>
+
+<!-- ===== Tab Content: Overview ===== -->
+<div id="tab-overview" class="tab-content active overflow-x-hidden" role="tabpanel">
+    {% include "dashboard/partials/stats/_tab_overview.html" %}
+</div><!-- End: tab-overview -->
+
+<!-- ===== Tab Content: Conversion ===== -->
+<div id="tab-conversion" class="tab-content overflow-x-hidden" role="tabpanel">
+    {% include "dashboard/partials/stats/_tab_conversion.html" %}
+</div><!-- End: tab-conversion -->
+
+<!-- ===== Tab Content: Behavior ===== -->
+<div id="tab-behavior" class="tab-content overflow-x-hidden" role="tabpanel">
+    {% include "dashboard/partials/stats/_tab_behavior.html" %}
+</div>
+
+<!-- ===== Tab Content: Segments ===== -->
+<div id="tab-segments" class="tab-content overflow-x-hidden" role="tabpanel">
+    {% include "dashboard/partials/stats/_tab_segments.html" %}
+</div>
+
+<!-- Loading Overlay -->
+<div id="loadingOverlay" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center backdrop-blur-sm">
+    <div class="bg-[#1e293b] p-12 rounded-2xl text-center border border-white/10">
+        <div class="w-16 h-16 rounded-2xl bg-indigo-500/15 flex items-center justify-center mx-auto mb-6">
+            <svg class="w-8 h-8 text-indigo-400 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"/></svg>
+        </div>
+        <div class="text-xl text-slate-50 font-bold">Loading data...</div>
+    </div>
+</div>
+
+<!-- Delete Events Modal -->
+<div id="deleteEventsModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden items-center justify-center">
+    <div class="bg-[#1e293b] rounded-xl p-5 max-w-xl w-[90%] shadow-2xl border border-white/10">
+        <h3 class="text-lg font-bold text-red-500 mb-1.5">Delete Events</h3>
+        <p class="text-slate-400 mb-3 text-xs">Permanently delete event data for <strong class="text-slate-50">{{ app.name }}</strong>. This cannot be undone.</p>
+
+        <!-- Date Range (required) -->
+        <div class="grid grid-cols-2 gap-3 mb-3">
+            <div>
+                <label class="block text-xs font-medium text-slate-400 mb-1">From <span class="text-rose-400">*</span></label>
+                <input type="date" id="delDateFrom" class="w-full bg-[#0f172a] border border-white/10 rounded px-3 py-2 text-sm text-slate-50 focus:outline-none focus:border-brand-500">
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-slate-400 mb-1">To <span class="text-rose-400">*</span></label>
+                <input type="date" id="delDateTo" class="w-full bg-[#0f172a] border border-white/10 rounded px-3 py-2 text-sm text-slate-50 focus:outline-none focus:border-brand-500">
+            </div>
+        </div>
+
+        <!-- Optional Filters -->
+        <div class="grid grid-cols-3 gap-3 mb-4">
+            <div>
+                <label class="block text-xs font-medium text-slate-400 mb-1">Platform</label>
+                <select id="delPlatform" class="w-full bg-[#0f172a] border border-white/10 rounded px-3 py-2 text-sm text-slate-50 focus:outline-none focus:border-brand-500">
+                    <option value="">All</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-slate-400 mb-1">Country</label>
+                <select id="delCountry" class="w-full bg-[#0f172a] border border-white/10 rounded px-3 py-2 text-sm text-slate-50 focus:outline-none focus:border-brand-500">
+                    <option value="">All</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-slate-400 mb-1">Event Name</label>
+                <select id="delEventName" class="w-full bg-[#0f172a] border border-white/10 rounded px-3 py-2 text-sm text-slate-50 focus:outline-none focus:border-brand-500">
+                    <option value="">All</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Preview Button -->
+        <button onclick="previewDeleteEvents()" id="delPreviewBtn" class="w-full mb-3 px-3 py-2 bg-slate-700 text-slate-50 text-sm font-medium rounded hover:bg-slate-600 transition-colors">
+            Preview Matching Events
+        </button>
+
+        <!-- Preview Result -->
+        <div id="delPreviewResult" class="hidden mb-3">
+            <div class="bg-rose-500/15 border border-rose-400/30 rounded p-3">
+                <p class="text-slate-50 text-sm font-semibold"><span id="delPreviewCount">0</span> events will be permanently deleted.</p>
+            </div>
+        </div>
+
+        <!-- Confirmation Input (shown after preview) -->
+        <div id="delConfirmSection" class="hidden mb-4">
+            <label class="block text-xs font-medium text-slate-400 mb-1.5">Type the number <strong class="text-slate-50" id="delExpectedCount">0</strong> to confirm</label>
+            <input type="text" id="delConfirmInput" oninput="validateDeleteEventsConfirmation()" class="w-full bg-[#0f172a] border border-white/10 rounded px-3 py-2 text-sm text-slate-50 focus:outline-none focus:border-brand-500" placeholder="Type count here">
+        </div>
+
+        <!-- Error / Success Messages -->
+        <div id="delError" class="hidden p-2.5 rounded mb-4 bg-rose-500/15 border border-rose-400/30 text-rose-400 text-xs"></div>
+        <div id="delSuccess" class="hidden p-2.5 rounded mb-4 bg-emerald-500/15 border border-emerald-400/30 text-emerald-400 text-xs"></div>
+
+        <!-- Actions -->
+        <div class="flex justify-end gap-2">
+            <button onclick="hideDeleteEventsModal()" class="px-3 py-1.5 bg-[#0f172a] border border-white/10 text-slate-300 text-sm font-medium rounded hover:bg-slate-700 transition-colors">Cancel</button>
+            <button onclick="executeDeleteEvents()" id="delDeleteBtn" disabled class="px-3 py-1.5 bg-red-600 text-white text-sm font-medium rounded hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-red-600">Delete Events</button>
+        </div>
+    </div>
+</div>
+
+{% endif %}
+</div><!-- end wrapper -->
+{% endblock %}
+{% block dashboard_scripts %}
+{% if app_key %}
+<!-- Stats JavaScript Modules -->
+<script src="{% static 'js/stats/utils.js' %}"></script>
+<script src="{% static 'js/stats/core.js' %}"></script>
+<script src="{% static 'js/stats/filters.js' %}"></script>
+<script src="{% static 'js/stats/tabs.js' %}"></script>
+<script src="{% static 'js/stats/realtime.js' %}"></script>
+<script src="{% static 'js/stats/charts.js' %}"></script>
+<script src="{% static 'js/stats/tables.js' %}"></script>
+<script src="{% static 'js/stats/globe.js' %}"></script>
+<script>
+// ===== Configuration from Django =====
+const StatsConfig = {
+    appKey: '{{ app_key }}',
+    appSlug: '{{ app_slug }}',
+    apiBaseUrl: '/api/v1/',
+    preferredConversionEvents: {{ preferred_conversion_events|safe }}
+};
+
+// ===== Initialize StatsApp State with Django Configuration =====
+window.StatsApp = window.StatsApp || {};
+StatsApp.state = StatsApp.state || {};
+StatsApp.state.appKey = StatsConfig.appKey;
+StatsApp.state.appSlug = StatsConfig.appSlug;
+StatsApp.state.dateRange = { from: null, to: null };
+StatsApp.state.currentGranularity = 'day';
+StatsApp.state.selectedConversionEvents = StatsConfig.preferredConversionEvents;
+StatsApp.state.availableEventTypes = [];
+StatsApp.state.currentDatePreset = 'today';
+StatsApp.state.currentData = null;
+
+// Legacy global variables for compatibility (modules will migrate to StatsApp.state)
+let currentData = null;
+let dateRange = StatsApp.state.dateRange;
+let currentGranularity = 'day';
+let selectedConversionEvents = StatsConfig.preferredConversionEvents;
+let availableEventTypes = [];
+let currentDatePreset = 'today';
+
+// Note: App Switcher Functions (toggleAppSwitcher, closeAppSwitcher, switchApp) are now in core.js
+// Note: Toast notification function is now global from staticfiles/js/toast.js
+
+// Close app switcher when clicking outside
+document.addEventListener('click', function(event) {
+    const switcher = document.getElementById('appSwitcher');
+    if (switcher && !switcher.contains(event.target)) {
+        closeAppSwitcher();
+    }
+});
+
+// Close app switcher on escape key
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        closeAppSwitcher();
+    }
+});
+
+// Note: Filter Functions (setDatePreset, updateDatePresetButtons, updateFilterSummary, etc.) are now in filters.js
+// Note: Tab Functions (switchTab, loadTabData, initializeTabs) are now in tabs.js
+// Note: Realtime Functions (initializeRealtimePolling, toggleLiveUpdates, etc.) are now in realtime.js
+// Note: Chart Functions (createEventsOverTimeChart, createDAUChart, etc.) are now in charts.js
+// Note: Table Functions (createDailyTable, etc.) are now in tables.js
+// Note: Globe Functions (initializeGlobe, globeZoomIn, etc.) are now in globe.js
+
+// ===== Tab State Aliases (for backward compatibility with modules) =====
+// These point to the canonical state in StatsApp from tabs.js
+const TABS = StatsApp.TABS;
+const tabDataCache = StatsApp.tabDataCache;
+let currentTab = StatsApp.currentTab;
+
+// Keep currentTab in sync with StatsApp.currentTab
+Object.defineProperty(window, 'currentTab', {
+    get: () => StatsApp.currentTab,
+    set: (val) => { StatsApp.currentTab = val; }
+});
+
+// Initialize date range picker
+document.addEventListener('DOMContentLoaded', () => {
+    // Initialize floating tooltip for globe panels (escapes overflow containers)
+    const floatingTooltip = document.createElement('div');
+    floatingTooltip.id = 'floating-tooltip';
+    floatingTooltip.className = 'fixed z-[9999] px-3 py-2 text-xs text-slate-50 bg-slate-700 border border-white/10 rounded-lg shadow-xl max-w-[280px] pointer-events-none opacity-0 transition-opacity duration-150';
+    floatingTooltip.style.display = 'none';
+    document.body.appendChild(floatingTooltip);
+
+    document.querySelectorAll('.globe-tooltip-trigger').forEach(trigger => {
+        trigger.addEventListener('mouseenter', function(e) {
+            const text = this.getAttribute('data-tooltip');
+            if (!text) return;
+
+            floatingTooltip.textContent = text;
+            floatingTooltip.style.display = 'block';
+
+            const rect = this.getBoundingClientRect();
+            const tooltipRect = floatingTooltip.getBoundingClientRect();
+
+            // Position below the trigger, centered
+            let left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
+            let top = rect.bottom + 8;
+
+            // Keep within viewport
+            if (left < 10) left = 10;
+            if (left + tooltipRect.width > window.innerWidth - 10) {
+                left = window.innerWidth - tooltipRect.width - 10;
+            }
+
+            floatingTooltip.style.left = left + 'px';
+            floatingTooltip.style.top = top + 'px';
+            floatingTooltip.style.opacity = '1';
+        });
+
+        trigger.addEventListener('mouseleave', function() {
+            floatingTooltip.style.opacity = '0';
+            setTimeout(() => { floatingTooltip.style.display = 'none'; }, 150);
+        });
+    });
+
+    // Initialize tab system
+    initializeTabs();
+
+    // Auto-open delete events modal if linked from another page
+    if (new URLSearchParams(window.location.search).get('action') === 'delete_events') {
+        showDeleteEventsModal();
+        // Clean up the URL parameter
+        window.history.replaceState({}, '', window.location.pathname + window.location.hash);
+    }
+
+    // Initialize timezone detection for hourly patterns
+    initTimezoneDetection();
+    initTimezoneToggle();
+
+    // Restore collapsible section states - PLAT-005
+    restoreCollapsibleStates();
+
+    // Initialize Overview granularity toggle buttons
+    initOverviewGranularityButtons();
+
+    // Initialize conversion events selector change handler
+    const conversionSelect = document.getElementById('conversionEventSelect');
+    if (conversionSelect) {
+        conversionSelect.addEventListener('change', () => {
+            // Update selected events from dropdown
+            selectedConversionEvents = Array.from(conversionSelect.selectedOptions).map(opt => opt.value);
+            // Reload conversion data with new selection
+            loadConversionData();
+            // Invalidate conversion-dependent tab caches so they reload next time they're visited
+            delete tabDataCache['conversion'];
+            delete tabDataCache['behavior'];
+            delete tabDataCache['segments'];
+        });
+    }
+
+    flatpickr("#globalDateRange", {
+        mode: "range",
+        dateFormat: "Y-m-d",
+        onChange: function(selectedDates) {
+            if (selectedDates.length === 2) {
+                setCustomDateRange(selectedDates[0], selectedDates[1], { skipPickerUpdate: true });
+            }
+        },
+        onClear: function() {
+            // Reset to 7-day default
+            setDatePreset('7d');
+
+            // Resume live mode when clearing custom dates
+            isLiveMode = true;
+            if (realtimePoller) {
+                realtimePoller.start();
+            }
+            updateLiveIndicator();
+        }
+    });
+
+    // Load the last used date preset if available, otherwise default to Today
+    let initialPresetApplied = false;
+    if (StatsApp.utils && typeof StatsApp.utils.loadDateFilterState === 'function') {
+        const savedState = StatsApp.utils.loadDateFilterState();
+        const presetWhitelist = new Set(['today', '7d', '30d', '90d']);
+        if (savedState && savedState.preset) {
+            if (savedState.preset === 'custom' && savedState.from && savedState.to) {
+                setCustomDateRange(savedState.from, savedState.to);
+                initialPresetApplied = true;
+            } else if (presetWhitelist.has(savedState.preset)) {
+                setDatePreset(savedState.preset);
+                initialPresetApplied = true;
+            }
+        }
+    }
+
+    if (!initialPresetApplied) {
+        // Set default Today range on load (lightest on database)
+        // Note: setDatePreset already calls loadStats(), so no need to call it again
+        setDatePreset('today');
+    }
+
+    // Initialize real-time poller
+    initializeRealtimePolling();
+
+    // Fetch all available event types for conversion dropdown (independent of date filter)
+    // This ensures users can see all events from last 90 days, not just those in the current date range
+    fetchAllEventTypes();
+
+    // If we restored a custom range, keep live updates paused after init
+    if (currentDatePreset === 'custom') {
+        if (typeof realtimePoller !== 'undefined' && realtimePoller && typeof realtimePoller.stop === 'function') {
+            realtimePoller.stop();
+        }
+        if (StatsApp.realtimePoller && typeof StatsApp.realtimePoller.stop === 'function') {
+            StatsApp.realtimePoller.stop();
+        }
+        if (typeof isLiveMode !== 'undefined') {
+            isLiveMode = false;
+        }
+        StatsApp.isLiveMode = false;
+        updateLiveIndicator();
+    }
+});
+
+// Initialize real-time polling system
+function initializeRealtimePolling() {
+    // Use 24 hour as default range for real-time polling
+    const initialRange = 1440;
+
+    realtimePoller = new RealTimePoller('{{ app_key }}', {
+        defaultRange: initialRange,
+        onNewData: (data) => {
+            // Show warning if high traffic
+            if (data.warnings && data.warnings.length > 0) {
+                showWarning(data.warnings[0]);
+            }
+
+            // Reload stats silently (no loading overlay) to prevent page flicker
+            loadStats(true);
+
+            // Update last updated time
+            lastUpdateTime = Date.now();
+            updateLastUpdatedText();
+        },
+        onError: (error) => {
+            console.error('Polling error:', error);
+        },
+        onStatusChange: (status) => {
+            updateLiveIndicator();
+        }
+    });
+
+    // Start polling
+    realtimePoller.start();
+
+    // Update countdown every second
+    startCountdown();
+}
+
+// Fetch all event types (last 90 days) for conversion event selector
+// This runs independently of the date filter to show all available events
+async function fetchAllEventTypes() {
+    try {
+        const response = await StatsApp.utils.fetchJSON(`/api/v1/events/event-types/?app_key={{ app_key }}`);
+        const data = await response.json();
+        
+        if (response.ok && data.event_types) {
+            // Store globally and populate the conversion dropdowns
+            availableEventTypes = data.event_types;
+            populateConversionEventDropdown(availableEventTypes);
+            populateGlobalConversionDropdown(availableEventTypes);
+        }
+    } catch (error) {
+        console.error('Error fetching event types:', error);
+    }
+}
+
+// Note: toggleLiveUpdates, updateLiveIndicator, updateLastUpdatedText, startCountdown are now in realtime.js
+// Note: showWarning is now in core.js
+
+async function loadStats(silent = false) {
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    // Only show loading overlay on initial load, not background refreshes, and ONLY for Overview tab
+    const isOverviewTab = !StatsApp.currentTab || StatsApp.currentTab === 'overview';
+
+    // If not on overview, never show the overlay (but still allow data refresh for filters)
+    if (!isOverviewTab) {
+        if (loadingOverlay) loadingOverlay.style.display = 'none';
+    } else if (loadingOverlay && !silent) {
+        loadingOverlay.style.display = 'flex';
+    }
+    
+    try {
+        // Get user's timezone for accurate "Today" calculations
+        const userTz = StatsApp.utils.getUserTimezone();
+
+        // Build URL for legacy summary endpoint (still needed for countries, event types)
+        let summaryUrl = `/api/v1/events/summary/?app_key={{ app_key }}&tz=${encodeURIComponent(userTz)}`;
+        if (dateRange.from) summaryUrl += `&from=${dateRange.from}`;
+        if (dateRange.to) summaryUrl += `&to=${dateRange.to}`;
+
+        // Build URL for DAU endpoint with granularity
+        let dauUrl = `/api/v1/analytics/dau/?app_key={{ app_key }}&granularity=${currentGranularity}&tz=${encodeURIComponent(userTz)}`;
+        if (dateRange.from) dauUrl += `&from=${dateRange.from}`;
+        if (dateRange.to) dauUrl += `&to=${dateRange.to}`;
+
+        // Build URL for globe-stats endpoint with conversion events
+        let globeUrl = `/api/v1/analytics/globe-stats/?app_key={{ app_key }}&tz=${encodeURIComponent(userTz)}`;
+        if (dateRange.from) globeUrl += `&from=${dateRange.from}`;
+        if (dateRange.to) globeUrl += `&to=${dateRange.to}`;
+        if (selectedConversionEvents.length > 0) {
+            globeUrl += `&conversion_events=${selectedConversionEvents.join(',')}`;
+        }
+
+        // Fetch all three endpoints in parallel with individual error handling
+        const [summaryResult, dauResult, globeResult] = await Promise.all([
+            StatsApp.utils.fetchJSON(summaryUrl)
+                .then(async r => ({ ok: r.ok, data: await r.json() }))
+                .catch(err => {
+                    console.error('[loadStats] Summary API failed:', err);
+                    return { ok: false, data: null, error: err };
+                }),
+            StatsApp.utils.fetchJSON(dauUrl)
+                .then(async r => ({ ok: r.ok, data: await r.json() }))
+                .catch(err => {
+                    console.error('[loadStats] DAU API failed:', err);
+                    return { ok: false, data: null, error: err };
+                }),
+            StatsApp.utils.fetchJSON(globeUrl)
+                .then(async r => ({ ok: r.ok, data: await r.json() }))
+                .catch(err => {
+                    console.warn('[loadStats] Globe stats API failed:', err);
+                    return { ok: false, data: { data: [] }, error: err };
+                })
+        ]);
+
+        const summaryData = summaryResult.data;
+        const dauData = dauResult.data;
+        const globeData = globeResult.data;
+
+        if (!summaryResult.ok || !summaryData) {
+            showToast(`Error loading stats: ${summaryData?.detail || 'API request failed'}`, 'error');
+            return;
+        }
+
+        // Store current data
+        currentData = summaryData;
+
+        // Update key metrics - use DAU data for active sessions
+        document.getElementById('totalEvents').textContent = (summaryData.total_events || 0).toLocaleString();
+        document.getElementById('eventTypes').textContent = Object.keys(summaryData.events_by_name || {}).length;
+        document.getElementById('countries').textContent = (summaryData.unique_countries || 0).toLocaleString();
+
+        // Calculate total active sessions from DAU data
+        let totalActiveSessions = 0;
+        let periodLabel = 'Daily';
+        if (dauData && dauData.active_sessions && dauData.active_sessions.length > 0) {
+            // Sum unique sessions across all periods
+            // For now, show the most recent period's unique sessions
+            totalActiveSessions = dauData.active_sessions.reduce((sum, p) => sum + (p.unique_sessions || 0), 0);
+
+            // Update label based on granularity
+            switch(currentGranularity) {
+                case 'week': periodLabel = 'Weekly'; break;
+                case 'month': periodLabel = 'Monthly'; break;
+                case 'quarter': periodLabel = 'Quarterly'; break;
+                case 'year': periodLabel = 'Yearly'; break;
+                default: periodLabel = 'Daily';
+            }
+        }
+        document.getElementById('activeSessions').textContent = totalActiveSessions.toLocaleString();
+        // Update the label text to show "Active Sessions" style
+        const labelElement = document.getElementById('activeSessionsLabel');
+        if (labelElement) {
+            labelElement.textContent = `${periodLabel} Sessions`;
+        }
+
+        // Update average session length from DAU summary
+        const avgSessionLengthElement = document.getElementById('avgSessionLength');
+        if (avgSessionLengthElement && dauData && dauData.summary && dauData.summary.avg_session_length_seconds !== undefined) {
+            avgSessionLengthElement.textContent = formatDuration(dauData.summary.avg_session_length_seconds);
+        } else if (avgSessionLengthElement) {
+            avgSessionLengthElement.textContent = '-';
+        }
+
+        // Create charts - use DAU data for timeline if available
+        if (dauData && dauData.active_sessions && dauData.active_sessions.length > 0) {
+            // Reverse the data so oldest date is on the left (chronological order)
+            const chartData = dauData.active_sessions.map(p => ({
+                date: p.period,
+                count: p.total_events || 0,
+                unique_sessions: p.unique_sessions || 0,
+                avg_session_length_seconds: p.avg_session_length_seconds || null
+            })).reverse();
+            createEventsOverTimeChart(chartData);
+            createDAUChart(chartData);
+        } else {
+            createEventsOverTimeChart(summaryData.events_by_day || []);
+            // Create DAU chart - pass data or empty array to show empty state
+            createDAUChart(summaryData.events_by_day ? summaryData.events_by_day.map(d => ({
+                date: d.date,
+                unique_sessions: d.unique_sessions || 0
+            })) : []);
+        }
+
+        createEventsTypeChart(summaryData.events_by_name || {});
+        createCountriesChart(summaryData.top_countries || []);
+
+        // Create tables - use DAU data for daily breakdown if available
+        if (dauData && dauData.active_sessions && dauData.active_sessions.length > 0) {
+            // Reverse for chronological order (oldest first) in table too
+            createDailyTable(dauData.active_sessions.map(p => ({
+                date: p.period,
+                count: p.total_events || 0,
+                unique_sessions: p.unique_sessions || 0
+            })).reverse(), currentGranularity);
+        } else if (summaryData.events_by_day && summaryData.events_by_day.length > 0) {
+            createDailyTable(summaryData.events_by_day, 'day');
+        } else if (currentDatePreset === 'today' && summaryData.total_events > 0) {
+            // For "Today" view, create a single-day entry from summary data
+            const today = formatLocalDate(new Date());
+            createDailyTable([{
+                date: today,
+                count: summaryData.total_events,
+                unique_sessions: summaryData.unique_sessions || 0
+            }], 'day');
+        } else {
+            // No data available
+            createDailyTable([], 'day');
+        }
+
+        // Merge globe data with enhanced conversion metrics
+        const enhancedGlobeData = mergeGlobeData(summaryData.top_countries || [], (globeData && globeData.data) || []);
+
+        // Initialize or update globe with enhanced country data
+        // IMPORTANT: This now properly updates existing globe instead of skipping
+        initializeGlobe(enhancedGlobeData).catch(err => {
+            console.error('Globe initialization/update failed:', err);
+        });
+
+        // Populate side panels with top performers
+        populateSidePanels(enhancedGlobeData);
+
+        // Note: Conversion events dropdown is populated by fetchAllEventTypes() which runs
+        // independently to show all events from last 90 days regardless of current date filter
+        updateFilterSummary();
+        updateGlobalLastUpdated();
+
+        // Load "Last 30 Minutes" section
+        loadLast30Minutes();
+
+    } catch (error) {
+        showToast(`Error: ${error.message}`, 'error');
+    } finally {
+        if (loadingOverlay) loadingOverlay.style.display = 'none';
+    }
+}
+
+// Merge legacy top_countries data with enhanced globe stats data
+// FIXED: Now uses ALL countries from globe-stats (no 10-country limit)
+function mergeGlobeData(topCountries, globeStats) {
+    // Handle null/undefined inputs
+    if (!topCountries || !Array.isArray(topCountries)) {
+        topCountries = [];
+    }
+    if (!globeStats || !Array.isArray(globeStats)) {
+        globeStats = [];
+    }
+    
+    // Create map of legacy data by country code for fallback info
+    const legacyMap = new Map();
+    topCountries.forEach(country => {
+        if (country && country.country) {
+            legacyMap.set(country.country, country);
+        }
+    });
+
+    // Use ALL countries from globe-stats as primary source (no limit!)
+    // Globe-stats returns all countries with event data
+    if (globeStats.length > 0) {
+        return globeStats.map(stat => {
+            if (!stat || !stat.country) return null;
+            
+            return {
+                country: stat.country,
+                count: stat.events || 0,
+                sessions: stat.sessions || 0,
+                conversions: stat.conversions || 0,
+                conversion_rate: stat.conversion_rate || 0
+            };
+        }).filter(c => c !== null);
+    }
+
+    // Fallback to legacy data if globe-stats returned empty
+    return topCountries.map(country => {
+        if (!country || !country.country) return null;
+        
+        return {
+            country: country.country,
+            count: country.count || 0,
+            sessions: 0,
+            conversions: 0,
+            conversion_rate: 0
+        };
+    }).filter(c => c !== null);
+}
+
+/**
+ * Populate the cards below map with top converters and top activity countries
+ * Uses horizontal badge/pill layout for compact display
+ * @param {Array} globeData - Array of country objects with metrics
+ */
+function populateSidePanels(globeData) {
+    const convertersList = document.getElementById('top-converters-list');
+    const activityList = document.getElementById('top-activity-list');
+    
+    if (!globeData || !Array.isArray(globeData) || globeData.length === 0) {
+        if (convertersList) {
+            convertersList.innerHTML =
+                '<span class="text-xs text-slate-500">No data available</span>';
+        }
+        if (activityList) {
+            activityList.innerHTML =
+                '<span class="text-xs text-slate-500">No data available</span>';
+        }
+        return;
+    }
+
+    // Helper function to get flag emoji for country code
+    const getFlagEmoji = (countryCode) => {
+        if (!countryCode || countryCode.length !== 2) return '🌍';
+        const codePoints = countryCode
+            .toUpperCase()
+            .split('')
+            .map(char => 127397 + char.charCodeAt());
+        return String.fromCodePoint(...codePoints);
+    };
+
+    // Helper function to get country name using Intl.DisplayNames API (supports ALL country codes)
+    const getCountryFullName = (countryCode) => {
+        if (!countryCode) return 'Unknown';
+        try {
+            const displayNames = new Intl.DisplayNames(['en'], { type: 'region' });
+            return displayNames.of(countryCode.toUpperCase()) || countryCode;
+        } catch (e) {
+            return countryCode;
+        }
+    };
+
+    // Helper function to get color class for conversion rate
+    const getConversionRateColor = (rate) => {
+        if (rate >= 5) return 'text-emerald-400';
+        if (rate >= 2) return 'text-amber-400';
+        if (rate > 0) return 'text-rose-400';
+        return 'text-slate-500';
+    };
+
+    // Helper function to format large numbers
+    const formatNumber = (num) => {
+        if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+        if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+        return num.toLocaleString();
+    };
+
+    // TOP CONVERTERS: Sort by conversion_rate (descending), filter out 0% rates
+    const topConverters = [...globeData]
+        .filter(c => c && c.conversion_rate > 0)
+        .sort((a, b) => (b.conversion_rate || 0) - (a.conversion_rate || 0))
+        .slice(0, 5);
+
+    if (topConverters.length === 0) {
+        if (convertersList) {
+            convertersList.innerHTML =
+                '<span class="text-xs text-slate-500">No conversion data</span>';
+        }
+    } else if (convertersList) {
+        convertersList.innerHTML = topConverters.map((country) => {
+            const rateColor = getConversionRateColor(country.conversion_rate);
+            const flag = getFlagEmoji(country.country);
+            const countryName = getCountryFullName(country.country);
+
+            return `
+                <div class="bg-slate-800/60 rounded-lg px-3 py-2 border border-white/5 hover:border-white/20 transition-all flex items-center gap-2 flex-shrink-0">
+                    <span class="text-base">${flag}</span>
+                    <span class="text-xs font-medium text-slate-200 whitespace-nowrap">${countryName}</span>
+                    <span class="text-xs font-bold ${rateColor}">${country.conversion_rate.toFixed(1)}%</span>
+                </div>
+            `;
+        }).join('');
+    }
+
+    // TOP ACTIVITY: Sort by event count (descending)
+    const topActivity = [...globeData]
+        .filter(c => c && (c.count || 0) > 0)
+        .sort((a, b) => (b.count || 0) - (a.count || 0))
+        .slice(0, 5);
+
+    if (topActivity.length === 0) {
+        if (activityList) {
+            activityList.innerHTML =
+                '<span class="text-xs text-slate-500">No activity data</span>';
+        }
+    } else if (activityList) {
+        activityList.innerHTML = topActivity.map((country) => {
+            const flag = getFlagEmoji(country.country);
+            const countryName = getCountryFullName(country.country);
+
+            return `
+                <div class="bg-slate-800/60 rounded-lg px-3 py-2 border border-white/5 hover:border-white/20 transition-all flex items-center gap-2 flex-shrink-0">
+                    <span class="text-base">${flag}</span>
+                    <span class="text-xs font-medium text-slate-200 whitespace-nowrap">${countryName}</span>
+                    <span class="text-xs font-bold text-cyan-400">${formatNumber(country.count)}</span>
+                </div>
+            `;
+        }).join('');
+    }
+}
+
+// Populate the conversion events dropdown
+function populateConversionEventDropdown(eventTypes) {
+    const select = document.getElementById('conversionEventSelect');
+    if (!select) return;
+
+    // Clear existing options
+    select.innerHTML = '';
+
+    // Add options for each event type
+    eventTypes.forEach(eventType => {
+        const option = document.createElement('option');
+        option.value = eventType;
+        option.textContent = eventType;
+
+        // Pre-select if it's in the saved preferences
+        if (selectedConversionEvents.includes(eventType)) {
+            option.selected = true;
+        }
+
+        select.appendChild(option);
+    });
+
+    // If no events selected and we have saved preferences, they might not be in current data
+    // Add them anyway so user can see what was saved
+    selectedConversionEvents.forEach(savedEvent => {
+        if (!eventTypes.includes(savedEvent)) {
+            const option = document.createElement('option');
+            option.value = savedEvent;
+            option.textContent = savedEvent + ' (no data)';
+            option.selected = true;
+            select.appendChild(option);
+        }
+    });
+}
+
+// Load "Last 30 Minutes" section data
+async function loadLast30Minutes() {
+    const section = document.getElementById('last30Section');
+    if (!section) return;
+
+    try {
+        // Fetch recent activity for last 30 minutes
+        const response = await StatsApp.utils.fetchJSON(`/api/v1/events/recent-activity/?app_key={{ app_key }}&time_range=30`);
+        const data = await response.json();
+
+        if (!response.ok) {
+            console.error('Last 30 min API error: status', response.status);
+            return;
+        }
+
+        // Update time range display
+        const serverTime = new Date(data.server_time);
+        const thirtyMinsAgo = new Date(serverTime.getTime() - 30 * 60 * 1000);
+        const formatTime = (d) => d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        document.getElementById('last30TimeRange').textContent = `${formatTime(thirtyMinsAgo)} – ${formatTime(serverTime)}`;
+
+        // Update event count
+        const eventCount = data.total_in_range || 0;
+        const eventEl = document.getElementById('last30Events');
+        if (eventEl) {
+            eventEl.textContent = eventCount.toLocaleString();
+            if (eventCount === 0) {
+                eventEl.classList.add('zero-value');
+            } else {
+                eventEl.classList.remove('zero-value');
+            }
+        }
+
+        // Store event preview data for popover and update button state
+        window.recentActivityData = data.event_preview || [];
+        const viewActivityBtn = document.getElementById('viewActivityBtn');
+        const viewActivityLabel = document.getElementById('viewActivityLabel');
+        if (viewActivityBtn && viewActivityLabel) {
+            if (eventCount === 0) {
+                viewActivityLabel.textContent = 'No activity';
+                viewActivityBtn.classList.add('opacity-50', 'pointer-events-none');
+            } else {
+                viewActivityLabel.textContent = 'View activity';
+                viewActivityBtn.classList.remove('opacity-50', 'pointer-events-none');
+            }
+        }
+        
+        // Update popover content if it's open
+        updateActivityPopoverContent();
+
+    } catch (error) {
+        console.error('Error loading last 30 minutes:', error);
+        const eventEl = document.getElementById('last30Events');
+        if (eventEl) {
+            eventEl.textContent = '-';
+            eventEl.classList.add('zero-value');
+        }
+        window.recentActivityData = [];
+        const viewActivityLabel = document.getElementById('viewActivityLabel');
+        if (viewActivityLabel) {
+            viewActivityLabel.textContent = 'Failed to load';
+        }
+    }
+}
+
+// Toggle activity popover visibility
+function toggleActivityPopover() {
+    const popover = document.getElementById('activityPopover');
+    if (popover) {
+        const isHidden = popover.classList.contains('hidden');
+        if (isHidden) {
+            popover.classList.remove('hidden');
+            updateActivityPopoverContent();
+            // Close on click outside
+            setTimeout(() => {
+                document.addEventListener('click', closeActivityPopoverOnClickOutside);
+            }, 0);
+        } else {
+            popover.classList.add('hidden');
+            document.removeEventListener('click', closeActivityPopoverOnClickOutside);
+        }
+    }
+}
+
+function closeActivityPopoverOnClickOutside(e) {
+    const popover = document.getElementById('activityPopover');
+    const btn = document.getElementById('viewActivityBtn');
+    if (popover && !popover.contains(e.target) && !btn.contains(e.target)) {
+        popover.classList.add('hidden');
+        document.removeEventListener('click', closeActivityPopoverOnClickOutside);
+    }
+}
+
+// Update the popover content with recent activity
+function updateActivityPopoverContent() {
+    const content = document.getElementById('activityPopoverContent');
+    if (!content) return;
+    
+    const events = window.recentActivityData || [];
+    
+    if (events.length === 0) {
+        content.innerHTML = `<div class="text-slate-400 text-sm text-center py-4">No recent activity</div>`;
+        return;
+    }
+    
+    content.innerHTML = events.map(event => {
+        const eventTime = new Date(event.timestamp);
+        const now = new Date();
+        const secondsAgo = Math.floor((now - eventTime) / 1000);
+        let timeAgo;
+        if (secondsAgo < 60) {
+            timeAgo = `${secondsAgo}s ago`;
+        } else if (secondsAgo < 3600) {
+            timeAgo = `${Math.floor(secondsAgo / 60)}m ago`;
+        } else {
+            timeAgo = formatTime(eventTime);
+        }
+        
+        const countryFlag = getCountryFlag(event.country);
+        
+        return `
+            <div class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-700/50 transition-colors">
+                <span class="text-base">${countryFlag}</span>
+                <div class="flex-1 min-w-0">
+                    <div class="text-sm text-slate-50 font-medium truncate" title="${escapeHtml(event.event_name)}">${escapeHtml(event.event_name)}</div>
+                    <div class="text-xs text-slate-500">${escapeHtml(event.platform || 'Unknown')}</div>
+                </div>
+                <span class="text-xs text-slate-400 shrink-0">${timeAgo}</span>
+            </div>
+        `;
+    }).join('');
+}
+
+// escapeHtml and getCountryFlag are now in stats/utils.js
+
+/**
+ * PERF-022: Fetch event count for processing banner
+ */
+async function fetchEventCount() {
+    const appKey = '{{ app_key }}';
+    // Use StatsApp.state.dateRange to get the current date range
+    const currentDateRange = StatsApp.state.dateRange || dateRange;
+    // Add timezone for accurate date filtering
+    const userTz = StatsApp.utils.getUserTimezone();
+    let dateParams = `&tz=${encodeURIComponent(userTz)}`;
+    if (currentDateRange.from) dateParams += `&from=${currentDateRange.from}`;
+    if (currentDateRange.to) dateParams += `&to=${currentDateRange.to}`;
+
+    // If no date range is set yet, return 0 (will be called again after date range is initialized)
+    if (!currentDateRange.from && !currentDateRange.to) {
+        return 0;
+    }
+
+    try {
+        // Add cache busting timestamp to ensure fresh count for current date range
+        const cacheBust = `&_=${Date.now()}`;
+        const response = await fetch(`/api/v1/events/count/?app_key=${appKey}${dateParams}${cacheBust}`, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            cache: 'no-store' // Force no cache
+        });
+        if (response.ok) {
+            const data = await response.json();
+            return data.total_events || 0;
+        }
+    } catch (error) {
+        console.error('Error fetching event count:', error);
+    }
+    return 0;
+}
+
+/**
+ * PERF-022: Show processing banner with event count
+ */
+function showProcessingBanner(eventCount, tabName = 'conversion') {
+    // Only show banner if we have a valid event count > 0
+    if (!eventCount || eventCount <= 0) {
+        return;
+    }
+
+    const banner = document.getElementById(`${tabName}-processing-banner`);
+    const countSpan = document.getElementById(`${tabName}-event-count`);
+    const sectionsSpan = document.getElementById(`${tabName}-sections-complete`);
+
+    if (banner && countSpan) {
+        countSpan.textContent = eventCount.toLocaleString();
+        if (sectionsSpan) sectionsSpan.textContent = '0';
+        banner.style.display = 'block';
+        banner.classList.remove('hidden');
+    }
+}
+
+/**
+ * PERF-022: Update processing progress as sections complete
+ */
+function updateProcessingProgress(completedSections, totalSections, tabName = 'conversion') {
+    const sectionsSpan = document.getElementById(`${tabName}-sections-complete`);
+    if (sectionsSpan) {
+        sectionsSpan.textContent = completedSections;
+    }
+
+    // Hide banner when all complete
+    if (completedSections >= totalSections) {
+        setTimeout(() => {
+            const banner = document.getElementById(`${tabName}-processing-banner`);
+            if (banner) {
+                banner.style.display = 'none';
+                banner.classList.add('hidden');
+            }
+        }, 500);
+    }
+}
+
+/**
+ * PERF-024: Hide processing banner immediately
+ * @param {string} tabName - Tab identifier (conversion, behavior, retention, segments)
+ */
+function hideProcessingBanner(tabName = 'conversion') {
+    const banner = document.getElementById(`${tabName}-processing-banner`);
+    if (banner) {
+        banner.style.display = 'none';
+        banner.classList.add('hidden');
+    }
+}
+
+/**
+ * Load Conversion Tab Data
+ * Fetches time-to-conversion, drop-off points, and conversion paths
+ */
+async function loadConversionTabData() {
+    const overlay = document.getElementById('loadingOverlay');
+    if (overlay) overlay.style.display = 'none';
+    const contentEl = document.getElementById('conversion-content');
+    const emptyEl = document.getElementById('conversion-empty');
+
+    // Check if conversion events are selected
+    // Use classList only - Tailwind's hidden class uses !important
+    if (selectedConversionEvents.length === 0) {
+        contentEl.classList.add('hidden');
+        emptyEl.classList.remove('hidden');
+        throw new Error('empty'); // This will be caught but we show empty state
+    }
+
+    // Update the events notice
+    const eventsLabel = document.getElementById('conversionTabEvents');
+    if (eventsLabel) {
+        eventsLabel.textContent = selectedConversionEvents.join(', ');
+    }
+
+    const conversionEventsParam = encodeURIComponent(selectedConversionEvents.join(','));
+    const appKey = '{{ app_key }}';
+
+    // Build date params if set (including timezone for proper date boundary calculation)
+    const userTz = StatsApp.utils.getUserTimezone();
+    let dateParams = `&tz=${encodeURIComponent(userTz)}`;
+    if (dateRange.from) dateParams += `&start_date=${dateRange.from}`;
+    if (dateRange.to) dateParams += `&end_date=${dateRange.to}`;
+
+    // PERF-022: Fetch event count and show processing banner (after date params are ready)
+    const eventCount = await fetchEventCount();
+    showProcessingBanner(eventCount, 'conversion');
+    let completedSections = 0;
+    const totalSections = 3;
+
+    // Show content container (classList only - Tailwind's hidden uses !important)
+    contentEl.classList.remove('hidden');
+    emptyEl.classList.add('hidden');
+
+    // Show loading skeletons for all sections (style.display is OK for non-hidden elements)
+    ['ttc-loading', 'dropoff-loading', 'paths-loading'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'flex';
+    });
+
+    // Hide data sections initially
+    ['ttc-data', 'dropoff-data', 'paths-data'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    });
+
+    // Fire all requests in parallel (maintains optimal total time)
+    const ttcUrl = `/api/v1/analytics/time-to-conversion/?app_key=${appKey}&conversion_events=${conversionEventsParam}${dateParams}`;
+    const ttcPromise = StatsApp.utils.fetchJSON(ttcUrl)
+        .then(async response => {
+            if (response.ok) {
+                const ttcData = await response.json();
+                updateTimeToConversion(ttcData);
+            } else {
+                resetTimeToConversion();
+            }
+            // Show this section's data
+            const loadingEl = document.getElementById('ttc-loading');
+            const dataEl = document.getElementById('ttc-data');
+            if (loadingEl) loadingEl.style.display = 'none';
+            if (dataEl) dataEl.style.display = 'flex';
+            // Update progress
+            completedSections++;
+            updateProcessingProgress(completedSections, totalSections, 'conversion');
+        })
+        .catch(error => {
+            console.error('Error loading time-to-conversion:', error);
+            resetTimeToConversion();
+            // Still show the section even on error
+            const loadingEl = document.getElementById('ttc-loading');
+            const dataEl = document.getElementById('ttc-data');
+            if (loadingEl) loadingEl.style.display = 'none';
+            if (dataEl) dataEl.style.display = 'flex';
+            // Update progress even on error
+            completedSections++;
+            updateProcessingProgress(completedSections, totalSections, 'conversion');
+        });
+
+    const dropoffPromise = StatsApp.utils.fetchJSON(`/api/v1/analytics/drop-off/?app_key=${appKey}&conversion_events=${conversionEventsParam}&limit=10${dateParams}`)
+        .then(async response => {
+            if (response.ok) {
+                const dropoffData = await response.json();
+                updateDropoffTable(dropoffData);
+            } else {
+                console.warn('Drop-off API returned error');
+                updateDropoffTable({ drop_off_points: [] });
+            }
+            // Show this section's data
+            const loadingEl = document.getElementById('dropoff-loading');
+            const dataEl = document.getElementById('dropoff-data');
+            if (loadingEl) loadingEl.style.display = 'none';
+            if (dataEl) dataEl.style.display = 'flex';
+            // Update progress
+            completedSections++;
+            updateProcessingProgress(completedSections, totalSections, 'conversion');
+        })
+        .catch(error => {
+            console.error('Error loading drop-off:', error);
+            updateDropoffTable({ drop_off_points: [] });
+            // Still show the section even on error
+            const loadingEl = document.getElementById('dropoff-loading');
+            const dataEl = document.getElementById('dropoff-data');
+            if (loadingEl) loadingEl.style.display = 'none';
+            if (dataEl) dataEl.style.display = 'flex';
+            // Update progress even on error
+            completedSections++;
+            updateProcessingProgress(completedSections, totalSections, 'conversion');
+        });
+
+    const pathsPromise = StatsApp.utils.fetchJSON(`/api/v1/analytics/conversion-paths/?app_key=${appKey}&conversion_events=${conversionEventsParam}&limit=5${dateParams}`)
+        .then(async response => {
+            if (response.ok) {
+                const pathsData = await response.json();
+                updateConversionPaths(pathsData);
+            } else {
+                console.warn('Conversion paths API returned error');
+                updateConversionPaths({ paths: [] });
+            }
+            // Show this section's data
+            const loadingEl = document.getElementById('paths-loading');
+            const dataEl = document.getElementById('paths-data');
+            if (loadingEl) loadingEl.style.display = 'none';
+            if (dataEl) dataEl.style.display = 'flex';
+            // Update progress
+            completedSections++;
+            updateProcessingProgress(completedSections, totalSections, 'conversion');
+        })
+        .catch(error => {
+            console.error('Error loading conversion paths:', error);
+            updateConversionPaths({ paths: [] });
+            // Still show the section even on error
+            const loadingEl = document.getElementById('paths-loading');
+            const dataEl = document.getElementById('paths-data');
+            if (loadingEl) loadingEl.style.display = 'none';
+            if (dataEl) dataEl.style.display = 'flex';
+            // Update progress even on error
+            completedSections++;
+            updateProcessingProgress(completedSections, totalSections, 'conversion');
+        });
+
+    // Wait for all promises to complete for overall error handling
+    try {
+        await Promise.all([ttcPromise, dropoffPromise, pathsPromise]);
+    } catch (error) {
+        console.error('Error loading conversion data:', error);
+        // Individual errors are already handled above
+    }
+}
+
+/**
+ * Update Time-to-Conversion UI (Session-Based)
+ */
+function updateTimeToConversion(data) {
+    // Hide empty states, show data views
+    const timeEmpty = document.getElementById('timeConversionEmpty');
+    const timeDistribution = document.getElementById('timeDistribution');
+    const timeStats = document.getElementById('timeConversionStats');
+    const smallSampleWarning = document.getElementById('ttcSmallSampleWarning');
+
+    // Check if we have any actual data
+    const hasTimeData = data.time_distribution && Object.values(data.time_distribution).some(b => b.count > 0);
+    const sessionsCount = data.data_quality?.sessions_with_conversions || 0;
+    const hasSmallSample = sessionsCount > 0 && sessionsCount < 10;
+
+    // Time to Conversion visibility
+    if (hasTimeData) {
+        if (timeEmpty) { timeEmpty.classList.add('hidden'); timeEmpty.classList.remove('flex'); }
+        if (timeDistribution) timeDistribution.classList.remove('hidden');
+        if (timeStats) timeStats.classList.remove('hidden');
+        
+        // Show/hide small sample warning
+        if (smallSampleWarning) {
+            if (hasSmallSample) {
+                smallSampleWarning.classList.remove('hidden');
+                smallSampleWarning.innerHTML = `
+                    <div class="flex items-center gap-2 px-3 py-2 bg-amber-500/10 border border-amber-500/20 rounded-lg text-amber-300 text-xs">
+                        <svg class="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                            <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                        </svg>
+                        <span>Small sample: <strong>${sessionsCount} session${sessionsCount !== 1 ? 's' : ''}</strong>. Results may vary with more data.</span>
+                    </div>
+                `;
+            } else {
+                smallSampleWarning.classList.add('hidden');
+            }
+        }
+    } else {
+        if (timeEmpty) { timeEmpty.classList.remove('hidden'); timeEmpty.classList.add('flex'); }
+        if (timeDistribution) timeDistribution.classList.add('hidden');
+        if (timeStats) timeStats.classList.add('hidden');
+        if (smallSampleWarning) smallSampleWarning.classList.add('hidden');
+    }
+
+    // Format time helper
+    const formatTime = (minutes) => {
+        if (minutes === null || minutes === undefined) return '-';
+        if (minutes < 1) return '<1m';
+        if (minutes < 60) return `${Math.round(minutes)}m`;
+        return `${(minutes / 60).toFixed(1)}h`;
+    };
+
+    // Update time buckets (session-bounded: max 2 hours)
+    const buckets = data.time_distribution || {};
+    const bucketData = [
+        { id: 1, key: 'under_5_min' },
+        { id: 2, key: '5_to_15_min' },
+        { id: 3, key: '15_to_60_min' },
+        { id: 4, key: '1_to_2_hours' }
+    ];
+
+    bucketData.forEach(bucket => {
+        const bucketInfo = buckets[bucket.key] || { count: 0, percent: 0 };
+        const bar = document.getElementById(`timeBucket${bucket.id}`);
+        const pct = document.getElementById(`timeBucket${bucket.id}Pct`);
+
+        if (bar) {
+            bar.style.width = `${Math.max(bucketInfo.percent, 5)}%`;
+            bar.querySelector('.time-bucket-value').textContent = bucketInfo.count || 0;
+        }
+        if (pct) {
+            pct.textContent = `${(bucketInfo.percent || 0).toFixed(0)}%`;
+        }
+    });
+
+    // Update summary stats
+    const ttc = data.time_to_conversion || {};
+    document.getElementById('ttcMedian').textContent = formatTime(ttc.median_minutes);
+    document.getElementById('ttcMean').textContent = formatTime(ttc.mean_minutes);
+    document.getElementById('ttcSessions').textContent = sessionsCount.toLocaleString();
+}
+
+/**
+ * Reset Time-to-Conversion UI to empty state - shows empty state messages
+ */
+function resetTimeToConversion() {
+    // Show empty state messages
+    const timeEmpty = document.getElementById('timeConversionEmpty');
+    const timeDistribution = document.getElementById('timeDistribution');
+    const timeStats = document.getElementById('timeConversionStats');
+
+    if (timeEmpty) timeEmpty.classList.remove('hidden');
+    if (timeEmpty) timeEmpty.classList.add('flex');
+    if (timeDistribution) timeDistribution.classList.add('hidden');
+    if (timeStats) timeStats.classList.add('hidden');
+
+    // Reset values (4 buckets now, session-bounded)
+    for (let i = 1; i <= 4; i++) {
+        const bar = document.getElementById(`timeBucket${i}`);
+        const pct = document.getElementById(`timeBucket${i}Pct`);
+        if (bar) {
+            bar.style.width = '5%';
+            bar.querySelector('.time-bucket-value').textContent = '-';
+        }
+        if (pct) pct.textContent = '-';
+    }
+    document.getElementById('ttcMedian').textContent = '-';
+    document.getElementById('ttcMean').textContent = '-';
+    document.getElementById('ttcSessions').textContent = '-';
+}
+
+/**
+ * Update Drop-off Table
+ */
+function updateDropoffTable(data) {
+    const tbody = document.getElementById('dropoffTableBody');
+    const points = data.drop_off_points || [];
+
+    if (points.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="3" class="text-center py-10">
+                    <div class="flex flex-col items-center">
+                        <div class="w-12 h-12 rounded-xl bg-slate-800 flex items-center justify-center mb-3">
+                            <svg class="w-6 h-6 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                        </div>
+                        <div class="text-sm font-medium text-slate-400 mb-1">No drop-off data for this period</div>
+                        <div class="text-xs text-slate-500 text-center max-w-xs">Requires <strong class="text-slate-400">multiple sessions</strong> with tracked funnel steps to analyze drop-off points.</div>
+                    </div>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    // Find max sessions for relative bar sizing
+    const maxSessions = Math.max(...points.slice(0, 10).map(p => p.sessions_dropped || p.session_count || p.sessions || 0));
+    
+    // Get total non-converting sessions from data quality
+    const totalNonConverting = data.data_quality?.non_converting_sessions || 0;
+
+    tbody.innerHTML = points.slice(0, 10).map((point, idx) => {
+        const sessions = point.sessions_dropped || point.session_count || point.sessions || 0;
+        const barWidth = maxSessions > 0 ? Math.round((sessions / maxSessions) * 100) : 0;
+        
+        // Drop-off rate as percentage (what % of non-converting sessions ended here)
+        const dropOffRate = point.drop_off_rate || 0;
+        const dropOffPct = (dropOffRate * 100).toFixed(1);
+        
+        // Impact is based on rank - #1 is highest impact by definition (backend sorts by sessions_dropped)
+        const impactClass = idx === 0 ? 'high' : idx <= 2 ? 'medium' : 'low';
+        const impactColor = impactClass === 'high' ? 'bg-rose-500' :
+                           impactClass === 'medium' ? 'bg-amber-400' : 'bg-slate-600';
+        const eventName = escapeHtml(point.event || point.event_name || point.last_event || '');
+
+        return `
+            <tr class="group hover:bg-slate-700/30 transition-colors ${idx < points.slice(0, 10).length - 1 ? 'border-b border-white/10' : ''}">
+                <td class="py-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg ${impactClass === 'high' ? 'bg-rose-500/15' : impactClass === 'medium' ? 'bg-amber-400/15' : 'bg-slate-800'} flex items-center justify-center flex-shrink-0">
+                            <span class="text-sm font-bold ${impactClass === 'high' ? 'text-rose-400' : impactClass === 'medium' ? 'text-amber-300' : 'text-slate-400'}">${idx + 1}</span>
+                        </div>
+                        <div class="min-w-0">
+                            <div class="font-medium text-slate-50 truncate">${eventName}</div>
+                            <div class="h-1.5 w-24 bg-slate-800 rounded-full mt-1.5 overflow-hidden">
+                                <div class="h-full ${impactColor} rounded-full transition-all" style="width: ${barWidth}%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </td>
+                <td class="py-4 text-center">
+                    <div class="flex flex-col items-center">
+                        <span class="text-lg font-bold text-slate-50">${sessions.toLocaleString()}</span>
+                        <span class="text-xs text-slate-500">${dropOffPct}% of abandoned sessions</span>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+/**
+ * Update Conversion Paths List
+ */
+function updateConversionPaths(data) {
+    const container = document.getElementById('pathList');
+    const warningContainer = document.getElementById('pathsSmallSampleWarning');
+    // API returns top_conversion_paths, not paths
+    const paths = data.top_conversion_paths || data.paths || [];
+    const dataQuality = data.data_quality || {};
+    const totalPaths = dataQuality.total_unique_paths || paths.length;
+    const totalConvertingSessions = dataQuality.total_converting_sessions || 0;
+    const displayedPaths = Math.min(paths.length, 5);
+    const smallSampleWarning = dataQuality.small_sample_warning;
+
+    // Show/hide small sample warning
+    if (warningContainer) {
+        if (smallSampleWarning && paths.length > 0) {
+            warningContainer.classList.remove('hidden');
+            warningContainer.innerHTML = `
+                <div class="flex items-center gap-2 px-3 py-2 bg-amber-500/10 border border-amber-500/20 rounded-lg text-amber-300 text-xs">
+                    <svg class="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                        <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                    </svg>
+                    <span>Small sample: <strong>${totalConvertingSessions} converting session${totalConvertingSessions !== 1 ? 's' : ''}</strong>. Results may vary with more data.</span>
+                </div>
+            `;
+        } else {
+            warningContainer.classList.add('hidden');
+        }
+    }
+
+    if (paths.length === 0) {
+        container.innerHTML = `
+            <div class="flex flex-col items-center py-10">
+                <div class="w-12 h-12 rounded-xl bg-slate-800 flex items-center justify-center mb-3">
+                    <svg class="w-6 h-6 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4l3-9 4 18 3-9h4"/></svg>
+                </div>
+                <div class="text-sm font-medium text-slate-400 mb-1">No conversion paths found</div>
+                <div class="text-xs text-slate-500 text-center max-w-xs">No sessions completed a conversion during this period. Try a longer date range or check your conversion event selection.</div>
+            </div>
+        `;
+        return;
+    }
+
+    // Find max sessions for relative sizing
+    const maxSessions = Math.max(...paths.slice(0, 5).map(p => p.sessions || 0));
+    
+    // Calculate total conversions across all displayed paths
+    const totalConversions = paths.slice(0, 5).reduce((sum, p) => sum + (p.sessions || 0), 0);
+
+    // Rank styles for top 5 - dark theme
+    const rankStyles = [
+        { bg: 'bg-amber-500/10', border: 'border-amber-400/20', text: 'text-amber-300', medal: '🥇' },
+        { bg: 'bg-slate-800/50', border: 'border-slate-600/50', text: 'text-slate-300', medal: '🥈' },
+        { bg: 'bg-orange-500/10', border: 'border-orange-400/20', text: 'text-orange-300', medal: '🥉' },
+        { bg: 'bg-slate-800/30', border: 'border-slate-600/30', text: 'text-slate-400', medal: '④' },
+        { bg: 'bg-slate-800/30', border: 'border-slate-600/30', text: 'text-slate-400', medal: '⑤' }
+    ];
+    
+    // Build summary header - always show session count info
+    let summaryHtml = `
+        <div class="flex items-center justify-between mb-4 px-1">
+            <span class="text-xs text-slate-400">
+                ${totalPaths > displayedPaths 
+                    ? `Showing top ${displayedPaths} of <strong class="text-slate-300">${totalPaths} unique paths</strong>` 
+                    : `<strong class="text-slate-300">${displayedPaths} path${displayedPaths !== 1 ? 's' : ''}</strong> found`}
+            </span>
+            <span class="text-xs text-slate-400">
+                <strong class="text-emerald-400">${totalConvertingSessions.toLocaleString()}</strong> converting sessions
+            </span>
+        </div>
+    `;
+
+    const pathsHtml = paths.slice(0, 5).map((path, idx) => {
+        const steps = path.path || path.events || [];
+        const sessions = path.sessions || 0;
+        const barWidth = maxSessions > 0 ? Math.round((sessions / maxSessions) * 100) : 0;
+        const style = rankStyles[idx] || rankStyles[rankStyles.length - 1];
+
+        // Build path visualization - show ALL steps (no truncation)
+        const stepsHtml = steps.map((step, stepIdx) => {
+            const isLast = stepIdx === steps.length - 1;
+            const isConversion = selectedConversionEvents.includes(step);
+
+            const stepClass = isConversion
+                ? 'bg-emerald-500/15 text-emerald-400 border-emerald-400/20 font-semibold'
+                : 'bg-slate-800 text-slate-300 border-white/10';
+            return `
+                <span class="inline-flex items-center px-2 py-0.5 text-sm rounded border ${stepClass} whitespace-nowrap">${escapeHtml(step)}</span>
+                ${!isLast ? '<svg class="w-5 h-5 text-gray-600 flex-shrink-0 mx-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M9 18l6-6-6-6"/></svg>' : ''}
+            `;
+        }).join('');
+
+        return `
+            <div class="group rounded-xl border ${style.border} ${style.bg} p-4 hover:shadow-md transition-all">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-2">
+                        <span class="text-xl">${style.medal}</span>
+                        <span class="text-sm font-semibold ${style.text}">Path #${idx + 1}</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="w-16 h-1.5 bg-slate-700 rounded-full overflow-hidden">
+                            <div class="h-full bg-emerald-400 rounded-full" style="width: ${barWidth}%"></div>
+                        </div>
+                        <span class="text-sm font-bold text-slate-50">${sessions.toLocaleString()}</span>
+                        <span class="text-xs text-slate-400">conversions</span>
+                    </div>
+                </div>
+                <div class="flex flex-wrap items-center gap-1">
+                    ${stepsHtml}
+                </div>
+            </div>
+        `;
+    }).join('');
+    
+    container.innerHTML = summaryHtml + `<div class="space-y-4">${pathsHtml}</div>`;
+}
+
+/**
+ * Load Behavior Tab Data
+ * Fetches event correlation data (Boosters & Blockers)
+ * NOTE: Conversion signals removed in v2.0.0 (required cross-session tracking)
+ */
+/**
+ * Detect if an error is caused by an ad blocker
+ * Firefox: TypeError with "NetworkError when attempting to fetch resource"
+ * Chrome: TypeError with "Failed to fetch"
+ */
+function isAdBlockerError(error) {
+    if (!(error instanceof TypeError)) return false;
+    const msg = error.message.toLowerCase();
+    return msg.includes('networkerror') || 
+           msg.includes('failed to fetch') ||
+           msg.includes('network request failed');
+}
+
+/**
+ * Show/hide the ad blocker warning banner
+ */
+function showAdBlockerWarning(show) {
+    const warningEl = document.getElementById('behavior-adblocker-warning');
+    if (warningEl) {
+        if (show) {
+            warningEl.classList.remove('hidden');
+        } else {
+            warningEl.classList.add('hidden');
+        }
+    }
+}
+
+async function loadBehaviorTabData() {
+    const overlay = document.getElementById('loadingOverlay');
+    if (overlay) overlay.style.display = 'none';
+    const contentEl = document.getElementById('behavior-content');
+    const emptyEl = document.getElementById('behavior-empty');
+
+    // Check if conversion events are selected
+    // Use classList only - Tailwind's hidden class uses !important
+    if (selectedConversionEvents.length === 0) {
+        contentEl.classList.add('hidden');
+        emptyEl.classList.remove('hidden');
+        throw new Error('empty');
+    }
+
+// Update the events notice
+const eventsLabel = document.getElementById('behaviorTabEvents');
+    if (eventsLabel) {
+        eventsLabel.textContent = selectedConversionEvents.join(', ');
+    }
+
+    const conversionEventsParam = encodeURIComponent(selectedConversionEvents.join(','));
+    const appKey = '{{ app_key }}';
+
+    // Build date params if set (including timezone for proper date boundary calculation)
+    const userTz = StatsApp.utils.getUserTimezone();
+    let dateParams = `&tz=${encodeURIComponent(userTz)}`;
+    if (dateRange.from) dateParams += `&start_date=${dateRange.from}`;
+    if (dateRange.to) dateParams += `&end_date=${dateRange.to}`;
+
+    // PERF-023: Fetch event count and show processing banner (after date params are ready)
+    const eventCount = await fetchEventCount();
+    showProcessingBanner(eventCount, 'behavior');
+    let completedSections = 0;
+    const totalSections = 1;  // Only correlation section (signals removed in v2.0.0)
+
+    // Show content container and all section loading skeletons
+    // Use classList only - Tailwind's hidden class uses !important
+    contentEl.classList.remove('hidden');
+    emptyEl.classList.add('hidden');
+
+    // Show loading skeletons for correlation section only
+    ['correlation-loading'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'flex';
+    });
+
+    // Hide data sections initially
+    ['correlation-data'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    });
+
+    // Fire both requests in parallel (maintains optimal total time)
+    const correlationUrl = `/api/v1/analytics/event-correlation/?app_key=${appKey}&conversion_events=${conversionEventsParam}&limit=30${dateParams}`;
+    const correlationPromise = StatsApp.utils.fetchJSON(correlationUrl)
+        .then(async response => {
+            // API call succeeded - hide any previous ad blocker warning
+            showAdBlockerWarning(false);
+            if (response.ok) {
+                const correlationData = await response.json();
+                updateEventCorrelations(correlationData);
+            } else {
+                updateEventCorrelations({ positive_correlations: [], negative_correlations: [] });
+            }
+            // Show this section's data
+            const loadingEl = document.getElementById('correlation-loading');
+            const dataEl = document.getElementById('correlation-data');
+            if (loadingEl) loadingEl.style.display = 'none';
+            if (dataEl) dataEl.style.display = 'flex';
+            // Update progress
+            completedSections++;
+            updateProcessingProgress(completedSections, totalSections, 'behavior');
+        })
+        .catch(error => {
+            // Check if this looks like an ad blocker error
+            if (isAdBlockerError(error)) {
+                showAdBlockerWarning(true);
+            }
+            
+            updateEventCorrelations({ positive_correlations: [], negative_correlations: [] });
+            // Still show the section even on error
+            const loadingEl = document.getElementById('correlation-loading');
+            const dataEl = document.getElementById('correlation-data');
+            if (loadingEl) loadingEl.style.display = 'none';
+            if (dataEl) dataEl.style.display = 'flex';
+            // Update progress even on error
+            completedSections++;
+            updateProcessingProgress(completedSections, totalSections, 'behavior');
+        });
+
+    // NOTE: signalsPromise removed in v2.0.0 - ConversionSignalsView required
+    // cross-session user tracking which is incompatible with session-based analytics.
+    // Use Event Correlations (Boosters & Blockers) for similar insights.
+
+    // Wait for correlation promise to complete
+    try {
+        await correlationPromise;
+    } catch (error) {
+        console.error('Error loading behavior data:', error);
+        // Individual errors are already handled above
+    }
+}
+
+/**
+ * Update Event Correlations UI
+ */
+function updateEventCorrelations(data) {
+    const positiveContainer = document.getElementById('positiveCorrelations');
+    const negativeContainer = document.getElementById('negativeCorrelations');
+    const filteredInfoEl = document.getElementById('correlationFilteredInfo');
+
+    // Get data quality info
+    const dataQuality = data.data_quality || {};
+    const eventsAnalyzed = dataQuality.events_analyzed || 0;
+    const eventsFilteredOut = dataQuality.events_filtered_out || 0;
+    const minSessionsThreshold = dataQuality.min_sessions_threshold || 10;
+    const totalSessions = dataQuality.total_sessions || 0;
+    const convertingSessions = dataQuality.converting_sessions || 0;
+    
+    // Show filtered events info banner if events were filtered
+    if (filteredInfoEl) {
+        if (eventsFilteredOut > 0) {
+            filteredInfoEl.classList.remove('hidden');
+            filteredInfoEl.innerHTML = `
+                <div class="flex items-center gap-2 px-3 py-2 bg-slate-800/50 border border-white/10 rounded-lg text-slate-400 text-xs">
+                    <svg class="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>
+                    </svg>
+                    <span><strong class="text-slate-300">${eventsFilteredOut} event${eventsFilteredOut !== 1 ? 's' : ''}</strong> excluded (fewer than ${minSessionsThreshold} sessions). Analyzing <strong class="text-slate-300">${eventsAnalyzed}</strong> event types across <strong class="text-slate-300">${totalSessions.toLocaleString()}</strong> sessions.</span>
+                </div>
+            `;
+        } else if (eventsAnalyzed > 0) {
+            filteredInfoEl.classList.remove('hidden');
+            filteredInfoEl.innerHTML = `
+                <div class="flex items-center gap-2 px-3 py-2 bg-slate-800/50 border border-white/10 rounded-lg text-slate-400 text-xs">
+                    <svg class="w-4 h-4 flex-shrink-0 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                    <span>Analyzing <strong class="text-slate-300">${eventsAnalyzed}</strong> event types across <strong class="text-slate-300">${totalSessions.toLocaleString()}</strong> sessions (${convertingSessions.toLocaleString()} converting)</span>
+                </div>
+            `;
+        } else {
+            filteredInfoEl.classList.add('hidden');
+        }
+    }
+
+    // Process positive correlations
+    const positives = data.positive_correlations || [];
+    const negatives = data.negative_correlations || [];
+    const neutralCount = (data.neutral_events || []).length;
+
+    // Find the maximum conversion rate across BOTH sections for consistent scaling
+    const allRates = [
+        ...positives.map(p => p.conversion_rate_with || 0),
+        ...negatives.map(n => n.conversion_rate_with || 0)
+    ];
+    const globalMaxRate = Math.max(...allRates, 0.01);
+
+    if (positives.length === 0) {
+        let emptyMessage = '';
+        if (eventsAnalyzed === 0) {
+            emptyMessage = `
+                <div class="text-sm font-medium text-slate-400 text-center">No events to analyze</div>
+                <div class="text-xs text-slate-500 text-center mt-1 max-w-xs">No events have enough sessions (${minSessionsThreshold}+) for correlation analysis in this period.</div>
+            `;
+        } else if (neutralCount > 0) {
+            emptyMessage = `
+                <div class="text-sm font-medium text-slate-400 text-center">No significant boosters</div>
+                <div class="text-xs text-slate-500 text-center mt-1 max-w-xs">${neutralCount} event${neutralCount !== 1 ? 's' : ''} analyzed but none show <strong class="text-slate-400">+10% lift</strong> vs baseline. This may be normal for your conversion flow.</div>
+            `;
+        } else {
+            emptyMessage = `
+                <div class="text-sm font-medium text-slate-400 text-center">No boosters detected</div>
+                <div class="text-xs text-slate-500 text-center mt-1 max-w-xs">Events need <strong class="text-slate-400">${minSessionsThreshold}+ sessions</strong> and <strong class="text-slate-400">+10% conversion lift</strong> to appear here.</div>
+            `;
+        }
+        positiveContainer.innerHTML = `
+            <div class="flex flex-col items-center py-6">
+                <div class="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center mb-2">
+                    <svg class="w-5 h-5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/></svg>
+                </div>
+                ${emptyMessage}
+            </div>
+        `;
+    } else {
+        // Sort by conversion rate (highest first)
+        const sortedPositives = [...positives].sort((a, b) => (b.conversion_rate_with || 0) - (a.conversion_rate_with || 0));
+
+        positiveContainer.innerHTML = sortedPositives.map(item => {
+            const rateWith = item.conversion_rate_with || 0;
+            const rateWithout = item.conversion_rate_without || 0;
+            const sessionsCount = item.sessions_with_event || 0;
+            const convertsWithCount = item.converts_with || 0;
+            const barWidth = (rateWith / globalMaxRate) * 100;
+
+            // Smart formatting: show decimals for low rates
+            const formatRate = (rate) => {
+                const pct = rate * 100;
+                if (pct >= 1) return pct.toFixed(1) + '%';
+                if (pct >= 0.1) return pct.toFixed(2) + '%';
+                if (pct > 0) return pct.toFixed(3) + '%';
+                return '0%';
+            };
+            const rateWithStr = formatRate(rateWith);
+            const rateWithoutStr = formatRate(rateWithout);
+
+            // Calculate lift - use the API's lift_percent which is more accurate
+            const liftPercent = item.lift_percent || 0;
+            const multiplier = rateWithout > 0 ? (rateWith / rateWithout).toFixed(1) : null;
+
+            // Build meaningful insight text
+            let insightText = '';
+            if (multiplier && parseFloat(multiplier) >= 1.5) {
+                insightText = `<span class="text-emerald-300 font-semibold">${multiplier}× more likely</span> to convert`;
+            } else if (liftPercent > 0) {
+                insightText = `+${liftPercent.toFixed(0)}% lift vs baseline`;
+            } else {
+                insightText = 'Positive correlation';
+            }
+
+            return `
+                <div class="lift-item-detailed">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-base font-semibold text-slate-50 truncate" title="${escapeHtml(item.event || item.event_name)}">${escapeHtml(item.event || item.event_name)}</span>
+                        <span class="text-xs text-slate-400">${sessionsCount.toLocaleString()} sessions</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2 mb-2">
+                                <div class="h-2 bg-emerald-400 rounded" style="width: ${barWidth}%;"></div>
+                                <span class="text-sm font-bold text-emerald-400">${rateWithStr} convert</span>
+                                <span class="text-xs text-slate-500">(${convertsWithCount} conversion${convertsWithCount !== 1 ? 's' : ''})</span>
+                            </div>
+                            <div class="text-sm">${insightText}</div>
+                            <div class="text-xs text-slate-500 mt-0.5">Without: ${rateWithoutStr} convert</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    // Process negative correlations
+    if (negatives.length === 0) {
+        let emptyMessage = '';
+        if (eventsAnalyzed === 0) {
+            emptyMessage = `
+                <div class="text-sm font-medium text-slate-400 text-center">No events to analyze</div>
+                <div class="text-xs text-slate-500 text-center mt-1 max-w-xs">No events have enough sessions for analysis.</div>
+            `;
+        } else {
+            emptyMessage = `
+                <div class="text-sm font-medium text-emerald-400 text-center">No blockers detected</div>
+                <div class="text-xs text-slate-500 text-center mt-1 max-w-xs">Great news! None of the ${eventsAnalyzed} analyzed events show significant conversion drops (−10% or worse).</div>
+            `;
+        }
+        negativeContainer.innerHTML = `
+            <div class="flex flex-col items-center py-6">
+                <div class="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center mb-2">
+                    <svg class="w-5 h-5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                </div>
+                ${emptyMessage}
+            </div>
+        `;
+    } else {
+        // Sort by conversion rate (lowest first - worst blockers at top)
+        const sortedNegatives = [...negatives].sort((a, b) => (a.conversion_rate_with || 0) - (b.conversion_rate_with || 0));
+
+        negativeContainer.innerHTML = sortedNegatives.map(item => {
+            const rateWith = item.conversion_rate_with || 0;
+            const rateWithout = item.conversion_rate_without || 0;
+            const sessionsCount = item.sessions_with_event || 0;
+            const convertsWithCount = item.converts_with || 0;
+            const barWidth = rateWithout > 0 ? Math.max((rateWith / rateWithout) * 50, 2) : 2;
+
+            // Smart formatting: show decimals for low rates
+            const formatRate = (rate) => {
+                const pct = rate * 100;
+                if (pct >= 1) return pct.toFixed(1) + '%';
+                if (pct >= 0.1) return pct.toFixed(2) + '%';
+                if (pct > 0) return pct.toFixed(3) + '%';
+                return '0%';
+            };
+            const rateWithStr = formatRate(rateWith);
+            const rateWithoutStr = formatRate(rateWithout);
+
+            // Use API's lift_percent (will be negative for blockers)
+            const liftPercent = item.lift_percent || 0;
+
+            // Build meaningful insight text
+            let insightText = '';
+            if (rateWith === 0 && rateWithout > 0) {
+                insightText = `<span class="text-rose-300 font-semibold">No conversions</span> from sessions with this event`;
+            } else if (liftPercent <= -50) {
+                insightText = `<span class="text-rose-300 font-semibold">${Math.abs(liftPercent).toFixed(0)}% fewer</span> conversions than baseline`;
+            } else {
+                insightText = `${liftPercent.toFixed(0)}% vs baseline`;
+            }
+
+            return `
+                <div class="lift-item-detailed">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-base font-semibold text-slate-50 truncate" title="${escapeHtml(item.event || item.event_name)}">${escapeHtml(item.event || item.event_name)}</span>
+                        <span class="text-xs text-slate-400">${sessionsCount.toLocaleString()} sessions</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2 mb-2">
+                                <div class="h-2 bg-rose-400 rounded" style="width: ${barWidth}%;"></div>
+                                <span class="text-sm font-bold text-rose-400">${rateWithStr} convert</span>
+                                <span class="text-xs text-slate-500">(${convertsWithCount} conversion${convertsWithCount !== 1 ? 's' : ''})</span>
+                            </div>
+                            <div class="text-sm">${insightText}</div>
+                            <div class="text-xs text-slate-500 mt-0.5">Without: ${rateWithoutStr} convert</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+}
+
+// NOTE: updateConversionSignals function removed in v2.0.0
+// ConversionSignalsView required cross-session user tracking which is
+// incompatible with session-based analytics. Use updateEventCorrelations instead.
+
+// ============================================
+// SEGMENTS TAB FUNCTIONS
+// ============================================
+
+// Current segment type being viewed
+let currentSegmentType = 'platform';
+// Current segments granularity
+let currentSegmentsGranularity = 'day';
+
+// Timezone handling for hourly view
+let useLocalTimezone = false; // Default to UTC
+let userTimezoneOffset = 0; // Offset in hours from UTC
+let userTimezoneLabel = 'UTC'; // Display label for user's timezone
+
+/**
+ * Initialize timezone detection
+ */
+function initTimezoneDetection() {
+    try {
+        // Get the user's timezone
+        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+        // Get offset in hours (e.g., -8 for PST, +1 for CET)
+        const now = new Date();
+        userTimezoneOffset = -now.getTimezoneOffset() / 60;
+
+        // Create a human-readable timezone label
+        // Use short timezone name (e.g., "PST", "CET", "GMT+2")
+        const formatter = new Intl.DateTimeFormat('en-US', {
+            timeZone: tz,
+            timeZoneName: 'short'
+        });
+        const parts = formatter.formatToParts(now);
+        const tzPart = parts.find(p => p.type === 'timeZoneName');
+        userTimezoneLabel = tzPart ? tzPart.value : formatTimezoneOffset(userTimezoneOffset);
+
+        // Store timezone name for tooltip
+        window.userTimezoneName = tz; // e.g., "America/Los_Angeles"
+    } catch (e) {
+        userTimezoneOffset = 0;
+        userTimezoneLabel = 'Local';
+    }
+}
+
+/**
+ * Format timezone offset as GMT+X or GMT-X
+ */
+function formatTimezoneOffset(offset) {
+    if (offset === 0) return 'UTC';
+    const sign = offset >= 0 ? '+' : '';
+    return `GMT${sign}${offset}`;
+}
+
+/**
+ * Convert UTC hour to local hour based on offset
+ */
+function convertHourToLocal(utcHour, offset) {
+    let localHour = (utcHour + offset) % 24;
+    if (localHour < 0) localHour += 24;
+    return localHour;
+}
+
+/**
+ * Convert local hour to UTC hour based on offset
+ */
+function convertHourToUTC(localHour, offset) {
+    let utcHour = (localHour - offset) % 24;
+    if (utcHour < 0) utcHour += 24;
+    return utcHour;
+}
+
+/**
+ * Update timezone toggle visibility and state
+ */
+function updateTimezoneToggle() {
+    const toggleRow = document.getElementById('timezoneToggleRow');
+    const labelEl = document.getElementById('currentTimezoneLabel');
+    const btnTextEl = document.getElementById('timezoneToggleBtnText');
+
+    if (!toggleRow) return;
+
+    // Only show for hour segment type
+    if (currentSegmentType === 'hour') {
+        toggleRow.classList.remove('hidden');
+
+        // Update label and button text based on current state
+        if (useLocalTimezone) {
+            labelEl.textContent = userTimezoneLabel;
+            labelEl.title = window.userTimezoneName || '';
+            btnTextEl.textContent = 'Switch to UTC';
+        } else {
+            labelEl.textContent = 'UTC';
+            labelEl.title = 'Coordinated Universal Time';
+            btnTextEl.textContent = `Switch to ${userTimezoneLabel}`;
+        }
+    } else {
+        toggleRow.classList.add('hidden');
+    }
+}
+
+/**
+ * Initialize timezone toggle button
+ */
+function initTimezoneToggle() {
+    const toggleBtn = document.getElementById('timezoneToggleBtn');
+    if (!toggleBtn) return;
+
+    toggleBtn.addEventListener('click', async () => {
+        // Toggle timezone mode
+        useLocalTimezone = !useLocalTimezone;
+
+        // Save preference to localStorage
+        try {
+            localStorage.setItem('respectlytics_useLocalTimezone', useLocalTimezone ? '1' : '0');
+        } catch (e) { /* ignore */ }
+
+        // Update toggle UI
+        updateTimezoneToggle();
+
+        // Update descriptions to reflect timezone change
+        updateSegmentTypeDescription('hour');
+
+        // Re-render chart and table with new timezone
+        // We need to reload the data or re-render with stored data
+        delete tabDataCache['segments'];
+        await loadTabData('segments');
+    });
+
+    // Load preference from localStorage
+    try {
+        const saved = localStorage.getItem('respectlytics_useLocalTimezone');
+        if (saved === '1') {
+            useLocalTimezone = true;
+        }
+    } catch (e) { /* ignore */ }
+}
+
+/**
+ * Load Segments Tab Data
+ */
+async function loadSegmentsTabData() {
+    const overlay = document.getElementById('loadingOverlay');
+    if (overlay) overlay.style.display = 'none';
+    const contentEl = document.getElementById('segments-content');
+    const emptyEl = document.getElementById('segments-empty');
+
+    const appKey = '{{ app_key }}';
+
+    // If no conversion events selected, show empty state immediately
+    // Use classList only - Tailwind's hidden class uses !important
+    if (selectedConversionEvents.length === 0) {
+        contentEl.classList.add('hidden');
+        emptyEl.classList.remove('hidden');
+        throw new Error('empty');
+    }
+
+    // PERF-024: Fetch event count and show processing banner
+    const eventCount = await fetchEventCount();
+    showProcessingBanner(eventCount, 'segments');
+
+    // Show content container and all section loading skeletons
+    // Use classList only - Tailwind's hidden class uses !important
+    contentEl.classList.remove('hidden');
+    emptyEl.classList.add('hidden');
+
+    // Show loading skeletons (Data Quality banner stays visible)
+    ['summary-loading', 'chart-loading', 'table-loading'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'block';
+    });
+
+    // Hide data sections initially
+    ['summary-data', 'chart-data', 'table-data'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    });
+
+    // Build date params if set (including timezone for proper date boundary calculation)
+    const userTz = StatsApp.utils.getUserTimezone();
+    let dateParams = `&tz=${encodeURIComponent(userTz)}`;
+    if (dateRange.from) dateParams += `&from=${dateRange.from}`;
+    if (dateRange.to) dateParams += `&to=${dateRange.to}`;
+
+    // Build conversion events param
+    let conversionEventsParam = `&conversion_events=${encodeURIComponent(selectedConversionEvents.join(','))}`;
+
+    try {
+        // Fetch segments data with granularity (SINGLE API CALL)
+        const segmentsUrl = `/api/v1/analytics/segments/?app_key=${appKey}&segment_by=${currentSegmentType}&granularity=${currentSegmentsGranularity}${conversionEventsParam}${dateParams}`;
+        const response = await StatsApp.utils.fetchJSON(segmentsUrl);
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+
+            // Hide processing banner and skeletons on error
+            const banner = document.getElementById('segments-processing-banner');
+            if (banner) banner.style.display = 'none';
+            ['summary-loading', 'chart-loading', 'table-loading'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.style.display = 'none';
+            });
+
+            // If error is about missing conversion events, show empty state
+            // Use classList only - Tailwind's hidden class uses !important
+            if (errorData.error && errorData.error.includes('conversion_events')) {
+                contentEl.classList.add('hidden');
+                emptyEl.classList.remove('hidden');
+                throw new Error('empty');
+            }
+            throw new Error(errorData.error || errorData.detail || 'Failed to load segments data');
+        }
+
+        const data = await response.json();
+
+        // If the API returns no segments, we still render all sections with
+        // helpful messaging (consistent with Conversion + Behavior tabs).
+        // Full-tab empty state is reserved only for missing prerequisites
+        // (no conversion events selected).
+        if (!data.segments || data.segments.length === 0) {
+            // Hide processing banner and skeletons
+            const banner = document.getElementById('segments-processing-banner');
+            if (banner) banner.style.display = 'none';
+            ['summary-loading', 'chart-loading', 'table-loading'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.style.display = 'none';
+            });
+
+            // Keep the tab content visible and render section-level empty states
+            contentEl.classList.remove('hidden');
+            emptyEl.classList.add('hidden');
+
+            const emptyData = {
+                ...data,
+                segments: data.segments || [],
+                summary: data.summary || { overall_conversion_rate: 0 },
+                granularity: data.granularity || currentSegmentsGranularity
+            };
+
+            updateSegmentsSummary(emptyData);
+            updateSegmentsChart(emptyData);
+            updateSegmentsTable(emptyData);
+
+            ['summary-data', 'chart-data', 'table-data'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.style.display = 'block';
+            });
+
+            // Initialize controls even when empty so the user can adjust views
+            initSegmentTypeButtons();
+            initSegmentsGranularityButtons();
+            updateSegmentTypeDescription(currentSegmentType);
+            return;
+        }
+
+        // Render all sections synchronously (single API response)
+        updateSegmentsSummary(data);
+        updateSegmentsChart(data);
+        updateSegmentsTable(data);
+
+        // Hide all loading skeletons and show all data sections together
+        ['summary-loading', 'chart-loading', 'table-loading'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.style.display = 'none';
+        });
+        ['summary-data', 'chart-data', 'table-data'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.style.display = 'block';
+        });
+
+        // Hide processing banner
+        const banner = document.getElementById('segments-processing-banner');
+        if (banner) {
+            setTimeout(() => {
+                banner.style.display = 'none';
+            }, 500);
+        }
+
+        // Initialize segment type buttons
+        initSegmentTypeButtons();
+
+        // Initialize granularity buttons
+        initSegmentsGranularityButtons();
+
+        // Update segment type description
+        updateSegmentTypeDescription(currentSegmentType);
+    } catch (error) {
+        // Hide processing banner and skeletons on any error
+        const banner = document.getElementById('segments-processing-banner');
+        if (banner) banner.style.display = 'none';
+        ['summary-loading', 'chart-loading', 'table-loading'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.style.display = 'none';
+        });
+
+        // Re-throw for upstream error handling
+        throw error;
+    }
+}
+
+/**
+ * Initialize Segment Type Selector Buttons
+ */
+function initSegmentTypeButtons() {
+    document.querySelectorAll('.segments-selector-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const newType = e.target.dataset.segment;
+            if (newType === currentSegmentType) return;
+
+            // Update active state
+            document.querySelectorAll('.segments-selector-btn').forEach(b => {
+                b.classList.remove('bg-indigo-600', 'text-white', 'shadow-sm');
+                b.classList.add('text-indigo-200', 'hover:text-white', 'hover:bg-indigo-500/30');
+            });
+            e.target.classList.remove('text-indigo-200', 'hover:text-white', 'hover:bg-indigo-500/30');
+            e.target.classList.add('bg-indigo-600', 'text-white', 'shadow-sm');
+
+            // Update segment type and reload
+            currentSegmentType = newType;
+
+            // Update segment type description
+            updateSegmentTypeDescription(newType);
+
+            // Invalidate cache and reload
+            delete tabDataCache['segments'];
+            await loadTabData('segments');
+        });
+    });
+}
+
+/**
+ * Initialize Segments Granularity Toggle Buttons
+ */
+function initSegmentsGranularityButtons() {
+    document.querySelectorAll('.segments-granularity-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const newGranularity = e.target.dataset.granularity;
+            if (newGranularity === currentSegmentsGranularity) return;
+
+            // Update active state
+            document.querySelectorAll('.segments-granularity-btn').forEach(b => {
+                b.classList.remove('bg-slate-700', 'text-slate-200', 'shadow-sm');
+                b.classList.add('text-slate-400', 'hover:text-slate-200', 'hover:bg-slate-700/50');
+            });
+            e.target.classList.remove('text-slate-400', 'hover:text-slate-200', 'hover:bg-slate-700/50');
+            e.target.classList.add('bg-slate-700', 'text-slate-200', 'shadow-sm');
+
+            // Update granularity and reload
+            currentSegmentsGranularity = newGranularity;
+
+            // Invalidate cache and reload
+            delete tabDataCache['segments'];
+            await loadTabData('segments');
+        });
+    });
+}
+
+/**
+ * Calculate the optimal granularity based on date range
+ * @param {string} fromDate - Start date (YYYY-MM-DD)
+ * @param {string} toDate - End date (YYYY-MM-DD)
+ * @returns {string} - Recommended granularity ('day', 'week', 'month')
+ */
+function calculateAutoGranularity(fromDate, toDate) {
+    if (!fromDate || !toDate) return 'day';
+    
+    const from = new Date(fromDate);
+    const to = new Date(toDate);
+    const daysDiff = Math.ceil((to - from) / (1000 * 60 * 60 * 24));
+    
+    if (daysDiff >= 90) return 'month';
+    if (daysDiff >= 30) return 'week';
+    return 'day';
+}
+
+/**
+ * Get user's preferred granularity from localStorage
+ * @returns {string|null} - Saved preference or null
+ */
+function getSavedGranularityPreference() {
+    try {
+        return localStorage.getItem('respectlytics_overview_granularity');
+    } catch (e) {
+        return null;
+    }
+}
+
+/**
+ * Save user's granularity preference to localStorage
+ * @param {string} granularity - The granularity to save
+ */
+function saveGranularityPreference(granularity) {
+    try {
+        localStorage.setItem('respectlytics_overview_granularity', granularity);
+    } catch (e) {
+        // localStorage not available, ignore
+    }
+}
+
+/**
+ * Update overview labels based on current granularity
+ * @param {string} granularity - The current granularity
+ */
+function updateOverviewGranularityLabels(granularity) {
+    const periodLabel = {
+        'day': { unit: 'day', adj: 'Daily' },
+        'week': { unit: 'week', adj: 'Weekly' },
+        'month': { unit: 'month', adj: 'Monthly' }
+    }[granularity] || { unit: 'day', adj: 'Daily' };
+    
+    // Update Events Over Time chart
+    const eventsSubtitle = document.getElementById('eventsChartSubtitle');
+    if (eventsSubtitle) {
+        eventsSubtitle.textContent = `Total events tracked per ${periodLabel.unit}`;
+    }
+    
+    // Update Sessions & Duration chart
+    const sessionsSubtitle = document.getElementById('sessionsChartSubtitle');
+    if (sessionsSubtitle) {
+        sessionsSubtitle.textContent = `Unique sessions and average duration per ${periodLabel.unit}`;
+    }
+    
+    // Update Period Details section
+    const periodTitle = document.getElementById('periodBreakdownTitle');
+    if (periodTitle) {
+        const titleMap = {
+            'day': 'Daily Details',
+            'week': 'Weekly Details',
+            'month': 'Monthly Details'
+        };
+        periodTitle.querySelector('span').textContent = titleMap[granularity] || 'Period Details';
+    }
+    
+    const periodSubtitle = document.getElementById('periodBreakdownSubtitle');
+    if (periodSubtitle) {
+        const subtitleMap = {
+            'day': 'Day-by-day statistics with change indicators',
+            'week': 'Week-by-week statistics with change indicators',
+            'month': 'Month-by-month statistics with change indicators'
+        };
+        periodSubtitle.textContent = subtitleMap[granularity] || 'Statistics with change indicators';
+    }
+}
+
+/**
+ * Update Overview granularity button active states
+ * @param {string} granularity - The active granularity
+ * @param {boolean} isAuto - Whether this was auto-selected
+ */
+function updateOverviewGranularityButtonStates(granularity, isAuto = false) {
+    document.querySelectorAll('.overview-granularity-btn').forEach(btn => {
+        const btnGranularity = btn.dataset.granularity;
+        if (btnGranularity === granularity) {
+            btn.classList.remove('text-slate-400', 'hover:text-slate-200', 'hover:bg-slate-700/50');
+            btn.classList.add('bg-slate-700', 'text-slate-200', 'shadow-sm');
+        } else {
+            btn.classList.remove('bg-slate-700', 'text-slate-200', 'shadow-sm');
+            btn.classList.add('text-slate-400', 'hover:text-slate-200', 'hover:bg-slate-700/50');
+        }
+    });
+    
+    // Show/hide auto-selected label
+    const autoLabel = document.getElementById('overviewGranularityAutoLabel');
+    if (autoLabel) {
+        autoLabel.classList.toggle('hidden', !isAuto);
+    }
+}
+
+/**
+ * Initialize Overview Granularity Toggle Buttons
+ */
+function initOverviewGranularityButtons() {
+    document.querySelectorAll('.overview-granularity-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const newGranularity = e.target.dataset.granularity;
+            if (newGranularity === currentGranularity) return;
+            
+            // Update active state
+            updateOverviewGranularityButtonStates(newGranularity, false);
+            
+            // Update granularity and save preference
+            currentGranularity = newGranularity;
+            if (window.StatsApp && StatsApp.state) {
+                StatsApp.state.currentGranularity = newGranularity;
+            }
+            saveGranularityPreference(newGranularity);
+            
+            // Update labels
+            updateOverviewGranularityLabels(newGranularity);
+            
+            // Reload data
+            await loadStats(false);
+        });
+    });
+}
+
+/**
+ * Apply auto-granularity based on current date range
+ * Called when date range changes
+ * @param {boolean} forceAuto - If true, ignore user preference and use auto
+ */
+function applyAutoGranularity(forceAuto = false) {
+    const autoGranularity = calculateAutoGranularity(dateRange.from, dateRange.to);
+    const savedPref = getSavedGranularityPreference();
+    
+    // Use saved preference if available and not forcing auto, otherwise use auto
+    let useGranularity = autoGranularity;
+    let isAuto = true;
+    
+    if (!forceAuto && savedPref) {
+        // User has a preference - use it unless it doesn't make sense
+        // (e.g., monthly view for a 7-day range is fine, just shows one month)
+        useGranularity = savedPref;
+        isAuto = false;
+    }
+    
+    // Update the global state
+    currentGranularity = useGranularity;
+    if (window.StatsApp && StatsApp.state) {
+        StatsApp.state.currentGranularity = useGranularity;
+    }
+    
+    // Update UI
+    updateOverviewGranularityButtonStates(useGranularity, isAuto && !savedPref);
+    updateOverviewGranularityLabels(useGranularity);
+    
+    return useGranularity;
+}
+
+/**
+ * Update segment type description based on current selection
+ */
+function updateSegmentTypeDescription(segmentType) {
+    const descEl = document.getElementById('segmentTypeDescription');
+    const headerEl = document.querySelector('#summary-data h3');
+    const segmentLabelEl = document.getElementById('segmentLabelText');
+
+    if (!descEl) return;
+
+    // Build timezone-aware config for hour view
+    const tzLabel = useLocalTimezone ? userTimezoneLabel : 'UTC';
+    const tzDesc = useLocalTimezone
+        ? `Identify peak conversion hours in your timezone (${userTimezoneLabel}) to optimize marketing timing`
+        : 'Identify peak conversion hours (0-23 UTC) throughout the day to optimize marketing timing';
+
+    const config = {
+        'platform': {
+            description: 'Compare conversion rates across different platforms (iOS, Android, Web)',
+            header: 'Segment Comparison',
+            segmentLabel: 'Segments',
+            topLabel: 'Top Segment',
+            columnLabel: 'Platform',
+            breakdownTitle: 'Platform Breakdown',
+            breakdownDesc: 'Detailed metrics for each platform over time'
+        },
+        'country': {
+            description: 'See how conversion rates vary by session location and country',
+            header: 'Segment Comparison',
+            segmentLabel: 'Countries',
+            topLabel: 'Top Country',
+            columnLabel: 'Country',
+            breakdownTitle: 'Country Breakdown',
+            breakdownDesc: 'Detailed metrics for each country over time'
+        },
+        'depth': {
+            description: 'Analyze engagement by grouping sessions based on the number of events they contain.',
+            header: 'Engagement Analysis (Events per Session)',
+            segmentLabel: 'Depth Buckets',
+            topLabel: 'Most Common',
+            columnLabel: 'Events/Session',
+            breakdownTitle: 'Engagement Breakdown',
+            breakdownDesc: 'Sessions grouped by event count. Higher counts indicate deeper engagement.'
+        },
+        'hour': {
+            description: tzDesc,
+            header: 'Hourly Patterns',
+            segmentLabel: 'Hours',
+            topLabel: 'Peak Hour',
+            columnLabel: `Hour (${tzLabel})`,
+            breakdownTitle: 'Hourly Breakdown',
+            breakdownDesc: `Conversion rates by hour of day (${tzLabel} timezone)`
+        }
+    };
+
+    const c = config[segmentType] || config['platform'];
+    descEl.textContent = c.description;
+    if (headerEl) headerEl.textContent = c.header;
+    if (segmentLabelEl) segmentLabelEl.textContent = c.segmentLabel;
+
+    // Update the top segment label
+    const topLabelEl = document.getElementById('topSegmentLabel');
+    if (topLabelEl) topLabelEl.textContent = c.topLabel;
+
+    // Update table column header
+    const columnLabelEl = document.getElementById('tableColumnLabel');
+    if (columnLabelEl) columnLabelEl.textContent = c.columnLabel;
+
+    // Update table breakdown title and description
+    const breakdownTitleEl = document.getElementById('tableBreakdownTitle');
+    if (breakdownTitleEl) breakdownTitleEl.textContent = c.breakdownTitle;
+
+    const breakdownDescEl = document.getElementById('tableBreakdownDesc');
+    if (breakdownDescEl) breakdownDescEl.textContent = c.breakdownDesc;
+
+    // Update chart help text
+    const tzNote = useLocalTimezone
+        ? `<span class="text-slate-500 text-xs">(showing ${userTimezoneLabel})</span>`
+        : '<span class="text-slate-500 text-xs">(showing UTC)</span>';
+    const chartHelpTexts = {
+        'platform': '<strong>How to read this chart:</strong> Taller bars indicate higher conversion rates. <span class="text-purple-400 font-medium">Compare platforms to see which device types convert best.</span>',
+        'country': '<strong>How to read this chart:</strong> Taller bars indicate higher conversion rates. <span class="text-purple-400 font-medium">Compare countries to identify your best-converting markets.</span>',
+        'depth': '<strong>How to read this chart:</strong> Taller bars indicate higher conversion rates. <span class="text-purple-400 font-medium">Each bar shows sessions grouped by event count (e.g., "6-10 events" = sessions with 6 to 10 events). More events often means higher engagement.</span>',
+        'hour': `<strong>How to read this chart:</strong> Taller bars indicate higher conversion rates. <span class="text-purple-400 font-medium">Find your peak hours to optimize marketing campaigns and server capacity.</span> ${tzNote}`
+    };
+    const chartHelpEl = document.getElementById('chartHelpText');
+    if (chartHelpEl) chartHelpEl.innerHTML = chartHelpTexts[segmentType] || chartHelpTexts['platform'];
+
+    // Show/hide timezone toggle for hour view
+    updateTimezoneToggle();
+}
+
+/**
+ * Update Segments Summary Cards
+ */
+function updateSegmentsSummary(data) {
+    const segments = data.segments || [];
+
+    // Total segments count
+    document.getElementById('segmentsTotalCount').textContent = segments.length.toString();
+
+    // Use overall_conversion_rate from summary (already calculated by API)
+    const overallRate = data.summary?.overall_conversion_rate || 0;
+    document.getElementById('segmentsOverallRate').textContent = (overallRate * 100).toFixed(2) + '%';
+
+    // Find top performing segment
+    let topSegment = null;
+    let topRate = -1;
+    segments.forEach(s => {
+        const rate = s.summary?.conversion_rate || 0;
+        const sessions = s.summary?.total_active_sessions || 0;
+        if (rate > topRate && sessions >= 10) { // Minimum threshold
+            topRate = rate;
+            topSegment = s;
+        }
+    });
+
+    if (topSegment) {
+        // Format top segment display based on type
+        let topSegmentDisplay = topSegment.segment || '-';
+        if (currentSegmentType === 'hour') {
+            const utcHour = parseInt(topSegment.segment);
+            if (useLocalTimezone) {
+                const localHour = convertHourToLocal(utcHour, userTimezoneOffset);
+                topSegmentDisplay = `${localHour}:00`;
+            } else {
+                topSegmentDisplay = `${utcHour}:00`;
+            }
+        } else if (currentSegmentType === 'depth') {
+            topSegmentDisplay = `${topSegment.segment} events`;
+        }
+        document.getElementById('segmentsTopSegment').textContent = topSegmentDisplay;
+        document.getElementById('segmentsTopRate').textContent = `${(topRate * 100).toFixed(2)}%`;
+    } else {
+        document.getElementById('segmentsTopSegment').textContent = '-';
+        document.getElementById('segmentsTopRate').textContent = '--';
+    }
+
+    // Update conversion events label
+    updateSegmentsEventsLabel();
+}
+
+/**
+ * Update the conversion events label in the Segments tab
+ */
+function updateSegmentsEventsLabel() {
+    const labelEl = document.getElementById('segmentsTabEvents');
+    if (!labelEl) return;
+
+    if (selectedConversionEvents.length === 0) {
+        labelEl.textContent = 'No events selected';
+    } else if (selectedConversionEvents.length === 1) {
+        labelEl.textContent = selectedConversionEvents[0];
+    } else {
+        labelEl.textContent = selectedConversionEvents.join(', ');
+    }
+}
+
+/**
+ * Update Segments Comparison Chart
+ */
+function updateSegmentsChart(data) {
+    const chartContainer = document.getElementById('segmentsBarsContainer');
+    const segments = data.segments || [];
+
+    if (segments.length === 0) {
+        chartContainer.innerHTML = `
+            <div class="w-full h-full flex flex-col items-center justify-center text-center px-6">
+                <div class="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center mb-3">
+                    <svg class="w-5 h-5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="12" y1="8" x2="12" y2="12"/>
+                        <line x1="12" y1="16" x2="12.01" y2="16"/>
+                    </svg>
+                </div>
+                <div class="text-sm font-semibold text-slate-200">No segment data yet</div>
+                <div class="text-sm text-slate-400 mt-1 max-w-xl">We didn’t find sessions with your selected conversion events in this date range. Keep collecting sessions, expand the date range, or try a different event.</div>
+                <div class="text-xs text-slate-500 mt-3">Minimum: 10 sessions with conversion events needed for analysis</div>
+            </div>
+        `;
+        return;
+    }
+
+    // For depth/hour segments (finite set), show all; for platform/country, take top 8
+    const isFiniteSegmentType = currentSegmentType === 'depth' || currentSegmentType === 'hour';
+    let sortedSegments;
+
+    if (isFiniteSegmentType) {
+        // For finite segment types, show ALL segments (no filtering)
+        sortedSegments = [...segments].sort((a, b) => {
+            // Sort depth segments by their natural order (1, 2, 3, 4, 5, 6-10, etc.)
+            if (currentSegmentType === 'depth') {
+                const order = {'1': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6-10': 6, '11-20': 7, '21+': 8};
+                return (order[a.segment] || 99) - (order[b.segment] || 99);
+            }
+            // Sort hour segments by display order (considering timezone conversion)
+            if (currentSegmentType === 'hour') {
+                const utcHourA = parseInt(a.segment);
+                const utcHourB = parseInt(b.segment);
+                if (useLocalTimezone) {
+                    // Sort by local hour
+                    const localHourA = convertHourToLocal(utcHourA, userTimezoneOffset);
+                    const localHourB = convertHourToLocal(utcHourB, userTimezoneOffset);
+                    return localHourA - localHourB;
+                }
+                return utcHourA - utcHourB;
+            }
+            return 0;
+        });
+    } else {
+        // For open-ended segments (platform/country), filter by minimum sessions and take top 8
+        sortedSegments = [...segments]
+            .filter(s => (s.summary?.total_active_sessions || 0) >= 5)
+            .sort((a, b) => (b.summary?.conversion_rate || 0) - (a.summary?.conversion_rate || 0))
+            .slice(0, 8);
+    }
+
+    if (sortedSegments.length === 0) {
+        chartContainer.innerHTML = `
+            <div class="w-full h-full flex flex-col items-center justify-center text-center px-6">
+                <div class="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center mb-3">
+                    <svg class="w-5 h-5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <path d="M12 16v-4"/>
+                        <path d="M12 8h.01"/>
+                    </svg>
+                </div>
+                <div class="text-sm font-semibold text-slate-200">Not enough segment volume yet</div>
+                <div class="text-sm text-slate-400 mt-1 max-w-xl">To keep comparisons meaningful, we only show chart bars for segments with at least 5 sessions in the selected date range. Keep collecting sessions or widen the date range.</div>
+            </div>
+        `;
+        return;
+    }
+
+    const maxRate = Math.max(...sortedSegments.map(s => s.summary?.conversion_rate || 0), 0.01);
+
+    // Helper function to get country flag emoji from ISO 3166-1 alpha-2 code
+    const getCountryFlag = (countryCode) => {
+        if (!countryCode || countryCode.length !== 2) return '';
+        const codePoints = countryCode.toUpperCase().split('').map(char => 127397 + char.charCodeAt());
+        return String.fromCodePoint(...codePoints);
+    };
+
+    // Helper function to get country name using Intl.DisplayNames API (supports ALL country codes)
+    const getCountryName = (countryCode) => {
+        if (!countryCode) return countryCode;
+        try {
+            const displayNames = new Intl.DisplayNames(['en'], { type: 'region' });
+            return displayNames.of(countryCode.toUpperCase()) || countryCode;
+        } catch (e) {
+            return countryCode;
+        }
+    };
+
+    // Use consistent purple color for all bars
+    const purpleColor = '#7c3aed';
+
+    // Chart container height (matches the 260px in _tab_segments.html)
+    const chartHeight = 260;
+    // Reserve space for label (about 25px) and percentage above bar (about 20px for narrow bars)
+    const labelSpace = 25;
+
+    // Calculate responsive bar width based on number of segments
+    // Hour view has 24 segments - needs narrow bars; depth has 6-8 - can use wider bars
+    const segmentCount = sortedSegments.length;
+    let barWidth, fontSize, labelFontSize, showPercentInBar;
+    if (segmentCount >= 20) {
+        // Hourly view - compact bars
+        barWidth = 28;
+        fontSize = 10;
+        labelFontSize = 11;
+        showPercentInBar = false; // Too narrow, show on hover only
+    } else if (segmentCount >= 10) {
+        barWidth = 45;
+        fontSize = 11;
+        labelFontSize = 12;
+        showPercentInBar = true;
+    } else {
+        barWidth = 70;
+        fontSize = 14;
+        labelFontSize = 14;
+        showPercentInBar = true;
+    }
+
+    // Calculate available height for bars (accounting for label and percentage text)
+    const percentSpace = !showPercentInBar ? 20 : 0;
+    const availableHeight = chartHeight - labelSpace - percentSpace - 10; // 10px margin
+    const minBarHeight = showPercentInBar ? 32 : 20;
+
+    chartContainer.innerHTML = sortedSegments.map((segment, idx) => {
+        const rate = segment.summary?.conversion_rate || 0;
+        // Calculate height in PIXELS for precise control (fixes flexbox percentage height issues)
+        const heightRatio = rate / maxRate;
+        const barHeight = Math.max(Math.round(heightRatio * availableHeight), minBarHeight);
+        const pct = (rate * 100).toFixed(1);
+        const sessions = segment.summary?.total_active_sessions || 0;
+        const label = segment.segment || 'Unknown';
+        const flag = getCountryFlag(label);
+        const countryFullName = getCountryName(label);
+
+        // For depth segments, add 'events' suffix for clarity
+        // For hour segments, convert to local time if needed
+        let displayLabel;
+        let tooltipLabel = label;
+        if (currentSegmentType === 'depth') {
+            displayLabel = `${label} events`;
+        } else if (currentSegmentType === 'hour') {
+            const utcHour = parseInt(label);
+            if (useLocalTimezone) {
+                const localHour = convertHourToLocal(utcHour, userTimezoneOffset);
+                displayLabel = localHour.toString();
+                tooltipLabel = `${localHour}:00 ${userTimezoneLabel} (${utcHour}:00 UTC)`;
+            } else {
+                displayLabel = label;
+                tooltipLabel = `${utcHour}:00 UTC`;
+            }
+        } else if (currentSegmentType === 'country' && flag) {
+            displayLabel = `${flag} ${countryFullName}`;
+            tooltipLabel = countryFullName;
+        } else {
+            displayLabel = label;
+        }
+
+        // For narrow bars, show percentage above the bar instead of inside
+        const barContent = showPercentInBar
+            ? `<span style="color: white; font-size: ${fontSize}px; font-weight: 700; text-shadow: 0 1px 2px rgba(0,0,0,0.2);">${pct}%</span>`
+            : '';
+
+        const percentAboveBar = !showPercentInBar
+            ? `<div style="font-size: ${fontSize}px; font-weight: 600; color: #a78bfa; margin-bottom: 4px;">${pct}%</div>`
+            : '';
+
+        return `
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; min-width: ${barWidth}px;">
+                ${percentAboveBar}
+                <div style="width: ${barWidth}px; height: ${barHeight}px; background: ${purpleColor}; border-radius: ${barWidth >= 50 ? 8 : 4}px; display: flex; align-items: center; justify-content: center; margin-bottom: 6px;"
+                     title="${tooltipLabel}: ${pct}% (${sessions.toLocaleString()} sessions)">
+                    ${barContent}
+                </div>
+                <div style="text-align: center; font-size: ${labelFontSize}px; font-weight: 500; color: #94a3b8;" title="${tooltipLabel}">${displayLabel}</div>
+            </div>
+        `;
+    }).join('');
+}
+
+/**
+ * Update Segments Breakdown Table
+ */
+function updateSegmentsTable(data) {
+    const tbody = document.getElementById('segmentsTableBody');
+    const thead = document.getElementById('segmentsTableHeader');
+    const segments = data.segments || [];
+    const granularity = data.granularity || 'day';
+
+    if (segments.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="7" class="text-center text-slate-400 py-8">
+                    <div class="flex flex-col items-center gap-2">
+                        <svg class="w-8 h-8 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <line x1="12" y1="8" x2="12" y2="12"/>
+                            <line x1="12" y1="16" x2="12.01" y2="16"/>
+                        </svg>
+                        <span class="font-medium text-slate-200">No segment data yet</span>
+                        <span class="text-sm text-slate-400">No sessions matched your selected conversion events in this date range.</span>
+                        <span class="text-xs text-slate-500">Tip: Try a wider date range and keep collecting sessions (minimum: 10 sessions with conversion events).</span>
+                    </div>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    // Get period labels from first segment's periods (they're the same across segments)
+    const firstSegment = segments[0];
+    const periods = firstSegment.periods || [];
+
+    // Determine how many periods to show based on granularity
+    // Daily: up to 7 periods, Weekly: up to 5 periods, Monthly: all periods
+    const maxPeriods = granularity === 'day' ? 7 : granularity === 'week' ? 5 : periods.length;
+    const displayPeriods = periods.slice(0, maxPeriods);
+    const periodLabels = displayPeriods.map(p => formatPeriodLabel(p.period, granularity));
+
+    // Update table header with dynamic period labels
+    if (thead) {
+        thead.innerHTML = `
+            <tr>
+                <th class="px-4 py-2 text-left font-semibold text-slate-50 sticky left-0 bg-slate-800">Segment</th>
+                <th class="px-4 py-2 text-center font-semibold text-slate-50">
+                    <div class="flex items-center justify-center gap-1">
+                        Sessions
+                        <span class="info-tooltip" data-tip="Count of unique sessions. Each session lasts up to 2 hours.">?</span>
+                    </div>
+                </th>
+                <th class="px-4 py-2 text-center font-semibold text-slate-50">
+                    <div class="flex items-center justify-center gap-1">
+                        Conv.
+                        <span class="info-tooltip" data-tip="Total number of conversion events triggered in this segment.">?</span>
+                    </div>
+                </th>
+                <th class="px-4 py-2 text-center font-semibold text-slate-50">
+                    <div class="flex items-center justify-center gap-1">
+                        Rate
+                        <span class="info-tooltip" data-tip="Conversion rate = Conversions ÷ Sessions. Shows what percentage of sessions triggered at least one conversion event.">?</span>
+                    </div>
+                </th>
+                ${periodLabels.map((label) => `
+                    <th class="px-4 py-2 text-center font-semibold text-slate-50 text-sm">${label}</th>
+                `).join('')}
+            </tr>
+        `;
+    }
+
+    // Sort by total sessions descending
+    const sortedSegments = [...segments].sort((a, b) =>
+        (b.summary?.total_active_sessions || 0) - (a.summary?.total_active_sessions || 0)
+    );
+
+    // Calculate overall average rate for comparison
+    const overallRate = sortedSegments.reduce((sum, s) => sum + (s.summary?.conversion_rate || 0), 0) / sortedSegments.length;
+
+    tbody.innerHTML = sortedSegments.map((segment, idx) => {
+        const sessions = segment.summary?.total_active_sessions || 0;
+        const conversions = segment.summary?.total_conversions || 0;
+        const rate = segment.summary?.conversion_rate || 0;
+        const ratePct = (rate * 100).toFixed(1);
+
+        // Determine rate badge class (luminous dark theme style)
+        let rateColorClass, rateBgClass;
+        if (rate >= 0.2) {
+            rateColorClass = 'text-emerald-400';
+            rateBgClass = 'bg-emerald-500/15';
+        } else if (rate >= 0.1) {
+            rateColorClass = 'text-green-400';
+            rateBgClass = 'bg-green-500/15';
+        } else if (rate >= 0.05) {
+            rateColorClass = 'text-amber-300';
+            rateBgClass = 'bg-amber-400/15';
+        } else {
+            rateColorClass = 'text-rose-400';
+            rateBgClass = 'bg-rose-500/15';
+        }
+
+        // Period performance - use same maxPeriods as header
+        const segmentPeriods = segment.periods || [];
+        const periodCells = segmentPeriods.slice(0, maxPeriods).map(p => {
+            const pRate = p.conversion_rate || 0;
+            const pPct = (pRate * 100).toFixed(1);
+            // Color-code based on comparison to segment's overall rate
+            // Round both values to display precision (1 decimal %) to avoid floating point comparison issues
+            const pRateRounded = Math.round(pRate * 1000) / 1000;  // 0.1% precision
+            const rateRounded = Math.round(rate * 1000) / 1000;
+            let pColorClass, pBgClass;
+            if (pRateRounded >= rateRounded * 1.1) {
+                // Above segment average - green
+                pColorClass = 'text-green-400';
+                pBgClass = 'bg-green-500/15';
+            } else if (pRateRounded >= rateRounded * 0.9) {
+                // Around segment average - neutral
+                pColorClass = 'text-slate-50';
+                pBgClass = 'bg-slate-700/30';
+            } else {
+                // Below segment average - red
+                pColorClass = 'text-rose-400';
+                pBgClass = 'bg-rose-500/15';
+            }
+            return `<td class="px-4 py-2 text-center"><span class="inline-block px-2 py-1 rounded-lg text-sm font-semibold ${pColorClass} ${pBgClass}">${pPct}%</span></td>`;
+        }).join('');
+
+        // Fill empty period cells if needed
+        const emptyPeriods = maxPeriods - Math.min(segmentPeriods.length, maxPeriods);
+        const emptyPeriodCells = Array(emptyPeriods).fill('<td class="px-4 py-2 text-center"><span class="inline-block px-2 py-1 rounded-lg text-sm font-medium bg-slate-700/30 text-slate-400">--</span></td>').join('');
+
+        const rowBg = idx % 2 === 0 ? 'bg-[#1e293b]' : 'bg-slate-800/30';
+
+        // Format segment label based on type
+        let segmentLabel = escapeHtml(segment.segment || 'Unknown');
+        if (currentSegmentType === 'depth') {
+            segmentLabel += ' events';
+        } else if (currentSegmentType === 'hour') {
+            const utcHour = parseInt(segment.segment);
+            if (useLocalTimezone) {
+                const localHour = convertHourToLocal(utcHour, userTimezoneOffset);
+                segmentLabel = `${localHour}:00`;
+            } else {
+                segmentLabel = `${utcHour}:00`;
+            }
+        } else if (currentSegmentType === 'country') {
+            // Get flag and country name for country segments
+            const countryCode = segment.segment;
+            if (countryCode && countryCode.length === 2) {
+                const codePoints = countryCode.toUpperCase().split('').map(char => 127397 + char.charCodeAt());
+                const flag = String.fromCodePoint(...codePoints);
+                let countryName = countryCode;
+                try {
+                    const displayNames = new Intl.DisplayNames(['en'], { type: 'region' });
+                    countryName = displayNames.of(countryCode.toUpperCase()) || countryCode;
+                } catch (e) {}
+                segmentLabel = `<span class="inline-flex items-center gap-2"><span class="text-base">${flag}</span> ${escapeHtml(countryName)}</span>`;
+            }
+        }
+
+        return `
+            <tr class="${rowBg} hover:bg-slate-700/30 transition-colors border-b border-white/5">
+                <td class="px-4 py-2 sticky left-0 ${rowBg}">
+                    <span class="font-medium text-slate-50">${segmentLabel}</span>
+                </td>
+                <td class="px-4 py-2 text-center">
+                    <span class="text-slate-50 font-medium">${sessions.toLocaleString()}</span>
+                </td>
+                <td class="px-4 py-2 text-center">
+                    <span class="text-slate-50 font-medium">${conversions.toLocaleString()}</span>
+                </td>
+                <td class="px-4 py-2 text-center">
+                    <span class="inline-block px-2 py-1 rounded-lg text-sm font-semibold ${rateColorClass} ${rateBgClass}">${ratePct}%</span>
+                </td>
+                ${periodCells}${emptyPeriodCells}
+            </tr>
+        `;
+    }).join('');
+}
+
+/**
+ * Format duration in seconds to human-readable format
+ * @param {number} seconds - Duration in seconds
+ * @returns {string} Formatted duration (e.g., "2m 30s", "45s", "-")
+ */
+function formatDuration(seconds) {
+    if (!seconds || seconds <= 0) return '-';
+
+    if (seconds < 60) {
+        return `${Math.round(seconds)}s`;
+    }
+
+    const minutes = Math.floor(seconds / 60);
+    const secs = Math.round(seconds % 60);
+
+    if (secs > 0) {
+        return `${minutes}m ${secs}s`;
+    }
+    return `${minutes}m`;
+}
+
+/**
+ * Format period label for human-readable display
+ */
+function formatPeriodLabel(period, granularity) {
+    if (!period) return '--';
+
+    try {
+        if (granularity === 'day') {
+            // "2025-12-02" -> "Dec 2"
+            const date = new Date(period + 'T00:00:00');
+            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        } else if (granularity === 'week') {
+            // "2025-W48" -> "Nov 25-Dec 1"
+            const match = period.match(/^(\d{4})-W(\d{2})$/);
+            if (match) {
+                const year = parseInt(match[1]);
+                const week = parseInt(match[2]);
+                const startDate = getDateOfISOWeek(week, year);
+                const endDate = new Date(startDate);
+                endDate.setDate(endDate.getDate() + 6);
+                const startStr = startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                const endStr = endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                return `${startStr}-${endStr}`;
+            }
+            return period;
+        } else if (granularity === 'month') {
+            // "2025-11" -> "Nov 2025"
+            const [year, month] = period.split('-');
+            const date = new Date(parseInt(year), parseInt(month) - 1, 1);
+            return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+        } else if (granularity === 'quarter') {
+            // "2025-Q4" -> "Q4 2025"
+            return period.replace(/(\d{4})-Q(\d)/, 'Q$2 $1');
+        } else if (granularity === 'year') {
+            return period;
+        }
+    } catch (e) {
+        console.error('Error formatting period:', e);
+    }
+    return period;
+}
+
+/**
+ * Get the start date of an ISO week
+ */
+function getDateOfISOWeek(week, year) {
+    const simple = new Date(year, 0, 1 + (week - 1) * 7);
+    const dayOfWeek = simple.getDay();
+    const ISOweekStart = simple;
+    if (dayOfWeek <= 4) {
+        ISOweekStart.setDate(simple.getDate() - simple.getDay() + 1);
+    } else {
+        ISOweekStart.setDate(simple.getDate() + 8 - simple.getDay());
+    }
+    return ISOweekStart;
+}
+
+// Save conversion event preferences to server
+async function saveConversionPreferences() {
+    // Use the selectedConversionEvents array (managed by the global filter bar checkboxes)
+    try {
+        const response = await fetch(`/dashboard/api/preferences/{{ app_slug }}/conversion-events/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify({ conversion_events: selectedConversionEvents })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            selectedConversionEvents = data.conversion_events;
+            showToast('Conversion event preferences saved!', 'success');
+            
+            // Clear cache for conversion-dependent tabs
+            if (StatsApp.tabDataCache) {
+                delete StatsApp.tabDataCache['conversion'];
+                delete StatsApp.tabDataCache['behavior'];
+                delete StatsApp.tabDataCache['segments'];
+            }
+            
+            // Reload current tab if it depends on conversion events
+            const currentTab = StatsApp.currentTab || 'overview';
+            if (['conversion', 'behavior', 'segments'].includes(currentTab)) {
+                loadTabData(currentTab);
+            }
+        } else {
+            showToast('Error saving preferences: ' + (data.error || 'Unknown error'), 'error');
+        }
+    } catch (error) {
+        console.error('Error saving preferences:', error);
+        showToast('Error saving preferences: ' + error.message, 'error');
+    }
+}
+
+// getCsrfToken is now in stats/utils.js
+// Note: Chart functions (createEventsOverTimeChart, createDAUChart, createEventsTypeChart, createCountriesChart) are now in charts.js
+// Note: Table functions (createDailyTable, renderPeriodDetailsTable, sortPeriodDetails) are now in tables.js
+// Note: Globe functions (initializeGlobe, globeZoomIn, globeZoomOut, toggleGlobeFullscreen, exitGlobeFullscreen, handleGlobeEscape) are now in globe.js
+// Note: Collapsible functions (toggleCollapsible, restoreCollapsibleStates) are now in core.js
+
+// === END OF INLINE SCRIPT - All major functions have been moved to modules ===
+
+// === DELETE EVENTS MODAL ===
+let _delPreviewedCount = null;
+
+function showDeleteEventsModal() {
+    const modal = document.getElementById('deleteEventsModal');
+    modal.style.display = 'flex';
+    _delPreviewedCount = null;
+    // Reset fields
+    document.getElementById('delDateFrom').value = '';
+    document.getElementById('delDateTo').value = '';
+    document.getElementById('delPlatform').value = '';
+    document.getElementById('delCountry').value = '';
+    document.getElementById('delEventName').value = '';
+    document.getElementById('delPreviewResult').classList.add('hidden');
+    document.getElementById('delConfirmSection').classList.add('hidden');
+    document.getElementById('delConfirmInput').value = '';
+    document.getElementById('delDeleteBtn').disabled = true;
+    document.getElementById('delError').classList.add('hidden');
+    document.getElementById('delSuccess').classList.add('hidden');
+    // Load filter options
+    _loadDeleteFilterOptions();
+}
+
+function hideDeleteEventsModal() {
+    document.getElementById('deleteEventsModal').style.display = 'none';
+}
+
+// Close modal on backdrop click
+document.getElementById('deleteEventsModal')?.addEventListener('click', function(e) {
+    if (e.target === this) hideDeleteEventsModal();
+});
+
+async function _loadDeleteFilterOptions() {
+    try {
+        const resp = await fetch(`/api/v1/events/filter-options/`, {
+            headers: { 'X-App-Key': '{{ app_key }}' }
+        });
+        if (!resp.ok) return;
+        const data = await resp.json();
+        const filters = data.filters || {};
+
+        const platformSel = document.getElementById('delPlatform');
+        platformSel.innerHTML = '<option value="">All</option>';
+        (filters.platforms || []).forEach(p => {
+            platformSel.innerHTML += `<option value="${p}">${p}</option>`;
+        });
+
+        const countrySel = document.getElementById('delCountry');
+        countrySel.innerHTML = '<option value="">All</option>';
+        const _countryNames = (() => { try { return new Intl.DisplayNames(['en'], { type: 'region' }); } catch { return null; } })();
+        (filters.countries || []).forEach(c => {
+            const name = _countryNames ? (_countryNames.of(c.toUpperCase()) || c) : c;
+            countrySel.innerHTML += `<option value="${c}">${name} (${c})</option>`;
+        });
+
+        const eventSel = document.getElementById('delEventName');
+        eventSel.innerHTML = '<option value="">All</option>';
+        (filters.event_names || []).forEach(e => {
+            eventSel.innerHTML += `<option value="${e}">${e}</option>`;
+        });
+    } catch (err) {
+        console.error('Failed to load filter options for deletion:', err);
+    }
+}
+
+function _getDelFilters() {
+    const body = {
+        date_from: document.getElementById('delDateFrom').value,
+        date_to: document.getElementById('delDateTo').value,
+    };
+    const platform = document.getElementById('delPlatform').value;
+    if (platform) body.platform = platform;
+    const country = document.getElementById('delCountry').value;
+    if (country) body.country = country;
+    const eventName = document.getElementById('delEventName').value;
+    if (eventName) body.event_name = eventName;
+    return body;
+}
+
+async function previewDeleteEvents() {
+    const errEl = document.getElementById('delError');
+    errEl.classList.add('hidden');
+    document.getElementById('delSuccess').classList.add('hidden');
+    document.getElementById('delPreviewResult').classList.add('hidden');
+    document.getElementById('delConfirmSection').classList.add('hidden');
+    document.getElementById('delDeleteBtn').disabled = true;
+    document.getElementById('delConfirmInput').value = '';
+    _delPreviewedCount = null;
+
+    const body = _getDelFilters();
+    if (!body.date_from || !body.date_to) {
+        errEl.textContent = 'Please select both a start and end date.';
+        errEl.classList.remove('hidden');
+        return;
+    }
+
+    const btn = document.getElementById('delPreviewBtn');
+    btn.disabled = true;
+    btn.textContent = 'Counting...';
+
+    try {
+        const resp = await fetch(`/dashboard/api/apps/{{ app_slug }}/events/delete/preview/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken(),
+            },
+            body: JSON.stringify(body),
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+            errEl.textContent = data.error || 'Preview failed.';
+            errEl.classList.remove('hidden');
+            return;
+        }
+        _delPreviewedCount = data.count;
+        document.getElementById('delPreviewCount').textContent = data.count.toLocaleString();
+        document.getElementById('delExpectedCount').textContent = data.count.toLocaleString();
+        document.getElementById('delPreviewResult').classList.remove('hidden');
+        if (data.count > 0) {
+            document.getElementById('delConfirmSection').classList.remove('hidden');
+        }
+    } catch (err) {
+        errEl.textContent = 'Network error. Please try again.';
+        errEl.classList.remove('hidden');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Preview Matching Events';
+    }
+}
+
+function validateDeleteEventsConfirmation() {
+    const input = document.getElementById('delConfirmInput').value.trim();
+    const expected = String(_delPreviewedCount);
+    document.getElementById('delDeleteBtn').disabled = (input !== expected);
+}
+
+async function executeDeleteEvents() {
+    const errEl = document.getElementById('delError');
+    const successEl = document.getElementById('delSuccess');
+    errEl.classList.add('hidden');
+    successEl.classList.add('hidden');
+
+    const body = _getDelFilters();
+    body.confirmation_count = _delPreviewedCount;
+
+    const btn = document.getElementById('delDeleteBtn');
+    btn.disabled = true;
+    btn.textContent = 'Deleting...';
+
+    try {
+        const resp = await fetch(`/dashboard/api/apps/{{ app_slug }}/events/delete/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken(),
+            },
+            body: JSON.stringify(body),
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+            errEl.textContent = data.error || 'Deletion failed.';
+            errEl.classList.remove('hidden');
+            btn.disabled = false;
+            btn.textContent = 'Delete Events';
+            return;
+        }
+        successEl.textContent = `${data.deleted.toLocaleString()} events permanently deleted.`;
+        successEl.classList.remove('hidden');
+        document.getElementById('delPreviewResult').classList.add('hidden');
+        document.getElementById('delConfirmSection').classList.add('hidden');
+        document.getElementById('delConfirmInput').value = '';
+        btn.textContent = 'Delete Events';
+        // Refresh charts after deletion
+        setTimeout(() => {
+            hideDeleteEventsModal();
+            if (typeof loadAllData === 'function') loadAllData();
+        }, 1500);
+    } catch (err) {
+        errEl.textContent = 'Network error. Please try again.';
+        errEl.classList.remove('hidden');
+        btn.disabled = false;
+        btn.textContent = 'Delete Events';
+    }
+}
+</script>
+{% endif %}
+{% endblock %}

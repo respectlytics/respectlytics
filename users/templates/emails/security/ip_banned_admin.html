@@ -1,0 +1,29 @@
+{% extends "emails/base_email.html" %}
+{% block title %}IP Banned - Security Alert{% endblock %}
+
+{% block content %}
+<h1>IP Address Banned</h1>
+
+<div class="alert alert-warning">
+    <p style="margin: 0;"><strong>An IP address has been banned for suspicious activity.</strong></p>
+</div>
+
+<div class="card">
+    <p><strong>IP Address:</strong> {{ ip_address }}</p>
+    <p><strong>Reason:</strong> {{ reason }}</p>
+    {% if details %}<p><strong>Details:</strong> {{ details }}</p>{% endif %}
+    <p><strong>Ban Duration:</strong> {{ ban_duration }}</p>
+    <p class="mb-0"><strong>Time:</strong> {{ timestamp|date:"F j, Y, g:i a" }} UTC</p>
+</div>
+
+{% if reason == 'attack_path' %}
+<p>This IP was immediately banned for probing a known attack path (e.g., /wp-admin, /.env, /phpmyadmin).</p>
+{% elif reason == 'excessive_404s' %}
+<p>This IP was banned for generating too many 404 errors, indicating path scanning or enumeration attempts.</p>
+{% endif %}
+
+<p class="text-muted">
+    The IP will be automatically unbanned after {{ ban_duration }}.
+    No action is required unless you see repeated patterns from the same IP range.
+</p>
+{% endblock %}

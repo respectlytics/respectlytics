@@ -1,0 +1,164 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Respectlytics - Privacy-First Analytics{% endblock %}</title>
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="{% static 'favicon/favicon.ico' %}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{% static 'favicon/favicon-32x32.png' %}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{% static 'favicon/favicon-16x16.png' %}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{% static 'favicon/apple-touch-icon.png' %}">
+    <link rel="manifest" href="{% static 'favicon/site.webmanifest' %}">
+    <meta name="theme-color" content="#5856d6">
+    <meta name="application-name" content="Respectlytics">
+
+    <!-- Tailwind CSS -->
+    <link rel="stylesheet" href="{% static 'css/tailwind.css' %}">
+    <link rel="stylesheet" href="{% static 'css/base.css' %}">
+
+    {% block extra_head %}{% endblock %}
+
+    <style>
+        :root {
+            --primary-700: #4338CA;
+            --primary-600: #4F46E5;
+            --primary-500: #6366F1;
+            --primary-400: #818CF8;
+            --primary-100: #E0E7FF;
+            --primary-50: #EEF2FF;
+            --secondary-600: #7C3AED;
+            --secondary-500: #8B5CF6;
+            --secondary-400: #A78BFA;
+            --gray-900: #111827;
+            --gray-800: #1F2937;
+            --gray-700: #374151;
+            --gray-600: #4B5563;
+            --gray-500: #6B7280;
+            --gray-400: #9CA3AF;
+            --gray-300: #D1D5DB;
+            --gray-200: #E5E7EB;
+            --gray-100: #F3F4F6;
+            --gray-50: #F9FAFB;
+            --white: #FFFFFF;
+            --success-600: #059669;
+            --success-500: #10B981;
+            --success-100: #D1FAE5;
+            --success-50: #ECFDF5;
+            --warning-600: #D97706;
+            --warning-500: #F59E0B;
+            --warning-100: #FEF3C7;
+            --error-600: #DC2626;
+            --error-500: #EF4444;
+            --error-100: #FEE2E2;
+            --info-500: #3B82F6;
+            --space-1: 0.25rem;
+            --space-2: 0.5rem;
+            --space-3: 0.75rem;
+            --space-4: 1rem;
+            --space-5: 1.25rem;
+            --space-6: 1.5rem;
+            --space-8: 2rem;
+            --space-10: 2.5rem;
+            --space-12: 3rem;
+            --space-16: 4rem;
+            --space-20: 5rem;
+            --radius-sm: 0.375rem;
+            --radius-md: 0.5rem;
+            --radius-lg: 0.75rem;
+            --radius-xl: 1rem;
+            --radius-2xl: 1.5rem;
+        }
+
+        .btn-gradient {
+            background: linear-gradient(135deg, #5856d6 0%, #7c3aed 100%);
+        }
+        .btn-gradient:hover {
+            box-shadow: 0 8px 20px rgba(88, 86, 214, 0.4);
+        }
+
+        html {
+            scroll-behavior: smooth;
+            font-size: 15px;
+        }
+
+        body {
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="font-body leading-relaxed text-slate-400 bg-[#0f172a]">
+    <header class="bg-[#1e293b] border-b border-white/10 py-3 md:py-4 sticky top-0 z-50">
+        <div class="{% block navbar_container_class %}max-w-7xl mx-auto{% endblock %} px-4 md:px-6 lg:px-12 flex items-center justify-between">
+            <!-- Logo -->
+            <a href="{% url 'dashboard:main' %}" class="flex items-center gap-2 md:gap-3 no-underline group flex-shrink-0">
+                <img src="{% static 'images/respectlytics.png' %}" alt="Respectlytics" class="w-8 h-8 md:w-10 md:h-10 object-contain rounded-lg shadow-md shadow-purple-500/10 group-hover:shadow-purple-500/20 transition-shadow duration-200">
+                <span class="flex text-lg md:text-xl font-black tracking-tight">
+                    <span class="text-slate-50">Respect</span>
+                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-brand-400 to-purple-400">lytics</span>
+                </span>
+            </a>
+
+            <!-- Nav -->
+            <nav class="flex items-center gap-1 md:gap-2">
+                {% if user.is_authenticated %}
+                <a href="{% url 'dashboard:main' %}" class="text-slate-300 no-underline py-2 px-3 rounded-lg transition-all duration-200 font-medium text-sm hover:bg-slate-700/50 hover:text-brand-400 {% if '/dashboard/' in request.path %}bg-slate-700/50 text-brand-400{% endif %}">
+                    Dashboard
+                </a>
+                <a href="{% url 'account_profile' %}" class="text-slate-300 no-underline py-2 px-3 rounded-lg transition-all duration-200 font-medium text-sm hover:bg-slate-700/50 hover:text-brand-400 {% if '/account/' in request.path %}bg-slate-700/50 text-brand-400{% endif %}">
+                    Account
+                </a>
+                <a href="{% url 'logout' %}" class="text-slate-400 no-underline py-2 px-3 rounded-lg transition-all duration-200 font-medium text-sm hover:bg-slate-700/50 hover:text-red-400">
+                    Sign Out
+                </a>
+                {% else %}
+                <a href="{% url 'login' %}" class="text-slate-300 no-underline py-2 px-3 rounded-lg transition-all duration-200 font-medium text-sm hover:bg-slate-700/50 hover:text-brand-400">
+                    Sign In
+                </a>
+                <a href="{% url 'register' %}" class="px-4 py-2 btn-gradient text-white text-sm font-semibold rounded-lg hover:shadow-lg transition-all duration-200">
+                    Get Started
+                </a>
+                {% endif %}
+            </nav>
+        </div>
+    </header>
+
+    <!-- Messages -->
+    {% if messages %}
+    <div class="max-w-7xl mx-auto px-4 md:px-6 lg:px-12 pt-3">
+        {% for message in messages %}
+        <div class="mb-2 p-3 rounded-lg text-sm {% if message.tags == 'success' %}bg-emerald-500/10 border border-emerald-500/20 text-emerald-400{% elif message.tags == 'error' %}bg-red-500/10 border border-red-500/20 text-red-400{% elif message.tags == 'warning' %}bg-amber-500/10 border border-amber-500/20 text-amber-400{% else %}bg-blue-500/10 border border-blue-500/20 text-blue-400{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% block content %}{% endblock %}
+
+    {% block extra_js %}{% endblock %}
+
+    <!-- CSRF Token for AJAX -->
+    <script>
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        const csrftoken = getCookie('csrftoken');
+    </script>
+</body>
+</html>
