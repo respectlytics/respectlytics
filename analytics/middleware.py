@@ -215,22 +215,26 @@ class SecurityMiddleware(MiddlewareMixin):
         SEC-013: Track 404 attempts and ban if threshold exceeded.
         
         Returns True if IP was banned, False otherwise.
+        Fails open if cache/DB is unreachable.
         """
-        cache_key = f'404_count:{ip}'
-        count = cache.get(cache_key, 0) + 1
-        cache.set(cache_key, count, SCAN_WINDOW_SECONDS)
-        
-        logger.info(f"[SECURITY] 404 attempt #{count} from {ip}: {path}")
-        
-        if count >= MAX_SUSPICIOUS_ATTEMPTS:
-            # Ban the IP
-            cache.set(f'banned:{ip}', True, SCAN_BAN_DURATION)
-            logger.warning(f"[SECURITY] IP {ip} banned after {count} 404s in {SCAN_WINDOW_SECONDS}s")
+        try:
+            cache_key = f'404_count:{ip}'
+            count = cache.get(cache_key, 0) + 1
+            cache.set(cache_key, count, SCAN_WINDOW_SECONDS)
             
-            # SEC-007: IP banned alert emails disabled (too noisy in production)
-            # Bans are still logged above - check logs/security.log
+            logger.info(f"[SECURITY] 404 attempt #{count} from {ip}: {path}")
             
-            return True
+            if count >= MAX_SUSPICIOUS_ATTEMPTS:
+                # Ban the IP
+                cache.set(f'banned:{ip}', True, SCAN_BAN_DURATION)
+                logger.warning(f"[SECURITY] IP {ip} banned after {count} 404s in {SCAN_WINDOW_SECONDS}s")
+                
+                # SEC-007: IP banned alert emails disabled (too noisy in production)
+                # Bans are still logged above - check logs/security.log
+                
+                return True
+        except Exception:
+            logger.warning(f"[SECURITY] Cache unavailable during 404 tracking for IP: {ip} \u2014 failing open")
         return False
     
     def _track_attack_path(self, ip, path):
@@ -242,21 +246,25 @@ class SecurityMiddleware(MiddlewareMixin):
         catching attackers who specifically probe for vulnerabilities.
         
         Returns True if IP was banned, False otherwise.
+        Fails open if cache/DB is unreachable.
         """
-        cache_key = f'attack_path_count:{ip}'
-        count = cache.get(cache_key, 0) + 1
-        cache.set(cache_key, count, SCAN_WINDOW_SECONDS)
-        
-        logger.warning(f"[SECURITY] Attack path probe #{count} from {ip}: {path}")
-        
-        if count >= MAX_SUSPICIOUS_ATTEMPTS:
-            # Ban the IP
-            cache.set(f'banned:{ip}', True, SCAN_BAN_DURATION)
-            logger.error(f"[SECURITY] IP {ip} banned after {count} attack path probes")
+        try:
+            cache_key = f'attack_path_count:{ip}'
+            count = cache.get(cache_key, 0) + 1
+            cache.set(cache_key, count, SCAN_WINDOW_SECONDS)
             
-            # SEC-007: IP banned alert emails disabled (too noisy in production)
+            logger.warning(f"[SECURITY] Attack path probe #{count} from {ip}: {path}")
             
-            return True
+            if count >= MAX_SUSPICIOUS_ATTEMPTS:
+                # Ban the IP
+                cache.set(f'banned:{ip}', True, SCAN_BAN_DURATION)
+                logger.error(f"[SECURITY] IP {ip} banned after {count} attack path probes")
+                
+                # SEC-007: IP banned alert emails disabled (too noisy in production)
+                
+                return True
+        except Exception:
+            logger.warning(f"[SECURITY] Cache unavailable during attack path tracking for IP: {ip} \u2014 failing open")
         return False
     
     def _blocked_response(self, request, ip):

@@ -61,7 +61,7 @@ X-App-Key: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 
 ## SDKs
 
-Official SDKs handle authentication, batching, and offline support automatically:
+Official SDKs handle authentication, batching, and RAM-only event queue automatically:
 - [Swift (iOS)](https://github.com/nickloheden/respectlytics-swift)
 - [Kotlin (Android)](https://github.com/nickloheden/respectlytics-kotlin)
 - [Flutter](https://github.com/nickloheden/respectlytics-flutter)

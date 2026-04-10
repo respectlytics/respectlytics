@@ -208,10 +208,10 @@ Official SDKs for mobile platforms:
 
 | Platform | Repository |
 |----------|-----------|
-| Swift (iOS/macOS) | [respectlytics-swift](https://github.com/nickloheden/respectlytics-swift) |
-| Flutter | [respectlytics-flutter](https://github.com/nickloheden/respectlytics-flutter) |
-| React Native | [respectlytics-react-native](https://github.com/nickloheden/respectlytics-react-native) |
-| Kotlin (Android) | [respectlytics-kotlin](https://github.com/nickloheden/respectlytics-kotlin) |
+| Swift (iOS/macOS) | [respectlytics-swift](https://github.com/respectlytics/respectlytics-swift) |
+| Flutter | [respectlytics-flutter](https://github.com/respectlytics/respectlytics-flutter) |
+| React Native | [respectlytics-react-native](https://github.com/respectlytics/respectlytics-react-native) |
+| Kotlin (Android) | [respectlytics-kotlin](https://github.com/respectlytics/respectlytics-kotlin) |
 
 SDK documentation: [https://respectlytics.com/sdk/](https://respectlytics.com/sdk/)
 

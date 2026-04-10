@@ -46,18 +46,24 @@ def track_failed_auth_attempt(request, app_key=None):
     """
     Track failed authentication attempts to detect brute force attacks.
     Blocks after 10 failed attempts in 15 minutes.
+    
+    Fails open: if the cache/DB is unreachable (e.g. during maintenance),
+    logs a warning and returns False rather than crashing the request.
     """
     ip = get_client_ip(request)
     cache_key = f'failed_auth:{ip}'
     
-    attempts = cache.get(cache_key, 0)
-    attempts += 1
-    cache.set(cache_key, attempts, 900)  # 15 minutes
-    
-    if attempts >= 10:
-        logger.warning(f"[SECURITY] Multiple failed auth attempts from IP: {ip}, app_key: {app_key}")
-        cache.set(f'banned:{ip}', True, 3600)  # Ban for 1 hour
-        return True
+    try:
+        attempts = cache.get(cache_key, 0)
+        attempts += 1
+        cache.set(cache_key, attempts, 900)  # 15 minutes
+        
+        if attempts >= 10:
+            logger.warning(f"[SECURITY] Multiple failed auth attempts from IP: {ip}, app_key: {app_key}")
+            cache.set(f'banned:{ip}', True, 3600)  # Ban for 1 hour
+            return True
+    except Exception:
+        logger.warning(f"[SECURITY] Cache unavailable during auth tracking for IP: {ip} — failing open")
     
     return False
 
@@ -68,6 +74,9 @@ def is_ip_banned(request):
     
     In DEBUG mode, localhost (127.0.0.1) is never banned to allow
     SDK integration testing without getting locked out.
+    
+    Fails open: if the cache/DB is unreachable (e.g. during maintenance),
+    logs a warning and returns False rather than crashing the request.
     """
     ip = get_client_ip(request)
     
@@ -75,7 +84,11 @@ def is_ip_banned(request):
     if settings.DEBUG and ip in ('127.0.0.1', 'localhost', '::1'):
         return False
     
-    return cache.get(f'banned:{ip}', False)
+    try:
+        return cache.get(f'banned:{ip}', False)
+    except Exception:
+        logger.warning(f"[SECURITY] Cache unavailable checking ban for IP: {ip} — failing open")
+        return False
 
 
 def get_client_ip(request):
