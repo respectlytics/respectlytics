@@ -10,6 +10,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+from typing import Any
 import environ
 import sys
 
@@ -17,7 +18,7 @@ import sys
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Initialize environ
-env = environ.Env(
+env: Any = environ.Env(
     DEBUG=(bool, True),
     REGISTRATION_CLOSED=(bool, False),
 )
@@ -154,7 +155,7 @@ if env.bool('DATABASE_SSL', default=False):
     }
 
 # Connection resilience
-DATABASES['default']['CONN_MAX_AGE'] = 600  # 10 minutes
+DATABASES['default']['CONN_MAX_AGE'] = 60  # 60 seconds
 DATABASES['default']['CONN_HEALTH_CHECKS'] = True
 
 # Test database
