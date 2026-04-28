@@ -44,6 +44,7 @@ REGISTRATION_CLOSED = env('REGISTRATION_CLOSED')
 SECRET_KEY = env('SECRET_KEY', default='change-me-in-production-generate-a-random-string')
 
 DEBUG = env('DEBUG')
+TESTING = 'test' in sys.argv or 'pytest' in sys.modules
 
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['localhost', '127.0.0.1', '0.0.0.0'])
 
@@ -136,7 +137,13 @@ WSGI_APPLICATION = 'core.wsgi.application'
 # PostgreSQL is REQUIRED. We use django.contrib.postgres aggregates (ArrayAgg).
 # SQLite is NOT supported and will crash.
 
-if DEBUG:
+TEST_DATABASE_URL = env('DATABASE_URL_TEST', default=None)
+
+if TESTING and TEST_DATABASE_URL:
+    DATABASES = {
+        'default': env.db('DATABASE_URL_TEST')
+    }
+elif DEBUG:
     DATABASES = {
         'default': env.db('DATABASE_URL_DEV', default=env('DATABASE_URL', default='postgres://localhost/respectlytics'))
     }
@@ -151,15 +158,23 @@ else:
 if env.bool('DATABASE_SSL', default=False):
     DATABASES['default']['OPTIONS'] = {
         'sslmode': 'require',
-        'options': '-c search_path=public',
     }
+
+    _db_port = str(DATABASES['default'].get('PORT', ''))
+    _using_digitalocean_pool = _db_port == '25061'
+    if not _using_digitalocean_pool:
+        DATABASES['default']['OPTIONS']['options'] = '-c search_path=public'
 
 # Connection resilience
 DATABASES['default']['CONN_MAX_AGE'] = 60  # 60 seconds
 DATABASES['default']['CONN_HEALTH_CHECKS'] = True
 
+# Required when using transaction-mode PostgreSQL connection pools.
+# Export views use QuerySet.iterator(), and server-side cursors cannot safely
+# span pooled transactions.
+DATABASES['default']['DISABLE_SERVER_SIDE_CURSORS'] = True
+
 # Test database
-TEST_DATABASE_URL = env('DATABASE_URL_TEST', default=None)
 if TEST_DATABASE_URL:
     DATABASES['default']['TEST'] = {
         'NAME': env.db('DATABASE_URL_TEST')['NAME'],
