@@ -29,6 +29,11 @@ class App(models.Model):
         if not self.slug:
             from django.utils.text import slugify
             base_slug = slugify(self.name)
+            if not base_slug:
+                # slugify() strips non-ASCII characters, so names written
+                # entirely in e.g. Korean produce an empty slug, which the
+                # <slug:...> URL converter cannot reverse (500 on /dashboard/).
+                base_slug = f"app-{str(self.id)[:8]}"
             slug = base_slug
             counter = 1
             while App.objects.filter(slug=slug).exists():

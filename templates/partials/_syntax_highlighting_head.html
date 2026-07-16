@@ -1,0 +1,65 @@
+{% comment %}
+Prism.js — head assets (theme + token-color overrides).
+
+Usage in any template that contains <pre><code class="language-X"> blocks:
+
+    {% block extra_head %}
+        {{ block.super }}
+        {% include "partials/_syntax_highlighting_head.html" %}
+    {% endblock %}
+
+    {% block extra_js %}
+        {{ block.super }}
+        {% include "partials/_syntax_highlighting_js.html" %}
+    {% endblock %}
+
+See .github/instructions/code-syntax-highlighting.instructions.md for the
+canonical wiring + the supported language list. Token colors are tuned to
+fit the brand palette (purple primary + emerald + amber accents).
+{% endcomment %}
+<link href="https://cdnjs.cloudflare.com/ajax/libs/prism-themes/1.9.0/prism-one-dark.min.css" rel="stylesheet">
+<style>
+    /* Make Prism's container transparent so our card pattern's slate-800 + border-white/10 shows through. */
+    pre[class*="language-"] {
+        background: transparent !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        text-shadow: none !important;
+        font-size: 0.875rem;
+        line-height: 1.6;
+    }
+    code[class*="language-"],
+    pre[class*="language-"] {
+        text-shadow: none !important;
+        font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+        color: #e2e8f0; /* slate-200 base */
+    }
+    /* Token palette — aligned with the brand purple primary + emerald accents. */
+    .token.comment,
+    .token.prolog,
+    .token.doctype,
+    .token.cdata { color: #64748b; font-style: italic; }
+    .token.punctuation { color: #94a3b8; }
+    .token.property,
+    .token.tag,
+    .token.boolean,
+    .token.number,
+    .token.constant,
+    .token.symbol,
+    .token.deleted { color: #c4b5fd; }
+    .token.selector,
+    .token.attr-name,
+    .token.string,
+    .token.char,
+    .token.builtin,
+    .token.inserted { color: #6ee7b7; }
+    .token.atrule,
+    .token.attr-value,
+    .token.keyword,
+    .token.operator { color: #c084fc; }
+    .token.function,
+    .token.class-name { color: #fde68a; }
+    .token.regex,
+    .token.important,
+    .token.variable { color: #fcd34d; }
+</style>

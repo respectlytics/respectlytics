@@ -7,6 +7,8 @@ module.exports = {
     './website/templates/**/*.html',
     './billing/templates/**/*.html',
     './analytics/templates/**/*.html',
+    './tools/templates/**/*.html',
+    './pseo/templates/**/*.html',
     './static/js/**/*.js',
   ],
   theme: {

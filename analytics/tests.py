@@ -1,4 +1,5 @@
 from django.test import TestCase
+from django.urls import reverse
 from django.utils import timezone
 from django.contrib.auth.models import User
 from rest_framework.test import APITestCase
@@ -28,6 +29,28 @@ class AppModelTestCase(TestCase):
         self.assertIn("My App", str(app))
         self.assertIn(str(app.id), str(app))
     
+    def test_slug_generated_from_name(self):
+        """Test slug is generated from an ASCII name"""
+        app = App.objects.create(name="My Test App", user=self.user)
+        self.assertEqual(app.slug, "my-test-app")
+
+    def test_non_ascii_only_name_gets_fallback_slug(self):
+        """Test a name that slugifies to '' (e.g. Korean) gets a usable fallback slug"""
+        app = App.objects.create(name="통계앱", user=self.user)
+        self.assertEqual(app.slug, f"app-{str(app.id)[:8]}")
+        # The slug must be reversible by the <slug:app_slug> URL pattern
+        # (an empty slug crashed /dashboard/ with NoReverseMatch)
+        url = reverse('dashboard:stats', args=[app.slug])
+        self.assertIn(app.slug, url)
+
+    def test_multiple_non_ascii_apps_get_distinct_slugs(self):
+        """Test several non-ASCII-named apps all get non-empty, unique slugs"""
+        first = App.objects.create(name="통계앱", user=self.user)
+        second = App.objects.create(name="분석기", user=self.user)
+        self.assertTrue(first.slug)
+        self.assertTrue(second.slug)
+        self.assertNotEqual(first.slug, second.slug)
+
     def test_regenerate_key_preserves_events(self):
         """Test that regenerating API key preserves historical events"""
         app = App.objects.create(name="Test App", user=self.user)
