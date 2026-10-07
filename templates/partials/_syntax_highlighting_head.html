@@ -1,4 +1,4 @@
-{% comment %}
+{% load static %}{% comment %}
 Prism.js — head assets (theme + token-color overrides).
 
 Usage in any template that contains <pre><code class="language-X"> blocks:
@@ -17,7 +17,7 @@ See .github/instructions/code-syntax-highlighting.instructions.md for the
 canonical wiring + the supported language list. Token colors are tuned to
 fit the brand palette (purple primary + emerald + amber accents).
 {% endcomment %}
-<link href="https://cdnjs.cloudflare.com/ajax/libs/prism-themes/1.9.0/prism-one-dark.min.css" rel="stylesheet">
+<link href="{% static 'vendor/prism-themes/prism-one-dark.min.css' %}" rel="stylesheet">
 <style>
     /* Make Prism's container transparent so our card pattern's slate-800 + border-white/10 shows through. */
     pre[class*="language-"] {

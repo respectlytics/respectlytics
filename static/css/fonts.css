@@ -1,0 +1,12 @@
+/* Schibsted Grotesk, the one typeface of every Loheden site (owner's rule,
+   2026-10-07). The authors' own release 1.100 files, unmodified, served from
+   this domain; licence: static/fonts/schibsted-grotesk/OFL.txt.
+   Only the weights the templates use are declared and shipped.
+   Guarded by website/test_fonts.py. */
+@font-face { font-family: "Schibsted Grotesk"; font-style: normal; font-weight: 400; font-display: swap; src: url("../fonts/schibsted-grotesk/SchibstedGrotesk-Regular.woff2") format("woff2"); }
+@font-face { font-family: "Schibsted Grotesk"; font-style: italic; font-weight: 400; font-display: swap; src: url("../fonts/schibsted-grotesk/SchibstedGrotesk-Italic.woff2") format("woff2"); }
+@font-face { font-family: "Schibsted Grotesk"; font-style: normal; font-weight: 500; font-display: swap; src: url("../fonts/schibsted-grotesk/SchibstedGrotesk-Medium.woff2") format("woff2"); }
+@font-face { font-family: "Schibsted Grotesk"; font-style: normal; font-weight: 600; font-display: swap; src: url("../fonts/schibsted-grotesk/SchibstedGrotesk-SemiBold.woff2") format("woff2"); }
+@font-face { font-family: "Schibsted Grotesk"; font-style: normal; font-weight: 700; font-display: swap; src: url("../fonts/schibsted-grotesk/SchibstedGrotesk-Bold.woff2") format("woff2"); }
+@font-face { font-family: "Schibsted Grotesk"; font-style: normal; font-weight: 800; font-display: swap; src: url("../fonts/schibsted-grotesk/SchibstedGrotesk-ExtraBold.woff2") format("woff2"); }
+@font-face { font-family: "Schibsted Grotesk"; font-style: normal; font-weight: 900; font-display: swap; src: url("../fonts/schibsted-grotesk/SchibstedGrotesk-Black.woff2") format("woff2"); }

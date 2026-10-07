@@ -281,10 +281,11 @@ class SecurityMiddleware(MiddlewareMixin):
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex, nofollow">
     <title>Blocked - Respectlytics</title>
+    <link rel="stylesheet" href="/static/css/fonts.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-family: 'Schibsted Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
             min-height: 100vh;
             display: flex;
@@ -459,23 +460,29 @@ class CSPMiddleware(MiddlewareMixin):
     Only active in production (when DEBUG=False).
     """
     
-    # CDN domains required for the application
+    # Third-party origins the browser is allowed to reach.
+    #
+    # No asset CDN appears here. Every front-end library is vendored into
+    # static/vendor/ and served from this domain, so jsDelivr, cdnjs and
+    # cdn.redoc.ly were removed: an asset fetched from someone else's CDN hands
+    # that CDN the visitor's IP, User-Agent and Referer before a consent banner
+    # can render, and there is no Art. 28 processor agreement covering it.
+    # Keeping them listed here would let a stray CDN <script> load unnoticed.
+    #
+    # What remains is functional third-party *services*, not assets: Stripe for
+    # payment, Turnstile for the CAPTCHA challenge, and Simple Analytics, which
+    # is the one allowed exception - cookieless, collects no personal data, and
+    # self-updates, so it cannot be pinned and vendored.
     CDN_SCRIPTS = [
-        'https://cdn.jsdelivr.net',      # Chart.js, Flatpickr
-        'https://cdnjs.cloudflare.com',  # Prism.js syntax highlighting
-        'https://cdn.redoc.ly',          # ReDoc API documentation
         'https://scripts.simpleanalyticscdn.com',  # Simple Analytics
         'https://challenges.cloudflare.com',  # Cloudflare Turnstile
     ]
-    
-    CDN_STYLES = [
-        'https://cdn.jsdelivr.net',      # Flatpickr styles
-    ]
-    
+
+    CDN_STYLES = []
+
     CDN_CONNECT = [
         'https://api.stripe.com',        # Stripe API
         'https://simpleanalytics.com',   # Simple Analytics
-        'https://cdn.redoc.ly',          # ReDoc runtime assets
     ]
     
     CDN_FRAMES = [
@@ -493,16 +500,21 @@ class CSPMiddleware(MiddlewareMixin):
         if response.streaming:
             return response
         
-        # Build CSP header
+        # Build CSP header. Sources are joined through a helper so that an empty
+        # allow-list (style-src, now that no stylesheet comes from anywhere but
+        # this domain) collapses cleanly instead of leaving a double space.
+        def directive(name, *sources):
+            return " ".join([name, *(s for s in sources if s)])
+
         csp_directives = [
             "default-src 'self'",
-            f"script-src 'self' {' '.join(self.CDN_SCRIPTS)} 'unsafe-inline'",
-            f"style-src 'self' {' '.join(self.CDN_STYLES)} 'unsafe-inline'",
+            directive("script-src", "'self'", *self.CDN_SCRIPTS, "'unsafe-inline'"),
+            directive("style-src", "'self'", *self.CDN_STYLES, "'unsafe-inline'"),
             "img-src 'self' data: https:",
             "font-src 'self' data:",
-            f"connect-src 'self' {' '.join(self.CDN_CONNECT)}",
+            directive("connect-src", "'self'", *self.CDN_CONNECT),
             "worker-src 'self' blob:",
-            f"frame-src 'self' {' '.join(self.CDN_FRAMES)}",
+            directive("frame-src", "'self'", *self.CDN_FRAMES),
             "object-src 'none'",
             "base-uri 'self'",
             "form-action 'self'",

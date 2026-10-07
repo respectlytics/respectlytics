@@ -30,8 +30,15 @@
   // FONT CONFIGURATION
   // ============================================
   
-  Chart.defaults.font.family = "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', 'Roboto', sans-serif";
+  // Schibsted Grotesk, the site's typeface (static/css/fonts.css). A chart
+  // drawn before the font arrived is drawn again once it has.
+  Chart.defaults.font.family = "'Schibsted Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif";
   Chart.defaults.font.size = 12;
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(function () {
+      Object.values(Chart.instances || {}).forEach(function (chart) { chart.update('none'); });
+    });
+  }
   
   // ============================================
   // TOOLTIP CONFIGURATION

@@ -1,0 +1,24 @@
+{% load static %}{% comment %}
+The Respectlytics mark. One copy of the <picture> chain for the two dozen
+places the mark is drawn, so the format list cannot drift between them.
+
+Every one of those slots renders it between 20 and 56 CSS px, so a single
+112px variant covers 2x of the largest of them. The full-size
+images/respectlytics.png is deliberately NOT used here: it is the 500px
+canonical that blog og:image tags and the Article JSON-LD point at, and
+serving it into a 40px navbar slot cost 162 KB on every page of the site.
+
+display:contents on the <picture> keeps the <img> itself as the flex/grid
+child, so wrapping an existing <img> in this partial cannot shift a layout.
+
+Usage:
+    {% include "partials/brand_mark.html" with classes="w-8 h-8" alt="Respectlytics" %}
+
+    classes  Tailwind classes for the <img>. The caller owns sizing.
+    alt      Pass alt="" where the mark sits next to the name in text and is
+             therefore decorative.
+{% endcomment %}<picture class="contents">
+    <source srcset="{% static 'images/respectlytics-112.avif' %}" type="image/avif">
+    <source srcset="{% static 'images/respectlytics-112.webp' %}" type="image/webp">
+    <img src="{% static 'images/respectlytics-112.png' %}" alt="{{ alt }}" width="112" height="112" decoding="async" class="{{ classes }}">
+</picture>

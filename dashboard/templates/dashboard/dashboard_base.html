@@ -3,14 +3,14 @@
 
 {% block extra_head %}
 <!-- Chart.js for charts -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="{% static 'vendor/chart.js/chart.umd.min.js' %}"></script>
 <!-- Chart.js DataLabels plugin for displaying values on charts -->
-<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<script src="{% static 'vendor/chartjs-plugin-datalabels/chartjs-plugin-datalabels.min.js' %}"></script>
 <!-- Chart.js Dark Theme Configuration (load after Chart.js) -->
 <script src="{% static 'js/chart-theme.js' %}"></script>
 <!-- Flatpickr for date pickers -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<link rel="stylesheet" href="{% static 'vendor/flatpickr/flatpickr.min.css' %}">
+<script src="{% static 'vendor/flatpickr/flatpickr.min.js' %}"></script>
 <!-- RealTimePoller for live updates -->
 <script src="{% static 'js/realtime-polling.js' %}"></script>
 <style>

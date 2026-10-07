@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% if admin_mode %}Admin Docs - Respectlytics{% else %}REST API Reference - Documentation | Respectlytics{% endif %}</title>
+    <link rel="stylesheet" href="{% static 'css/fonts.css' %}">
 
     {% if not admin_mode %}
     <!-- SEO Meta Tags -->
@@ -19,7 +20,7 @@
     <meta property="og:description" content="Explore the Respectlytics REST API. Endpoints, schemas, authentication, and code examples for privacy-first mobile analytics.">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://respectlytics.com/api/v1/reference/">
-    <meta property="og:image" content="https://respectlytics.com{% static 'images/og/sdk-documentation.png' %}">
+    <meta property="og:image" content="https://respectlytics.com{% static 'images/og/sdk-documentation.jpg' %}">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
     <meta property="og:image:alt" content="Respectlytics REST API Reference Documentation">
@@ -30,7 +31,7 @@
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="REST API Reference - Documentation | Respectlytics">
     <meta name="twitter:description" content="Explore the Respectlytics REST API. Endpoints, schemas, authentication, and code examples for privacy-first mobile analytics.">
-    <meta name="twitter:image" content="https://respectlytics.com{% static 'images/og/sdk-documentation.png' %}">
+    <meta name="twitter:image" content="https://respectlytics.com{% static 'images/og/sdk-documentation.jpg' %}">
     <meta name="twitter:image:alt" content="Respectlytics REST API Reference Documentation">
 
     <!-- Structured Data -->
@@ -110,7 +111,7 @@
         }
         
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            font-family: 'Schibsted Grotesk', -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
             background: var(--slate-900);
             overflow: hidden;
         }
@@ -449,7 +450,7 @@
             }
         }
     </style>
-    <script src="https://cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js"></script>
+    <script src="{% static 'vendor/redoc/redoc.standalone.js' %}"></script>
 </head>
 <body>
     <header class="header">
@@ -520,7 +521,7 @@
     <style>
         /* Enhanced ReDoc Styling */
         .redoc-wrap {
-            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif !important;
+            font-family: "Schibsted Grotesk", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif !important;
         }
         
         /* Sidebar Menu Styling */
@@ -1148,12 +1149,12 @@
                 typography: {
                     fontSize: '16px',
                     lineHeight: '1.75',
-                    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif',
+                    fontFamily: '"Schibsted Grotesk", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif',
                     fontWeightRegular: '400',
                     fontWeightBold: '600',
                     fontWeightLight: '300',
                     headings: {
-                        fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif',
+                        fontFamily: '"Schibsted Grotesk", -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif',
                         fontWeight: '700',
                         lineHeight: '1.2'
                     },

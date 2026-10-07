@@ -5,6 +5,7 @@
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}{{ title }}{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/fonts.css' %}">
 
     {% block extra_head %}{% endblock %}
 
@@ -31,7 +32,7 @@
     <meta property="og:description" content="Try the Respectlytics REST API interactively. Send requests, inspect responses, and test authentication directly in your browser.">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://respectlytics.com/api/v1/reference/swagger/">
-    <meta property="og:image" content="https://respectlytics.com{% static 'images/og/sdk-documentation.png' %}">
+    <meta property="og:image" content="https://respectlytics.com{% static 'images/og/sdk-documentation.jpg' %}">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
     <meta property="og:image:alt" content="Respectlytics Interactive API Explorer">
@@ -42,7 +43,7 @@
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Interactive API Explorer - Swagger UI | Respectlytics">
     <meta name="twitter:description" content="Try the Respectlytics REST API interactively. Send requests, inspect responses, and test authentication directly in your browser.">
-    <meta name="twitter:image" content="https://respectlytics.com{% static 'images/og/sdk-documentation.png' %}">
+    <meta name="twitter:image" content="https://respectlytics.com{% static 'images/og/sdk-documentation.jpg' %}">
     <meta name="twitter:image:alt" content="Respectlytics Interactive API Explorer">
 
     <!-- Structured Data -->
@@ -112,7 +113,7 @@
         * { box-sizing: border-box; }
 
         body.swagger-body {
-            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            font-family: 'Schibsted Grotesk', -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
             background: var(--slate-900);
             overflow: hidden;
             margin: 0;
@@ -161,7 +162,7 @@
         .swagger-ui .topbar { display: none !important; }
 
         /* Typography + spacing - Dark Theme */
-        .swagger-ui, .swagger-ui * { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif !important; }
+        .swagger-ui, .swagger-ui * { font-family: 'Schibsted Grotesk', -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif !important; }
         .swagger-ui .info { background: var(--slate-900) !important; }
         .swagger-ui .info .main { background: var(--slate-900) !important; }
         .swagger-ui .info hgroup.main { background: var(--slate-900) !important; }

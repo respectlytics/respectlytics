@@ -12,6 +12,9 @@
     <link rel="icon" type="image/png" sizes="16x16" href="{% static 'favicon/favicon-16x16.png' %}">
     <link rel="apple-touch-icon" sizes="180x180" href="{% static 'favicon/apple-touch-icon.png' %}">
     
+    <!-- Schibsted Grotesk, served from this domain (static/css/fonts.css) -->
+    <link rel="preload" href="{% static 'fonts/schibsted-grotesk/SchibstedGrotesk-Regular.woff2' %}" as="font" type="font/woff2" crossorigin>
+    <link rel="stylesheet" href="{% static 'css/fonts.css' %}">
     <!-- Tailwind CSS - Pre-compiled for production -->
     <link rel="stylesheet" href="{% static 'css/tailwind.css' %}">
     
@@ -22,7 +25,7 @@
     <div class="bg-[#1e293b] rounded-3xl border border-white/10 w-full max-w-md py-12 px-10">
         <!-- Logo + Brand Name (side by side, clickable to home) -->
         <a href="/" class="flex items-center justify-center gap-4 mb-8 group">
-            <img src="{% static 'images/respectlytics.png' %}" alt="Respectlytics" class="w-14 h-14 object-contain rounded-xl shadow-lg shadow-purple-500/20 group-hover:shadow-purple-500/30 transition-shadow duration-200">
+            {% include "partials/brand_mark.html" with classes="w-14 h-14 object-contain rounded-xl shadow-lg shadow-purple-500/20 group-hover:shadow-purple-500/30 transition-shadow duration-200" alt="Respectlytics" %}
             <h1 class="text-3xl font-black tracking-tight">
                 <span class="text-slate-50">Respect</span><span class="text-transparent bg-clip-text bg-gradient-to-r from-brand-400 to-purple-400">lytics</span>
             </h1>

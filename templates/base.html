@@ -15,6 +15,9 @@
     <meta name="theme-color" content="#5856d6">
     <meta name="application-name" content="Respectlytics">
 
+    <!-- Schibsted Grotesk, served from this domain (static/css/fonts.css) -->
+    <link rel="preload" href="{% static 'fonts/schibsted-grotesk/SchibstedGrotesk-Regular.woff2' %}" as="font" type="font/woff2" crossorigin>
+    <link rel="stylesheet" href="{% static 'css/fonts.css' %}">
     <!-- Tailwind CSS -->
     <link rel="stylesheet" href="{% static 'css/tailwind.css' %}">
     <link rel="stylesheet" href="{% static 'css/base.css' %}">
@@ -96,7 +99,7 @@
         <div class="{% block navbar_container_class %}max-w-7xl mx-auto{% endblock %} px-4 md:px-6 lg:px-12 flex items-center justify-between">
             <!-- Logo -->
             <a href="{% url 'dashboard:main' %}" class="flex items-center gap-2 md:gap-3 no-underline group flex-shrink-0">
-                <img src="{% static 'images/respectlytics.png' %}" alt="Respectlytics" class="w-8 h-8 md:w-10 md:h-10 object-contain rounded-lg shadow-md shadow-purple-500/10 group-hover:shadow-purple-500/20 transition-shadow duration-200">
+                {% include "partials/brand_mark.html" with classes="w-8 h-8 md:w-10 md:h-10 object-contain rounded-lg shadow-md shadow-purple-500/10 group-hover:shadow-purple-500/20 transition-shadow duration-200" alt="Respectlytics" %}
                 <span class="flex text-lg md:text-xl font-black tracking-tight">
                     <span class="text-slate-50">Respect</span>
                     <span class="text-transparent bg-clip-text bg-gradient-to-r from-brand-400 to-purple-400">lytics</span>
