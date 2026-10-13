@@ -15,19 +15,20 @@ Rate limiting (SEC-007b):
 """
 
 import logging
+
 from django.conf import settings
 from django.core.cache import cache
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
+from django.urls import NoReverseMatch, reverse
 from django.utils import timezone
 
-logger = logging.getLogger('analytics')
+logger = logging.getLogger("analytics")
 
-# Admin email for security alerts (from instructions)
-ADMIN_EMAIL = 'respectlytics@loheden.com'
-
-# Base URL for links in emails
-BASE_URL = 'https://respectlytics.com'
+# Where these emails point and who receives the admin alerts both come from
+# settings (SITE_URL, SECURITY_CONTACT_EMAIL), never from this file: the community
+# edition runs this same code on someone else's server, and its alerts carry their
+# visitors' addresses, which must go to them and nowhere else.
 
 # Rate limiting settings (SEC-007b)
 MAX_LOGIN_WARNINGS_PER_USER_PER_DAY = 3
@@ -35,26 +36,37 @@ MAX_LOCKOUT_ALERTS_PER_DAY = 10
 RATE_LIMIT_WINDOW = 86400  # 24 hours in seconds
 
 
+def _site_url():
+    """This server's own address, for the links in these emails."""
+    return settings.SITE_URL.rstrip("/")
+
+
+def _admin_users_url():
+    """The admin's user list, by name: the admin's path is never written out."""
+    try:
+        return _site_url() + reverse("admin:auth_user_changelist")
+    except NoReverseMatch:
+        return _site_url() + reverse("admin:index")
+
+
 def _get_common_context():
     """Get common context for all security email templates."""
     return {
-        'year': timezone.now().year,
-        'base_url': BASE_URL,
-        'support_email': ADMIN_EMAIL,
-        'dashboard_url': f'{BASE_URL}/dashboard/',
-        'password_reset_url': f'{BASE_URL}/password-reset/',
-        'preferences_url': f'{BASE_URL}/account/preferences/',
+        "year": timezone.now().year,
+        "site_url": _site_url(),
+        "support_email": settings.SECURITY_CONTACT_EMAIL,
+        "password_reset_url": f"{_site_url()}/password-reset/",
     }
 
 
 def _check_rate_limit(cache_key, max_count):
     """
     Check if rate limit is exceeded and increment counter.
-    
+
     Args:
         cache_key: Unique key for this rate limit
         max_count: Maximum allowed emails in the window
-    
+
     Returns:
         bool: True if email can be sent, False if rate limited
     """
@@ -68,7 +80,7 @@ def _check_rate_limit(cache_key, max_count):
 def _send_security_email(to_email, subject, html_template, text_template, context, is_admin=False):
     """
     Send a security email with HTML and plain text versions.
-    
+
     Args:
         to_email: Recipient email address
         subject: Email subject line
@@ -76,7 +88,7 @@ def _send_security_email(to_email, subject, html_template, text_template, contex
         text_template: Path to plain text template
         context: Template context dict
         is_admin: If True, this is an admin alert (always send)
-    
+
     Returns:
         bool: True if email sent successfully
     """
@@ -84,11 +96,11 @@ def _send_security_email(to_email, subject, html_template, text_template, contex
         # Merge common context
         full_context = _get_common_context()
         full_context.update(context)
-        
+
         # Render templates
         html_content = render_to_string(html_template, full_context)
         text_content = render_to_string(text_template, full_context)
-        
+
         # Create email with reply-to header
         email = EmailMultiAlternatives(
             subject=subject,
@@ -97,15 +109,15 @@ def _send_security_email(to_email, subject, html_template, text_template, contex
             to=[to_email],
             reply_to=[settings.EMAIL_REPLY_TO],
         )
-        email.attach_alternative(html_content, 'text/html')
-        
+        email.attach_alternative(html_content, "text/html")
+
         # Send
-        email.send(fail_silently=False)
-        
-        log_prefix = '[SECURITY_EMAIL]' if is_admin else '[EMAIL]'
+        email.send()
+
+        log_prefix = "[SECURITY_EMAIL]" if is_admin else "[EMAIL]"
         logger.info(f'{log_prefix} Sent "{subject}" to {to_email}')
         return True
-        
+
     except Exception as e:
         logger.error(f'[SECURITY_EMAIL] Failed to send "{subject}" to {to_email}: {e}')
         return False
@@ -115,75 +127,86 @@ def _send_security_email(to_email, subject, html_template, text_template, contex
 # Admin Security Alerts
 # =============================================================================
 
+
 def send_account_lockout_alert(user_email, ip_address, attempt_count):
     """
     Notify admin when an account is locked due to failed login attempts.
-    
+
     SEC-003/SEC-007: Sent when account lockout is triggered.
     SEC-007b: Rate limited to 10 emails per day to prevent inbox flooding.
-    
+
     Args:
         user_email: Email of the locked account
         ip_address: IP address of the last failed attempt
         attempt_count: Number of failed attempts
-    
+
     Returns:
         bool: True if email sent, False if rate limited or failed
     """
+    if not settings.SECURITY_CONTACT_EMAIL:
+        return False  # nobody is named to receive admin alerts
+
     # SEC-007b: Rate limit admin lockout alerts
-    cache_key = 'security_email:lockout_alerts_today'
+    cache_key = "security_email:lockout_alerts_today"
     if not _check_rate_limit(cache_key, MAX_LOCKOUT_ALERTS_PER_DAY):
-        logger.warning(f'[SECURITY_EMAIL] Rate limited: lockout alert for {user_email} (max {MAX_LOCKOUT_ALERTS_PER_DAY}/day)')
+        logger.warning(
+            f"[SECURITY_EMAIL] Rate limited: lockout alert for {user_email} (max "
+            f"{MAX_LOCKOUT_ALERTS_PER_DAY}/day)"
+        )
         return False
-    
-    subject = f'🚨 Account Locked: {user_email}'
-    
+
+    subject = f"🚨 Account Locked: {user_email}"
+
     context = {
-        'email': user_email,
-        'ip_address': ip_address,
-        'attempt_count': attempt_count,
-        'lockout_duration': '30 minutes',
-        'timestamp': timezone.now(),
+        "email": user_email,
+        "ip_address": ip_address,
+        "attempt_count": attempt_count,
+        "lockout_duration": "30 minutes",
+        "timestamp": timezone.now(),
+        "admin_users_url": _admin_users_url(),
     }
-    
+
     return _send_security_email(
-        to_email=ADMIN_EMAIL,
+        to_email=settings.SECURITY_CONTACT_EMAIL,
         subject=subject,
-        html_template='emails/security/account_lockout_admin.html',
-        text_template='emails/security/account_lockout_admin.txt',
+        html_template="emails/security/account_lockout_admin.html",
+        text_template="emails/security/account_lockout_admin.txt",
         context=context,
-        is_admin=True
+        is_admin=True,
     )
 
 
 def send_ip_banned_alert(ip_address, reason, details=None):
     """
     Notify admin when an IP is banned.
-    
+
     SEC-013/SEC-007: Sent when IP is banned for 404 scanning or attack paths.
-    
+
     Args:
         ip_address: The banned IP address
         reason: Why the IP was banned (e.g., 'excessive_404s', 'attack_path')
         details: Additional context (e.g., the attack path)
     """
-    subject = f'🛡️ IP Banned: {ip_address}'
-    
+    if not settings.SECURITY_CONTACT_EMAIL:
+        return False  # nobody is named to receive admin alerts
+
+    subject = f"🛡️ IP Banned: {ip_address}"
+
     context = {
-        'ip_address': ip_address,
-        'reason': reason,
-        'details': details,
-        'ban_duration': '1 hour',
-        'timestamp': timezone.now(),
+        "ip_address": ip_address,
+        "reason": reason,
+        "details": details,
+        "ban_duration": "1 hour",
+        "timestamp": timezone.now(),
     }
-    
+
     return _send_security_email(
-        to_email=ADMIN_EMAIL,
+        to_email=settings.SECURITY_CONTACT_EMAIL,
         subject=subject,
-        html_template='emails/security/ip_banned_admin.html',
-        text_template='emails/security/ip_banned_admin.txt',
+        html_template="emails/security/ip_banned_admin.html",
+        text_template="emails/security/ip_banned_admin.txt",
         context=context,
-        is_admin=True
+        is_admin=True,
     )
 
 
@@ -191,69 +214,73 @@ def send_ip_banned_alert(ip_address, reason, details=None):
 # User Security Notifications
 # =============================================================================
 
+
 def send_password_changed_notification(user):
     """
     Notify user when their password is changed.
-    
+
     This is a transactional email - always sent regardless of preferences.
-    
+
     Args:
         user: Django User object
     """
-    subject = 'Your Respectlytics password was changed'
-    
+    subject = "Your Respectlytics password was changed"
+
     context = {
-        'user': user,
-        'timestamp': timezone.now(),
+        "user": user,
+        "timestamp": timezone.now(),
     }
-    
+
     return _send_security_email(
         to_email=user.email,
         subject=subject,
-        html_template='emails/security/password_changed.html',
-        text_template='emails/security/password_changed.txt',
+        html_template="emails/security/password_changed.html",
+        text_template="emails/security/password_changed.txt",
         context=context,
-        is_admin=False
+        is_admin=False,
     )
 
 
 def send_failed_login_warning(user, attempt_count, ip_address):
     """
     Notify user of suspicious login activity on their account.
-    
+
     Sent after 3 failed attempts (before lockout at 5).
     This is a transactional security email - always sent.
-    
+
     SEC-007b: Rate limited to 3 emails per user per day to prevent inbox flooding.
-    
+
     Args:
         user: Django User object
         attempt_count: Number of failed attempts
         ip_address: IP address of the attempts
-    
+
     Returns:
         bool: True if email sent, False if rate limited or failed
     """
     # SEC-007b: Rate limit per-user login warnings
-    cache_key = f'security_email:login_warning:{user.id}'
+    cache_key = f"security_email:login_warning:{user.id}"
     if not _check_rate_limit(cache_key, MAX_LOGIN_WARNINGS_PER_USER_PER_DAY):
-        logger.warning(f'[SECURITY_EMAIL] Rate limited: login warning for user {user.id} (max {MAX_LOGIN_WARNINGS_PER_USER_PER_DAY}/day)')
+        logger.warning(
+            f"[SECURITY_EMAIL] Rate limited: login warning for user {user.id} (max "
+            f"{MAX_LOGIN_WARNINGS_PER_USER_PER_DAY}/day)"
+        )
         return False
-    
-    subject = '⚠️ Suspicious login activity on your Respectlytics account'
-    
+
+    subject = "⚠️ Suspicious login activity on your Respectlytics account"
+
     context = {
-        'user': user,
-        'attempt_count': attempt_count,
-        'ip_address': ip_address,
-        'timestamp': timezone.now(),
+        "user": user,
+        "attempt_count": attempt_count,
+        "ip_address": ip_address,
+        "timestamp": timezone.now(),
     }
-    
+
     return _send_security_email(
         to_email=user.email,
         subject=subject,
-        html_template='emails/security/failed_login_warning.html',
-        text_template='emails/security/failed_login_warning.txt',
+        html_template="emails/security/failed_login_warning.html",
+        text_template="emails/security/failed_login_warning.txt",
         context=context,
-        is_admin=False
+        is_admin=False,
     )

@@ -27,17 +27,16 @@ Usage:
     if to_datetime:
         events = events.filter(timestamp__lte=to_datetime)
 """
+
+import logging
 from datetime import datetime
 from zoneinfo import ZoneInfo
-import logging
 
 logger = logging.getLogger(__name__)
 
 
 def parse_date_range(
-    from_date_str: str | None,
-    to_date_str: str | None,
-    tz_name: str = 'UTC'
+    from_date_str: str | None, to_date_str: str | None, tz_name: str = "UTC"
 ) -> tuple[datetime | None, datetime | None]:
     """
     Parse date range parameters with timezone support.
@@ -77,18 +76,18 @@ def parse_date_range(
 
     if from_date_str:
         # Parse as start of day (00:00:00) in user's timezone
-        naive_from = datetime.strptime(from_date_str, '%Y-%m-%d')
+        naive_from = datetime.strptime(from_date_str, "%Y-%m-%d")
         local_from = naive_from.replace(tzinfo=user_tz)
         # Convert to UTC for database query
-        from_datetime = local_from.astimezone(ZoneInfo('UTC'))
+        from_datetime = local_from.astimezone(ZoneInfo("UTC"))
 
     if to_date_str:
         # Parse as end of day (23:59:59.999999) in user's timezone
-        naive_to = datetime.strptime(to_date_str, '%Y-%m-%d')
+        naive_to = datetime.strptime(to_date_str, "%Y-%m-%d")
         naive_to = naive_to.replace(hour=23, minute=59, second=59, microsecond=999999)
         local_to = naive_to.replace(tzinfo=user_tz)
         # Convert to UTC for database query
-        to_datetime = local_to.astimezone(ZoneInfo('UTC'))
+        to_datetime = local_to.astimezone(ZoneInfo("UTC"))
 
     return from_datetime, to_datetime
 
@@ -104,14 +103,14 @@ def _get_timezone_safe(tz_name: str) -> ZoneInfo:
         ZoneInfo object for the timezone, or UTC if invalid
     """
     if not tz_name:
-        return ZoneInfo('UTC')
+        return ZoneInfo("UTC")
 
     try:
         return ZoneInfo(tz_name)
     except Exception as e:
         # Log the invalid timezone but don't fail the request
         logger.warning(f"Invalid timezone '{tz_name}', falling back to UTC: {e}")
-        return ZoneInfo('UTC')
+        return ZoneInfo("UTC")
 
 
 def get_cache_key_with_timezone(
@@ -119,8 +118,8 @@ def get_cache_key_with_timezone(
     app_id: str,
     from_date: str | None,
     to_date: str | None,
-    tz_name: str = 'UTC',
-    **extra_params
+    tz_name: str = "UTC",
+    **extra_params,
 ) -> str:
     """
     Generate a cache key that includes timezone information.
@@ -140,30 +139,26 @@ def get_cache_key_with_timezone(
         Cache key string
 
     Examples:
-        >>> get_cache_key_with_timezone('summary', 'abc-123', '2025-12-19', '2025-12-19', 'America/New_York')
+        >>> get_cache_key_with_timezone(
+        ...     'summary', 'abc-123', '2025-12-19', '2025-12-19', 'America/New_York'
+        ... )
         'summary:abc-123:2025-12-19:2025-12-19:America/New_York'
 
         >>> get_cache_key_with_timezone('funnel', 'abc-123', None, None, 'UTC', steps='a,b,c')
         'funnel:abc-123:all:all:UTC:steps=a,b,c'
     """
     # Normalize timezone name for consistent cache keys
-    normalized_tz = tz_name if tz_name else 'UTC'
+    normalized_tz = tz_name if tz_name else "UTC"
 
     # Build base key
-    parts = [
-        prefix,
-        str(app_id),
-        from_date or 'all',
-        to_date or 'all',
-        normalized_tz
-    ]
+    parts = [prefix, str(app_id), from_date or "all", to_date or "all", normalized_tz]
 
     # Add extra parameters in sorted order for consistency
     if extra_params:
         sorted_params = sorted(extra_params.items())
         parts.extend([f"{k}={v}" for k, v in sorted_params if v is not None])
 
-    return ':'.join(parts)
+    return ":".join(parts)
 
 
 def format_date_for_response(dt: datetime | None) -> str | None:
@@ -178,4 +173,4 @@ def format_date_for_response(dt: datetime | None) -> str | None:
     """
     if dt is None:
         return None
-    return dt.strftime('%Y-%m-%d')
+    return dt.strftime("%Y-%m-%d")

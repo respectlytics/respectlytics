@@ -9,10 +9,11 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+import sys
 from pathlib import Path
 from typing import Any
+
 import environ
-import sys
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -24,34 +25,35 @@ env: Any = environ.Env(
 )
 
 # Read .env file
-environ.Env.read_env(BASE_DIR / '.env')
+environ.Env.read_env(BASE_DIR / ".env")
 
 # =============================================================================
 # Respectlytics Edition
 # =============================================================================
-RESPECTLYTICS_EDITION = 'community'
+RESPECTLYTICS_EDITION = "community"
 
 # User Registration Control
 # When True, the signup page shows a "registration closed" message instead of the form
-REGISTRATION_CLOSED = env('REGISTRATION_CLOSED')
+REGISTRATION_CLOSED = env("REGISTRATION_CLOSED")
 
 # =============================================================================
 # Security Settings
 # =============================================================================
 
 # IMPORTANT: Change this in production!
-# Generate with: python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
-SECRET_KEY = env('SECRET_KEY', default='change-me-in-production-generate-a-random-string')
+# Generate with:
+#   python -c "from django.core.management.utils import get_random_secret_key as k; print(k())"
+SECRET_KEY = env("SECRET_KEY", default="change-me-in-production-generate-a-random-string")
 
-DEBUG = env('DEBUG')
-TESTING = 'test' in sys.argv or 'pytest' in sys.modules
+DEBUG = env("DEBUG")
+TESTING = "test" in sys.argv or "pytest" in sys.modules
 
-ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['localhost', '127.0.0.1', '0.0.0.0'])
+ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["localhost", "127.0.0.1", "0.0.0.0"])
 
 # Security settings
 # SSL redirect is opt-in via SECURE_SSL=True (for deployments behind HTTPS reverse proxy)
 # Docker Compose runs plain HTTP, so this defaults to False
-SECURE_SSL = env.bool('SECURE_SSL', default=False)
+SECURE_SSL = env.bool("SECURE_SSL", default=False)
 
 if SECURE_SSL:
     SECURE_SSL_REDIRECT = True
@@ -60,7 +62,7 @@ if SECURE_SSL:
     SECURE_HSTS_SECONDS = 31536000  # 1 year
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
-    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 else:
     SECURE_SSL_REDIRECT = False
     SESSION_COOKIE_SECURE = False
@@ -69,7 +71,7 @@ else:
 # Always enable these regardless of SSL
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
-X_FRAME_OPTIONS = 'DENY'
+X_FRAME_OPTIONS = "DENY"
 
 
 # =============================================================================
@@ -77,58 +79,58 @@ X_FRAME_OPTIONS = 'DENY'
 # =============================================================================
 
 INSTALLED_APPS = [
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
-    'rest_framework',
-    'drf_yasg',
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+    "rest_framework",
+    "drf_yasg",
     # SEC-009: Django OTP for admin 2FA (optional, controlled by ADMIN_REQUIRE_OTP)
-    'django_otp',
-    'django_otp.plugins.otp_totp',
-    'django_otp.plugins.otp_static',
+    "django_otp",
+    "django_otp.plugins.otp_totp",
+    "django_otp.plugins.otp_static",
     # Core apps
-    'analytics',
-    'conversion',
-    'dashboard',
-    'users',
+    "analytics",
+    "conversion",
+    "dashboard",
+    "users",
 ]
 
 MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django_otp.middleware.OTPMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'analytics.middleware.SecurityMiddleware',
-    'analytics.middleware.RequestLoggingMiddleware',
-    'analytics.middleware.PerformanceMonitoringMiddleware',
+    "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django_otp.middleware.OTPMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "analytics.middleware.SecurityMiddleware",
+    "analytics.middleware.RequestLoggingMiddleware",
+    "analytics.middleware.PerformanceMonitoringMiddleware",
 ]
 
-ROOT_URLCONF = 'core.urls'
+ROOT_URLCONF = "core.urls"
 
 TEMPLATES = [
     {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates'],
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [BASE_DIR / "templates"],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
             ],
         },
     },
 ]
 
-WSGI_APPLICATION = 'core.wsgi.application'
+WSGI_APPLICATION = "core.wsgi.application"
 
 
 # =============================================================================
@@ -137,68 +139,67 @@ WSGI_APPLICATION = 'core.wsgi.application'
 # PostgreSQL is REQUIRED. We use django.contrib.postgres aggregates (ArrayAgg).
 # SQLite is NOT supported and will crash.
 
-TEST_DATABASE_URL = env('DATABASE_URL_TEST', default=None)
+TEST_DATABASE_URL = env("DATABASE_URL_TEST", default=None)
 
 if TESTING and TEST_DATABASE_URL:
-    DATABASES = {
-        'default': env.db('DATABASE_URL_TEST')
-    }
+    DATABASES = {"default": env.db("DATABASE_URL_TEST")}
 elif DEBUG:
     DATABASES = {
-        'default': env.db('DATABASE_URL_DEV', default=env('DATABASE_URL', default='postgres://localhost/respectlytics'))
+        "default": env.db(
+            "DATABASE_URL_DEV",
+            default=env("DATABASE_URL", default="postgres://localhost/respectlytics"),
+        )
     }
 else:
-    DATABASES = {
-        'default': env.db('DATABASE_URL')
-    }
+    DATABASES = {"default": env.db("DATABASE_URL")}
 
 # SSL for production databases (e.g., managed PostgreSQL services)
 # Enable with DATABASE_SSL=True when using managed PostgreSQL (e.g., AWS RDS, DigitalOcean)
 # Docker Compose local PostgreSQL does NOT support SSL, so this defaults to False
-if env.bool('DATABASE_SSL', default=False):
-    DATABASES['default']['OPTIONS'] = {
-        'sslmode': 'require',
+if env.bool("DATABASE_SSL", default=False):
+    DATABASES["default"]["OPTIONS"] = {
+        "sslmode": "require",
     }
 
-    _db_port = str(DATABASES['default'].get('PORT', ''))
-    _using_digitalocean_pool = _db_port == '25061'
+    _db_port = str(DATABASES["default"].get("PORT", ""))
+    _using_digitalocean_pool = _db_port == "25061"
     if not _using_digitalocean_pool:
-        DATABASES['default']['OPTIONS']['options'] = '-c search_path=public'
+        DATABASES["default"]["OPTIONS"]["options"] = "-c search_path=public"
 
 # Connection resilience
-DATABASES['default']['CONN_MAX_AGE'] = 60  # 60 seconds
-DATABASES['default']['CONN_HEALTH_CHECKS'] = True
+DATABASES["default"]["CONN_MAX_AGE"] = 60  # 60 seconds
+DATABASES["default"]["CONN_HEALTH_CHECKS"] = True
 
 # Required when using transaction-mode PostgreSQL connection pools.
 # Export views use QuerySet.iterator(), and server-side cursors cannot safely
 # span pooled transactions.
-DATABASES['default']['DISABLE_SERVER_SIDE_CURSORS'] = True
+DATABASES["default"]["DISABLE_SERVER_SIDE_CURSORS"] = True
 
 # Test database
 if TEST_DATABASE_URL:
-    DATABASES['default']['TEST'] = {
-        'NAME': env.db('DATABASE_URL_TEST')['NAME'],
+    DATABASES["default"]["TEST"] = {
+        "NAME": env.db("DATABASE_URL_TEST")["NAME"],
     }
 
-TEST_RUNNER = 'core.test_runner.KeepDbTestRunner'
+TEST_RUNNER = "core.test_runner.KeepDbTestRunner"
 
 
 # =============================================================================
 # Password validation
 # =============================================================================
 AUTH_PASSWORD_VALIDATORS = [
-    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
+    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
+    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
+    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
+    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
 
 # =============================================================================
 # Internationalization
 # =============================================================================
-LANGUAGE_CODE = 'en-us'
-TIME_ZONE = 'UTC'
+LANGUAGE_CODE = "en-us"
+TIME_ZONE = "UTC"
 USE_I18N = True
 USE_TZ = True
 
@@ -206,85 +207,85 @@ USE_TZ = True
 # =============================================================================
 # Static files
 # =============================================================================
-STATIC_URL = 'static/'
-STATICFILES_DIRS = [BASE_DIR / 'static']
-STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATIC_URL = "static/"
+STATICFILES_DIRS = [BASE_DIR / "static"]
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
 # =============================================================================
 # REST Framework
 # =============================================================================
 REST_FRAMEWORK = {
-    'DEFAULT_RENDERER_CLASSES': [
-        'rest_framework.renderers.JSONRenderer',
+    "DEFAULT_RENDERER_CLASSES": [
+        "rest_framework.renderers.JSONRenderer",
     ],
-    'DEFAULT_PARSER_CLASSES': [
-        'rest_framework.parsers.JSONParser',
+    "DEFAULT_PARSER_CLASSES": [
+        "rest_framework.parsers.JSONParser",
     ],
-    'DEFAULT_AUTHENTICATION_CLASSES': [
-        'analytics.authentication.AppKeyAuthentication',
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "analytics.authentication.AppKeyAuthentication",
     ],
-    'URL_FORMAT_OVERRIDE': 'format',
-    'UNAUTHENTICATED_USER': None,
+    "URL_FORMAT_OVERRIDE": "format",
+    "UNAUTHENTICATED_USER": None,
 }
 
 # Export safeguards
-EXPORT_MAX_EVENTS = int(env('EXPORT_MAX_EVENTS', default=100000))
-EXPORT_MAX_DAYS = int(env('EXPORT_MAX_DAYS', default=90))
+EXPORT_MAX_EVENTS = int(env("EXPORT_MAX_EVENTS", default=100000))
+EXPORT_MAX_DAYS = int(env("EXPORT_MAX_DAYS", default=90))
 
 
 # =============================================================================
 # Logging
 # =============================================================================
 _logging_handlers = {
-    'console': {
-        'class': 'logging.StreamHandler',
-        'formatter': 'verbose',
-        'filters': ['sanitize_app_key'],
+    "console": {
+        "class": "logging.StreamHandler",
+        "formatter": "verbose",
+        "filters": ["sanitize_app_key"],
     },
 }
 
 if DEBUG:
-    if not (BASE_DIR / 'logs').exists():
-        (BASE_DIR / 'logs').mkdir(parents=True, exist_ok=True)
-    _logging_handlers['file'] = {
-        'class': 'logging.handlers.RotatingFileHandler',
-        'filename': BASE_DIR / 'logs' / 'security.log',
-        'formatter': 'verbose',
-        'filters': ['sanitize_app_key'],
-        'maxBytes': 10485760,
-        'backupCount': 5,
+    if not (BASE_DIR / "logs").exists():
+        (BASE_DIR / "logs").mkdir(parents=True, exist_ok=True)
+    _logging_handlers["file"] = {
+        "class": "logging.handlers.RotatingFileHandler",
+        "filename": BASE_DIR / "logs" / "security.log",
+        "formatter": "verbose",
+        "filters": ["sanitize_app_key"],
+        "maxBytes": 10485760,
+        "backupCount": 5,
     }
 
-_analytics_handlers = ['console', 'file'] if DEBUG else ['console']
+_analytics_handlers = ["console", "file"] if DEBUG else ["console"]
 
 LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'filters': {
-        'sanitize_app_key': {
-            'class': 'analytics.logging_filters.SanitizeAppKeyFilter',
+    "version": 1,
+    "disable_existing_loggers": False,
+    "filters": {
+        "sanitize_app_key": {
+            "class": "analytics.logging_filters.SanitizeAppKeyFilter",
         },
     },
-    'formatters': {
-        'verbose': {
-            'format': '{levelname} {asctime} {module} {message}',
-            'style': '{',
+    "formatters": {
+        "verbose": {
+            "format": "{levelname} {asctime} {module} {message}",
+            "style": "{",
         },
     },
-    'handlers': _logging_handlers,
-    'loggers': {
-        'analytics': {
-            'handlers': _analytics_handlers,
-            'level': 'INFO',
-            'propagate': False,
+    "handlers": _logging_handlers,
+    "loggers": {
+        "analytics": {
+            "handlers": _analytics_handlers,
+            "level": "INFO",
+            "propagate": False,
         },
-        'django.server': {
-            'handlers': ['console'],
-            'level': 'INFO',
-            'propagate': False,
+        "django.server": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
         },
     },
 }
@@ -295,17 +296,22 @@ LOGGING = {
 # =============================================================================
 # Default: Console backend (prints emails to terminal output)
 # Configure SMTP for real email delivery in production
-EMAIL_BACKEND = env('EMAIL_BACKEND', default='django.core.mail.backends.console.EmailBackend')
+EMAIL_BACKEND = env("EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend")
 
-if 'smtp' in EMAIL_BACKEND.lower():
-    EMAIL_HOST = env('EMAIL_HOST', default='localhost')
-    EMAIL_PORT = env.int('EMAIL_PORT', default=587)
-    EMAIL_USE_TLS = env.bool('EMAIL_USE_TLS', default=True)
-    EMAIL_HOST_USER = env('EMAIL_HOST_USER', default='')
-    EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', default='')
+if "smtp" in EMAIL_BACKEND.lower():
+    EMAIL_HOST = env("EMAIL_HOST", default="localhost")
+    EMAIL_PORT = env.int("EMAIL_PORT", default=587)
+    EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=True)
+    EMAIL_HOST_USER = env("EMAIL_HOST_USER", default="")
+    EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
 
-DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', default='Respectlytics <noreply@localhost>')
-EMAIL_REPLY_TO = env('EMAIL_REPLY_TO', default='noreply@localhost')
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="Respectlytics <noreply@localhost>")
+EMAIL_REPLY_TO = env("EMAIL_REPLY_TO", default="noreply@localhost")
+# This server's own address, for the links in security emails, and who receives the
+# admin security alerts (account lockouts, banned addresses). With no address set,
+# no admin alert is sent.
+SITE_URL = env("SITE_URL", default="http://localhost:8080")
+SECURITY_CONTACT_EMAIL = env("SECURITY_CONTACT_EMAIL", default="")
 SERVER_EMAIL = DEFAULT_FROM_EMAIL
 
 ADMINS = []
@@ -315,61 +321,61 @@ MANAGERS = ADMINS
 # =============================================================================
 # Authentication URLs
 # =============================================================================
-LOGIN_URL = '/login/'
-LOGIN_REDIRECT_URL = '/dashboard/'
-LOGOUT_REDIRECT_URL = '/login/'
+LOGIN_URL = "/login/"
+LOGIN_REDIRECT_URL = "/dashboard/"
+LOGOUT_REDIRECT_URL = "/login/"
 
 
 # =============================================================================
 # API Documentation (Swagger/ReDoc)
 # =============================================================================
 SWAGGER_SETTINGS = {
-    'USE_SESSION_AUTH': False,
-    'SECURITY_DEFINITIONS': {
-        'App API Key': {
-            'type': 'apiKey',
-            'name': 'X-App-Key',
-            'in': 'header',
-            'description': (
-                'App API Key sent via the X-App-Key header.\n\n'
-                '• In Swagger UI: click the Authorize button and paste only the UUID value.\n'
-                '• In your app or curl: send header X-App-Key: App_API_Key.\n\n'
-            )
+    "USE_SESSION_AUTH": False,
+    "SECURITY_DEFINITIONS": {
+        "App API Key": {
+            "type": "apiKey",
+            "name": "X-App-Key",
+            "in": "header",
+            "description": (
+                "App API Key sent via the X-App-Key header.\n\n"
+                "• In Swagger UI: click the Authorize button and paste only the UUID value.\n"
+                "• In your app or curl: send header X-App-Key: App_API_Key.\n\n"
+            ),
         }
     },
-    'SUPPORTED_SUBMIT_METHODS': ['get', 'post'],
-    'DOC_EXPANSION': 'list',
-    'DEEP_LINKING': True,
-    'DISPLAY_OPERATION_ID': False,
-    'DEFAULT_MODEL_RENDERING': 'model',
+    "SUPPORTED_SUBMIT_METHODS": ["get", "post"],
+    "DOC_EXPANSION": "list",
+    "DEEP_LINKING": True,
+    "DISPLAY_OPERATION_ID": False,
+    "DEFAULT_MODEL_RENDERING": "model",
 }
 
 REDOC_SETTINGS = {
-    'LAZY_RENDERING': False,
+    "LAZY_RENDERING": False,
 }
 
 
 # =============================================================================
 # Test settings
 # =============================================================================
-TESTING = 'test' in sys.argv or 'pytest' in sys.modules
+TESTING = "test" in sys.argv or "pytest" in sys.modules
 if TESTING:
-    REST_FRAMEWORK['DEFAULT_THROTTLE_CLASSES'] = []
-    REST_FRAMEWORK['DEFAULT_THROTTLE_RATES'] = {}
+    REST_FRAMEWORK["DEFAULT_THROTTLE_CLASSES"] = []
+    REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"] = {}
 
 
 # =============================================================================
 # Caching (Database-backed)
 # =============================================================================
 CACHES = {
-    'default': {
-        'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
-        'LOCATION': 'django_cache',
-        'TIMEOUT': 120,
-        'OPTIONS': {
-            'MAX_ENTRIES': 1000,
-            'CULL_FREQUENCY': 3,
-        }
+    "default": {
+        "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+        "LOCATION": "django_cache",
+        "TIMEOUT": 120,
+        "OPTIONS": {
+            "MAX_ENTRIES": 1000,
+            "CULL_FREQUENCY": 3,
+        },
     }
 }
 
@@ -387,7 +393,7 @@ GLOBE_STATS_SLOW_QUERY_THRESHOLD = 2
 # Rate Limiting
 # =============================================================================
 RATELIMIT_ENABLE = True
-RATELIMIT_USE_CACHE = 'default'
+RATELIMIT_USE_CACHE = "default"
 
 # Who a request came from, for every limit, ban, geolocation and log
 # (analytics/client_ip.py). A self-hosted server trusts no header naming the
@@ -396,18 +402,18 @@ RATELIMIT_USE_CACHE = 'default'
 # CF-Connecting-IP. Published directly, or behind your own nginx or Caddy,
 # leave it empty: the address your proxy appends is read without it.
 TRUSTED_CLIENT_IP_HEADERS = tuple(
-    'HTTP_' + header.strip().upper().replace('-', '_')
-    for header in env.list('TRUSTED_CLIENT_IP_HEADER', default=[])
+    "HTTP_" + header.strip().upper().replace("-", "_")
+    for header in env.list("TRUSTED_CLIENT_IP_HEADER", default=[])
     if header.strip()
 )
-RATELIMIT_IP_META_KEY = 'analytics.client_ip.get_client_ip'
+RATELIMIT_IP_META_KEY = "analytics.client_ip.get_client_ip"
 
 
 # =============================================================================
 # Admin OTP (Two-Factor Authentication)
 # =============================================================================
 # Set to True to require OTP for admin access (recommended for production)
-ADMIN_REQUIRE_OTP = env.bool('ADMIN_REQUIRE_OTP', default=False)
+ADMIN_REQUIRE_OTP = env.bool("ADMIN_REQUIRE_OTP", default=False)
 
-OTP_TOTP_ISSUER = 'Respectlytics'
+OTP_TOTP_ISSUER = "Respectlytics"
 OTP_ADMIN_HIDE_SENSITIVE_DATA = not DEBUG

@@ -1,0 +1,28 @@
+# ruff on every push and pull request to main, with the rules and the exact ruff
+# version in ruff.toml (required-version).
+
+name: Lint
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  ruff:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install ruff
+        run: pip install "ruff$(sed -n 's/^required-version = "\(.*\)"$/\1/p' ruff.toml)"
+
+      - name: Lint (ruff)
+        run: ruff check .

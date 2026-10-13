@@ -154,10 +154,12 @@
                     <div class="text-sm text-slate-50 font-medium">
                         {% if subscription.status == 'trial' %}
                         Trial Period
-                        {% elif subscription.billing_interval == 'annual' %}
+                        {% elif subscription.billing_period == 'annual' %}
                         Annual
-                        {% else %}
+                        {% elif subscription.billing_period == 'monthly' %}
                         Monthly
+                        {% else %}
+                        -
                         {% endif %}
                     </div>
                 </div>
@@ -165,6 +167,20 @@
         </div>
     </div>
     
+    {% if withdrawal_until %}
+    <!-- Statutory withdrawal: only for a private buyer who has the right (billing/withdrawal.py) -->
+    <div>
+        <h2 class="text-lg font-bold text-slate-50 mb-3">Right of withdrawal</h2>
+        <div class="bg-slate-900/50 rounded-xl border border-white/10 p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <p class="text-sm text-slate-300">You bought as a private person, so you can withdraw from this purchase until <span class="font-semibold text-slate-50">{{ withdrawal_until|date:"j F Y, H:i" }} UTC</span>. Your subscription then ends, and {% if withdrawal_full_refund %}everything you paid{% else %}the unused part of what you paid{% endif %} comes back to you.</p>
+            <a href="/"
+               class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white text-xs font-medium rounded-lg transition-colors border border-white/10 whitespace-nowrap text-center">
+                Review withdrawal
+            </a>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Scheduled Plan Change Banner (BILL-017) -->
     {% if subscription.scheduled_plan %}
     <div class="bg-amber-500/10 rounded-xl border border-amber-500/30 p-4">

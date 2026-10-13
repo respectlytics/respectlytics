@@ -1,7 +1,7 @@
 {% extends 'dashboard/dashboard_base.html' %}
 {% load static %}
 
-{% block title %}Stats - Respectlytics{% endblock %}
+{% block title %}Stats | Respectlytics{% endblock %}
 
 {# Full-width navbar on pages with sidebar #}
 {% block navbar_container_class %}{% endblock %}
@@ -936,7 +936,7 @@ async function loadLast30Minutes() {
         const serverTime = new Date(data.server_time);
         const thirtyMinsAgo = new Date(serverTime.getTime() - 30 * 60 * 1000);
         const formatTime = (d) => d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        document.getElementById('last30TimeRange').textContent = `${formatTime(thirtyMinsAgo)} – ${formatTime(serverTime)}`;
+        document.getElementById('last30TimeRange').textContent = `${formatTime(thirtyMinsAgo)}-${formatTime(serverTime)}`;
 
         // Update event count
         const eventCount = data.total_in_range || 0;

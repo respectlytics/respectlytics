@@ -18,24 +18,26 @@ Available Endpoints:
 Note: ConversionSignalsView was removed in v2.0.0 because it required
 cross-session user tracking, which is not compatible with session-based analytics.
 """
+
+import logging
+from datetime import datetime, timedelta
+
+from dateutil.relativedelta import relativedelta
+from django.db.models import Count
+from django.db.models.functions import TruncDay, TruncMonth, TruncQuarter, TruncWeek, TruncYear
+from django.utils import timezone
+from drf_yasg import openapi
+from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from django.db.models import Count, Min
-from django.db.models.functions import TruncDay, TruncWeek, TruncMonth, TruncQuarter, TruncYear
-from django.utils import timezone
-from datetime import datetime, timedelta
-from drf_yasg.utils import swagger_auto_schema
-from drf_yasg import openapi
-from dateutil.relativedelta import relativedelta
+
+from analytics.authentication import AppKeyAuthentication
+from analytics.date_utils import get_cache_key_with_timezone, parse_date_range
 
 # Import from analytics app (shared models, auth, permissions)
 from analytics.models import Event
-from analytics.authentication import AppKeyAuthentication
 from analytics.permissions import HasValidAppKey
-from analytics.date_utils import parse_date_range, get_cache_key_with_timezone
-
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -60,11 +62,12 @@ class DAUView(APIView):
     This is a session-based analysis - each session is a distinct app usage period
     (maximum 2 hours). Sessions are not tracked across app restarts.
     """
+
     authentication_classes = [AppKeyAuthentication]
     permission_classes = [HasValidAppKey]
 
     # Valid granularity options
-    VALID_GRANULARITIES = ('day', 'week', 'month', 'quarter', 'year')
+    VALID_GRANULARITIES = ("day", "week", "month", "quarter", "year")
 
     @swagger_auto_schema(
         operation_description="""
@@ -93,41 +96,44 @@ This provides usage metrics without requiring user consent for tracking.
         """,
         manual_parameters=[
             openapi.Parameter(
-                'X-App-Key',
+                "X-App-Key",
                 openapi.IN_HEADER,
                 description="App Key for authentication",
                 type=openapi.TYPE_STRING,
-                required=True
+                required=True,
             ),
             openapi.Parameter(
-                'from',
+                "from",
                 openapi.IN_QUERY,
                 description="Start date in YYYY-MM-DD format",
                 type=openapi.TYPE_STRING,
-                required=False
+                required=False,
             ),
             openapi.Parameter(
-                'to',
+                "to",
                 openapi.IN_QUERY,
                 description="End date in YYYY-MM-DD format",
                 type=openapi.TYPE_STRING,
-                required=False
+                required=False,
             ),
             openapi.Parameter(
-                'tz',
+                "tz",
                 openapi.IN_QUERY,
-                description="IANA timezone name (e.g., 'America/New_York', 'Europe/London'). Dates are interpreted in this timezone. Defaults to UTC.",
+                description=(
+                    "IANA timezone name (e.g., 'America/New_York', 'Europe/London'). Dates are "
+                    "interpreted in this timezone. Defaults to UTC."
+                ),
                 type=openapi.TYPE_STRING,
                 required=False,
-                default='UTC'
+                default="UTC",
             ),
             openapi.Parameter(
-                'granularity',
+                "granularity",
                 openapi.IN_QUERY,
                 description="Time period grouping: day (default), week, month, quarter, year",
                 type=openapi.TYPE_STRING,
-                enum=['day', 'week', 'month', 'quarter', 'year'],
-                required=False
+                enum=["day", "week", "month", "quarter", "year"],
+                required=False,
             ),
         ],
         responses={
@@ -139,56 +145,83 @@ This provides usage metrics without requiring user consent for tracking.
                         "granularity": "week",
                         "date_range": {"from": "2025-11-01", "to": "2025-11-27"},
                         "active_sessions": [
-                            {"period": "2025-W48", "unique_sessions": 3456, "total_events": 15234, "avg_session_length_seconds": 245.3, "sessions_with_duration": 2891},
-                            {"period": "2025-W47", "unique_sessions": 3189, "total_events": 14102, "avg_session_length_seconds": 238.7, "sessions_with_duration": 2654},
-                            {"period": "2025-W46", "unique_sessions": 2987, "total_events": 13456, "avg_session_length_seconds": 251.2, "sessions_with_duration": 2503}
+                            {
+                                "period": "2025-W48",
+                                "unique_sessions": 3456,
+                                "total_events": 15234,
+                                "avg_session_length_seconds": 245.3,
+                                "sessions_with_duration": 2891,
+                            },
+                            {
+                                "period": "2025-W47",
+                                "unique_sessions": 3189,
+                                "total_events": 14102,
+                                "avg_session_length_seconds": 238.7,
+                                "sessions_with_duration": 2654,
+                            },
+                            {
+                                "period": "2025-W46",
+                                "unique_sessions": 2987,
+                                "total_events": 13456,
+                                "avg_session_length_seconds": 251.2,
+                                "sessions_with_duration": 2503,
+                            },
                         ],
                         "summary": {
                             "total_sessions": 9632,
                             "sessions_with_duration": 8048,
-                            "avg_session_length_seconds": 245.1
+                            "avg_session_length_seconds": 245.1,
                         },
                         "top_events_current_period": [
                             {"event_name": "app_open", "count": 5341},
-                            {"event_name": "screen_view", "count": 4876}
-                        ]
+                            {"event_name": "screen_view", "count": 4876},
+                        ],
                     }
-                }
+                },
             ),
             400: openapi.Response(
                 description="Bad Request - invalid date format or granularity",
                 examples={
                     "application/json": {
-                        "error": "Invalid granularity. Must be one of: day, week, month, quarter, year"
+                        "error": (
+                            "Invalid granularity. Must be one of: day, week, month, quarter, year"
+                        )
                     }
-                }
+                },
             ),
-            401: "Unauthorized - missing or invalid app_key"
-        }
+            401: "Unauthorized - missing or invalid app_key",
+        },
     )
     def get(self, request):
         # Get the authenticated app
         app = request.user
 
         # Parse query parameters
-        from_date_str = request.query_params.get('from')
-        to_date_str = request.query_params.get('to')
-        tz_name = request.query_params.get('tz', 'UTC')
-        granularity = request.query_params.get('granularity', 'day').lower()
+        from_date_str = request.query_params.get("from")
+        to_date_str = request.query_params.get("to")
+        tz_name = request.query_params.get("tz", "UTC")
+        granularity = request.query_params.get("granularity", "day").lower()
 
         # Validate granularity
         if granularity not in self.VALID_GRANULARITIES:
             return Response(
-                {'error': f'Invalid granularity. Must be one of: {", ".join(self.VALID_GRANULARITIES)}'},
-                status=status.HTTP_400_BAD_REQUEST
+                {
+                    "error": (
+                        "Invalid granularity. Must be one of: "
+                        f"{', '.join(self.VALID_GRANULARITIES)}"
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         # PERF-018: Cache DAU data for 2 minutes
         # DAU data updates with new events but is called every Overview tab load
-        from django.core.cache import cache
         from django.conf import settings
+        from django.core.cache import cache
 
-        cache_key = get_cache_key_with_timezone('dau', app.id, from_date_str, to_date_str, tz_name, granularity=granularity)
+        cache_key = get_cache_key_with_timezone(
+            "dau", app.id, from_date_str, to_date_str, tz_name, granularity=granularity
+        )
         cached_result = cache.get(cache_key)
 
         if cached_result is not None:
@@ -209,8 +242,7 @@ This provides usage metrics without requiring user consent for tracking.
                 events = events.filter(timestamp__lte=to_date)
         except ValueError:
             return Response(
-                {'error': 'Invalid date format. Use YYYY-MM-DD'},
-                status=status.HTTP_400_BAD_REQUEST
+                {"error": "Invalid date format. Use YYYY-MM-DD"}, status=status.HTTP_400_BAD_REQUEST
             )
 
         # Default date range: last 30 days if not specified
@@ -228,27 +260,23 @@ This provides usage metrics without requiring user consent for tracking.
 
         # Choose truncation function based on granularity
         trunc_functions = {
-            'day': TruncDay,
-            'week': TruncWeek,  # Django uses ISO weeks (Mon-Sun)
-            'month': TruncMonth,
-            'quarter': TruncQuarter,
-            'year': TruncYear,
+            "day": TruncDay,
+            "week": TruncWeek,  # Django uses ISO weeks (Mon-Sun)
+            "month": TruncMonth,
+            "quarter": TruncQuarter,
+            "year": TruncYear,
         }
         trunc_func = trunc_functions[granularity]
 
         # Calculate active sessions per period
         # A "session" is a unique session_id (in-memory, max 2 hours)
         period_data = (
-            events
-            .filter(session_id__isnull=False)
-            .exclude(session_id='')
-            .annotate(period=trunc_func('timestamp'))
-            .values('period')
-            .annotate(
-                unique_sessions=Count('session_id', distinct=True),
-                total_events=Count('id')
-            )
-            .order_by('-period')
+            events.filter(session_id__isnull=False)
+            .exclude(session_id="")
+            .annotate(period=trunc_func("timestamp"))
+            .values("period")
+            .annotate(unique_sessions=Count("session_id", distinct=True), total_events=Count("id"))
+            .order_by("-period")
         )
 
         # Calculate average session length per period
@@ -261,28 +289,32 @@ This provides usage metrics without requiring user consent for tracking.
         total_duration_seconds = 0.0
 
         for item in period_data:
-            period_dt = item['period']
+            period_dt = item["period"]
             if period_dt:
                 period_label = self._format_period_label(period_dt, granularity)
                 period_entry = {
-                    'period': period_label,
-                    'unique_sessions': item['unique_sessions'],
-                    'unique_buckets': item['unique_sessions'],  # JS compatibility alias
-                    'total_events': item['total_events']
+                    "period": period_label,
+                    "unique_sessions": item["unique_sessions"],
+                    "unique_buckets": item["unique_sessions"],  # JS compatibility alias
+                    "total_events": item["total_events"],
                 }
 
                 # Add session length data if available for this period
                 if period_label in session_lengths:
                     length_data = session_lengths[period_label]
-                    avg_duration = float(length_data['avg_duration']) if length_data['avg_duration'] else None
-                    period_entry['avg_session_length_seconds'] = round(avg_duration, 1) if avg_duration else None
-                    period_entry['sessions_with_duration'] = length_data['session_count']
-                    total_sessions_with_length += length_data['session_count']
+                    avg_duration = (
+                        float(length_data["avg_duration"]) if length_data["avg_duration"] else None
+                    )
+                    period_entry["avg_session_length_seconds"] = (
+                        round(avg_duration, 1) if avg_duration else None
+                    )
+                    period_entry["sessions_with_duration"] = length_data["session_count"]
+                    total_sessions_with_length += length_data["session_count"]
                     if avg_duration:
-                        total_duration_seconds += avg_duration * length_data['session_count']
+                        total_duration_seconds += avg_duration * length_data["session_count"]
                 else:
-                    period_entry['avg_session_length_seconds'] = None
-                    period_entry['sessions_with_duration'] = 0
+                    period_entry["avg_session_length_seconds"] = None
+                    period_entry["sessions_with_duration"] = 0
 
                 active_sessions.append(period_entry)
 
@@ -291,45 +323,48 @@ This provides usage metrics without requiring user consent for tracking.
         if active_sessions:
             # Get the most recent period's data
             most_recent_period = period_data.first()
-            if most_recent_period and most_recent_period['period']:
+            if most_recent_period and most_recent_period["period"]:
                 # Filter events for the most recent period
-                period_start = most_recent_period['period']
+                period_start = most_recent_period["period"]
                 period_end = self._get_period_end(period_start, granularity)
 
                 top_events_qs = (
-                    events
-                    .filter(timestamp__gte=period_start, timestamp__lt=period_end)
-                    .values('event_name')
-                    .annotate(count=Count('id'))
-                    .order_by('-count')[:10]
+                    events.filter(timestamp__gte=period_start, timestamp__lt=period_end)
+                    .values("event_name")
+                    .annotate(count=Count("id"))
+                    .order_by("-count")[:10]
                 )
                 top_events = list(top_events_qs)
 
         # Format response dates
         date_range = {
-            'from': from_date.strftime('%Y-%m-%d') if from_date else None,
-            'to': to_date.strftime('%Y-%m-%d') if to_date else None
+            "from": from_date.strftime("%Y-%m-%d") if from_date else None,
+            "to": to_date.strftime("%Y-%m-%d") if to_date else None,
         }
 
         # Calculate overall summary stats
-        total_unique_sessions = sum(item['unique_sessions'] for item in active_sessions)
-        avg_session_length_overall = round(total_duration_seconds / total_sessions_with_length, 1) if total_sessions_with_length > 0 else None
+        total_unique_sessions = sum(item["unique_sessions"] for item in active_sessions)
+        avg_session_length_overall = (
+            round(total_duration_seconds / total_sessions_with_length, 1)
+            if total_sessions_with_length > 0
+            else None
+        )
 
         response_data = {
-            'app_name': app.name,
-            'granularity': granularity,
-            'date_range': date_range,
-            'active_sessions': active_sessions,
-            'summary': {
-                'total_sessions': total_unique_sessions,
-                'sessions_with_duration': total_sessions_with_length,
-                'avg_session_length_seconds': avg_session_length_overall
+            "app_name": app.name,
+            "granularity": granularity,
+            "date_range": date_range,
+            "active_sessions": active_sessions,
+            "summary": {
+                "total_sessions": total_unique_sessions,
+                "sessions_with_duration": total_sessions_with_length,
+                "avg_session_length_seconds": avg_session_length_overall,
             },
-            'top_events_current_period': top_events
+            "top_events_current_period": top_events,
         }
 
         # Cache the result for 2 minutes
-        cache_ttl = getattr(settings, 'CACHE_TTL_SUMMARY', 120)
+        cache_ttl = getattr(settings, "CACHE_TTL_SUMMARY", 120)
         cache.set(cache_key, response_data, timeout=cache_ttl)
 
         return Response(response_data, status=status.HTTP_200_OK)
@@ -345,20 +380,20 @@ This provides usage metrics without requiring user consent for tracking.
         Returns:
             Formatted string label for the period
         """
-        if granularity == 'day':
-            return dt.strftime('%Y-%m-%d')
-        elif granularity == 'week':
+        if granularity == "day":
+            return dt.strftime("%Y-%m-%d")
+        elif granularity == "week":
             # ISO week format: YYYY-Www
             iso_cal = dt.isocalendar()
             return f"{iso_cal[0]}-W{iso_cal[1]:02d}"
-        elif granularity == 'month':
-            return dt.strftime('%Y-%m')
-        elif granularity == 'quarter':
+        elif granularity == "month":
+            return dt.strftime("%Y-%m")
+        elif granularity == "quarter":
             quarter = (dt.month - 1) // 3 + 1
             return f"{dt.year}-Q{quarter}"
-        elif granularity == 'year':
+        elif granularity == "year":
             return str(dt.year)
-        return dt.strftime('%Y-%m-%d')
+        return dt.strftime("%Y-%m-%d")
 
     def _get_period_end(self, period_start, granularity):
         """
@@ -371,15 +406,15 @@ This provides usage metrics without requiring user consent for tracking.
         Returns:
             datetime object at the start of the NEXT period
         """
-        if granularity == 'day':
+        if granularity == "day":
             return period_start + timedelta(days=1)
-        elif granularity == 'week':
+        elif granularity == "week":
             return period_start + timedelta(weeks=1)
-        elif granularity == 'month':
+        elif granularity == "month":
             return period_start + relativedelta(months=1)
-        elif granularity == 'quarter':
+        elif granularity == "quarter":
             return period_start + relativedelta(months=3)
-        elif granularity == 'year':
+        elif granularity == "year":
             return period_start + relativedelta(years=1)
         return period_start + timedelta(days=1)
 
@@ -404,13 +439,13 @@ This provides usage metrics without requiring user consent for tracking.
 
         # Determine truncation SQL based on granularity
         trunc_sql_map = {
-            'day': "DATE_TRUNC('day', MIN(timestamp))",
-            'week': "DATE_TRUNC('week', MIN(timestamp))",
-            'month': "DATE_TRUNC('month', MIN(timestamp))",
-            'quarter': "DATE_TRUNC('quarter', MIN(timestamp))",
-            'year': "DATE_TRUNC('year', MIN(timestamp))"
+            "day": "DATE_TRUNC('day', MIN(timestamp))",
+            "week": "DATE_TRUNC('week', MIN(timestamp))",
+            "month": "DATE_TRUNC('month', MIN(timestamp))",
+            "quarter": "DATE_TRUNC('quarter', MIN(timestamp))",
+            "year": "DATE_TRUNC('year', MIN(timestamp))",
         }
-        trunc_sql = trunc_sql_map.get(granularity, trunc_sql_map['day'])
+        trunc_sql = trunc_sql_map.get(granularity, trunc_sql_map["day"])
 
         # Build date filter
         date_filter = ""
@@ -462,8 +497,8 @@ This provides usage metrics without requiring user consent for tracking.
             if period_dt:
                 period_label = self._format_period_label(period_dt, granularity)
                 result[period_label] = {
-                    'session_count': session_count,
-                    'avg_duration': round(avg_duration, 1) if avg_duration else None
+                    "session_count": session_count,
+                    "avg_duration": round(avg_duration, 1) if avg_duration else None,
                 }
 
         return result
@@ -484,11 +519,12 @@ class ConversionSummaryView(APIView):
 
     Conversion rate is calculated as: sessions with conversions / total unique sessions per period
     """
+
     authentication_classes = [AppKeyAuthentication]
     permission_classes = [HasValidAppKey]
 
     # Valid granularity options (same as DAUView)
-    VALID_GRANULARITIES = ('day', 'week', 'month', 'quarter', 'year')
+    VALID_GRANULARITIES = ("day", "week", "month", "quarter", "year")
 
     @swagger_auto_schema(
         operation_description="""
@@ -522,48 +558,54 @@ A session is a unique app usage period (max 2 hours), identified by session_id.
         """,
         manual_parameters=[
             openapi.Parameter(
-                'X-App-Key',
+                "X-App-Key",
                 openapi.IN_HEADER,
                 description="App Key for authentication",
                 type=openapi.TYPE_STRING,
-                required=True
+                required=True,
             ),
             openapi.Parameter(
-                'conversion_events',
+                "conversion_events",
                 openapi.IN_QUERY,
-                description="REQUIRED: Comma-separated event names to count as conversions (e.g., purchase,subscription_complete)",
+                description=(
+                    "REQUIRED: Comma-separated event names to count as conversions (e.g., "
+                    "purchase,subscription_complete)"
+                ),
                 type=openapi.TYPE_STRING,
-                required=True
+                required=True,
             ),
             openapi.Parameter(
-                'from',
+                "from",
                 openapi.IN_QUERY,
                 description="Start date in YYYY-MM-DD format",
                 type=openapi.TYPE_STRING,
-                required=False
+                required=False,
             ),
             openapi.Parameter(
-                'to',
+                "to",
                 openapi.IN_QUERY,
                 description="End date in YYYY-MM-DD format",
                 type=openapi.TYPE_STRING,
-                required=False
+                required=False,
             ),
             openapi.Parameter(
-                'tz',
+                "tz",
                 openapi.IN_QUERY,
-                description="IANA timezone name (e.g., 'America/New_York', 'Europe/London'). Dates are interpreted in this timezone. Defaults to UTC.",
+                description=(
+                    "IANA timezone name (e.g., 'America/New_York', 'Europe/London'). Dates are "
+                    "interpreted in this timezone. Defaults to UTC."
+                ),
                 type=openapi.TYPE_STRING,
                 required=False,
-                default='UTC'
+                default="UTC",
             ),
             openapi.Parameter(
-                'granularity',
+                "granularity",
                 openapi.IN_QUERY,
                 description="Time period grouping: day (default), week, month, quarter, year",
                 type=openapi.TYPE_STRING,
-                enum=['day', 'week', 'month', 'quarter', 'year'],
-                required=False
+                enum=["day", "week", "month", "quarter", "year"],
+                required=False,
             ),
         ],
         responses={
@@ -575,18 +617,33 @@ A session is a unique app usage period (max 2 hours), identified by session_id.
                         "granularity": "month",
                         "conversion_events": ["purchase", "subscription_start"],
                         "date_range": {"from": "2025-09-01", "to": "2025-11-27"},
-                        "summary": {
-                            "total_conversions": 1042,
-                            "avg_conversion_rate": 0.0312
-                        },
+                        "summary": {"total_conversions": 1042, "avg_conversion_rate": 0.0312},
                         "conversions": [
-                            {"period": "2025-11", "conversions": 342, "active_sessions": 11793, "conversion_rate": 0.029},
-                            {"period": "2025-10", "conversions": 385, "active_sessions": 12419, "conversion_rate": 0.031},
-                            {"period": "2025-09", "conversions": 315, "active_sessions": 9265, "conversion_rate": 0.034}
+                            {
+                                "period": "2025-11",
+                                "conversions": 342,
+                                "active_sessions": 11793,
+                                "conversion_rate": 0.029,
+                            },
+                            {
+                                "period": "2025-10",
+                                "conversions": 385,
+                                "active_sessions": 12419,
+                                "conversion_rate": 0.031,
+                            },
+                            {
+                                "period": "2025-09",
+                                "conversions": 315,
+                                "active_sessions": 9265,
+                                "conversion_rate": 0.034,
+                            },
                         ],
-                        "interpretation": "Conversion rate shows the percentage of sessions that include a conversion event. Each session is analyzed independently."
+                        "interpretation": (
+                            "Conversion rate shows the percentage of sessions that include a "
+                            "conversion event. Each session is analyzed independently."
+                        ),
                     }
-                }
+                },
             ),
             400: openapi.Response(
                 description="Bad Request - missing conversion_events or invalid parameters",
@@ -594,66 +651,91 @@ A session is a unique app usage period (max 2 hours), identified by session_id.
                     "application/json": {
                         "error": "conversion_events parameter required",
                         "detail": "Please specify which events to count as conversions.",
-                        "your_event_types": ["app_open", "screen_view", "button_click", "checkout_start", "payment_success"],
-                        "example": "?conversion_events=payment_success,checkout_start"
+                        "your_event_types": [
+                            "app_open",
+                            "screen_view",
+                            "button_click",
+                            "checkout_start",
+                            "payment_success",
+                        ],
+                        "example": "?conversion_events=payment_success,checkout_start",
                     }
-                }
+                },
             ),
-            401: "Unauthorized - missing or invalid app_key"
-        }
+            401: "Unauthorized - missing or invalid app_key",
+        },
     )
     def get(self, request):
         # Get the authenticated app
         app = request.user
 
         # Parse query parameters
-        conversion_events_str = request.query_params.get('conversion_events')
-        from_date_str = request.query_params.get('from')
-        to_date_str = request.query_params.get('to')
-        tz_name = request.query_params.get('tz', 'UTC')
-        granularity = request.query_params.get('granularity', 'day').lower()
+        conversion_events_str = request.query_params.get("conversion_events")
+        from_date_str = request.query_params.get("from")
+        to_date_str = request.query_params.get("to")
+        tz_name = request.query_params.get("tz", "UTC")
+        granularity = request.query_params.get("granularity", "day").lower()
 
         # Validate conversion_events parameter (REQUIRED)
         if not conversion_events_str:
             # Get user's actual event types to help them
             event_types = list(
                 Event.objects.filter(app=app)
-                .values_list('event_name', flat=True)
+                .values_list("event_name", flat=True)
                 .distinct()
-                .order_by('event_name')[:20]
+                .order_by("event_name")[:20]
             )
-            return Response({
-                'error': 'conversion_events parameter required',
-                'detail': 'Please specify which events to count as conversions.',
-                'your_event_types': event_types,
-                'example': '?conversion_events=' + (','.join(event_types[:2]) if len(event_types) >= 2 else 'purchase,subscription')
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {
+                    "error": "conversion_events parameter required",
+                    "detail": "Please specify which events to count as conversions.",
+                    "your_event_types": event_types,
+                    "example": "?conversion_events="
+                    + (
+                        ",".join(event_types[:2])
+                        if len(event_types) >= 2
+                        else "purchase,subscription"
+                    ),
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         # Parse conversion events (comma-separated, trimmed)
-        conversion_events = [e.strip() for e in conversion_events_str.split(',') if e.strip()]
+        conversion_events = [e.strip() for e in conversion_events_str.split(",") if e.strip()]
 
         if not conversion_events:
-            return Response({
-                'error': 'conversion_events parameter is empty',
-                'detail': 'Please specify at least one event name.',
-                'example': '?conversion_events=purchase,subscription'
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {
+                    "error": "conversion_events parameter is empty",
+                    "detail": "Please specify at least one event name.",
+                    "example": "?conversion_events=purchase,subscription",
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         # Validate granularity
         if granularity not in self.VALID_GRANULARITIES:
             return Response(
-                {'error': f'Invalid granularity. Must be one of: {", ".join(self.VALID_GRANULARITIES)}'},
-                status=status.HTTP_400_BAD_REQUEST
+                {
+                    "error": (
+                        "Invalid granularity. Must be one of: "
+                        f"{', '.join(self.VALID_GRANULARITIES)}"
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         # PERF-006: Check cache before running expensive conversion analysis
-        from django.core.cache import cache
-        from django.conf import settings
         import hashlib
 
-        cache_params = f"{conversion_events_str}:{from_date_str}:{to_date_str}:{tz_name}:{granularity}"
+        from django.conf import settings
+        from django.core.cache import cache
+
+        cache_params = (
+            f"{conversion_events_str}:{from_date_str}:{to_date_str}:{tz_name}:{granularity}"
+        )
         cache_hash = hashlib.md5(cache_params.encode()).hexdigest()[:16]
-        cache_key = f'conversion_summary:{app.id}:{cache_hash}'
+        cache_key = f"conversion_summary:{app.id}:{cache_hash}"
 
         cached_result = cache.get(cache_key)
         if cached_result is not None:
@@ -674,8 +756,7 @@ A session is a unique app usage period (max 2 hours), identified by session_id.
                 events = events.filter(timestamp__lte=to_date)
         except ValueError:
             return Response(
-                {'error': 'Invalid date format. Use YYYY-MM-DD'},
-                status=status.HTTP_400_BAD_REQUEST
+                {"error": "Invalid date format. Use YYYY-MM-DD"}, status=status.HTTP_400_BAD_REQUEST
             )
 
         # Default date range: last 30 days if not specified
@@ -693,35 +774,35 @@ A session is a unique app usage period (max 2 hours), identified by session_id.
 
         # Choose truncation function based on granularity
         trunc_functions = {
-            'day': TruncDay,
-            'week': TruncWeek,  # Django uses ISO weeks (Mon-Sun)
-            'month': TruncMonth,
-            'quarter': TruncQuarter,
-            'year': TruncYear,
+            "day": TruncDay,
+            "week": TruncWeek,  # Django uses ISO weeks (Mon-Sun)
+            "month": TruncMonth,
+            "quarter": TruncQuarter,
+            "year": TruncYear,
         }
         trunc_func = trunc_functions[granularity]
 
         # Calculate active sessions per period (same logic as DAUView)
         active_sessions_data = (
-            events
-            .filter(session_id__isnull=False)
-            .exclude(session_id='')
-            .annotate(period=trunc_func('timestamp'))
-            .values('period')
-            .annotate(unique_sessions=Count('session_id', distinct=True))
+            events.filter(session_id__isnull=False)
+            .exclude(session_id="")
+            .annotate(period=trunc_func("timestamp"))
+            .values("period")
+            .annotate(unique_sessions=Count("session_id", distinct=True))
         )
 
         # Convert to dict for easy lookup
-        sessions_by_period = {item['period']: item['unique_sessions'] for item in active_sessions_data}
+        sessions_by_period = {
+            item["period"]: item["unique_sessions"] for item in active_sessions_data
+        }
 
         # Count conversion events per period
         conversion_data = (
-            events
-            .filter(event_name__in=conversion_events)
-            .annotate(period=trunc_func('timestamp'))
-            .values('period')
-            .annotate(conversions=Count('id'))
-            .order_by('-period')
+            events.filter(event_name__in=conversion_events)
+            .annotate(period=trunc_func("timestamp"))
+            .values("period")
+            .annotate(conversions=Count("id"))
+            .order_by("-period")
         )
 
         # Format response data with conversion rates
@@ -731,21 +812,25 @@ A session is a unique app usage period (max 2 hours), identified by session_id.
         periods_with_conversions = 0
 
         for item in conversion_data:
-            period_dt = item['period']
+            period_dt = item["period"]
             if period_dt:
                 period_label = self._format_period_label(period_dt, granularity)
                 active_sessions = sessions_by_period.get(period_dt, 0)
-                conversion_count = item['conversions']
+                conversion_count = item["conversions"]
 
                 # Calculate conversion rate (avoid division by zero)
-                conversion_rate = round(conversion_count / active_sessions, 4) if active_sessions > 0 else 0.0
+                conversion_rate = (
+                    round(conversion_count / active_sessions, 4) if active_sessions > 0 else 0.0
+                )
 
-                conversions_list.append({
-                    'period': period_label,
-                    'conversions': conversion_count,
-                    'active_sessions': active_sessions,
-                    'conversion_rate': conversion_rate
-                })
+                conversions_list.append(
+                    {
+                        "period": period_label,
+                        "conversions": conversion_count,
+                        "active_sessions": active_sessions,
+                        "conversion_rate": conversion_rate,
+                    }
+                )
 
                 total_conversions += conversion_count
                 if active_sessions > 0:
@@ -753,29 +838,36 @@ A session is a unique app usage period (max 2 hours), identified by session_id.
                     periods_with_conversions += 1
 
         # Calculate average conversion rate across all periods
-        avg_conversion_rate = round(total_conversions / total_sessions_for_avg, 4) if total_sessions_for_avg > 0 else 0.0
+        avg_conversion_rate = (
+            round(total_conversions / total_sessions_for_avg, 4)
+            if total_sessions_for_avg > 0
+            else 0.0
+        )
 
         # Format response dates
         date_range = {
-            'from': from_date.strftime('%Y-%m-%d') if from_date else None,
-            'to': to_date.strftime('%Y-%m-%d') if to_date else None
+            "from": from_date.strftime("%Y-%m-%d") if from_date else None,
+            "to": to_date.strftime("%Y-%m-%d") if to_date else None,
         }
 
         response_data = {
-            'app_name': app.name,
-            'granularity': granularity,
-            'conversion_events': conversion_events,
-            'date_range': date_range,
-            'summary': {
-                'total_conversions': total_conversions,
-                'avg_conversion_rate': avg_conversion_rate
+            "app_name": app.name,
+            "granularity": granularity,
+            "conversion_events": conversion_events,
+            "date_range": date_range,
+            "summary": {
+                "total_conversions": total_conversions,
+                "avg_conversion_rate": avg_conversion_rate,
             },
-            'conversions': conversions_list,
-            'interpretation': 'Conversion rate shows the percentage of sessions that include a conversion event. Each session is analyzed independently.'
+            "conversions": conversions_list,
+            "interpretation": (
+                "Conversion rate shows the percentage of sessions that include a conversion event. "
+                "Each session is analyzed independently."
+            ),
         }
 
         # Cache the result for 2 minutes
-        cache_ttl = getattr(settings, 'CACHE_TTL_CONVERSION', 120)
+        cache_ttl = getattr(settings, "CACHE_TTL_CONVERSION", 120)
         cache.set(cache_key, response_data, timeout=cache_ttl)
 
         return Response(response_data, status=status.HTTP_200_OK)
@@ -791,20 +883,20 @@ A session is a unique app usage period (max 2 hours), identified by session_id.
         Returns:
             Formatted string label for the period
         """
-        if granularity == 'day':
-            return dt.strftime('%Y-%m-%d')
-        elif granularity == 'week':
+        if granularity == "day":
+            return dt.strftime("%Y-%m-%d")
+        elif granularity == "week":
             # ISO week format: YYYY-Www
             iso_cal = dt.isocalendar()
             return f"{iso_cal[0]}-W{iso_cal[1]:02d}"
-        elif granularity == 'month':
-            return dt.strftime('%Y-%m')
-        elif granularity == 'quarter':
+        elif granularity == "month":
+            return dt.strftime("%Y-%m")
+        elif granularity == "quarter":
             quarter = (dt.month - 1) // 3 + 1
             return f"{dt.year}-Q{quarter}"
-        elif granularity == 'year':
+        elif granularity == "year":
             return str(dt.year)
-        return dt.strftime('%Y-%m-%d')
+        return dt.strftime("%Y-%m-%d")
 
 
 class TimeToConversionView(APIView):
@@ -857,6 +949,7 @@ class TimeToConversionView(APIView):
             }
         }
     """
+
     authentication_classes = [AppKeyAuthentication]
     permission_classes = [HasValidAppKey]
 
@@ -882,35 +975,38 @@ interaction with the app. This is a session-based analysis.
         """,
         manual_parameters=[
             openapi.Parameter(
-                'conversion_events',
+                "conversion_events",
                 openapi.IN_QUERY,
                 description="Comma-separated list of conversion event names (required)",
                 type=openapi.TYPE_STRING,
-                required=True
+                required=True,
             ),
             openapi.Parameter(
-                'start_date',
+                "start_date",
                 openapi.IN_QUERY,
                 description="Start date filter (YYYY-MM-DD)",
                 type=openapi.TYPE_STRING,
-                format='date',
-                required=False
+                format="date",
+                required=False,
             ),
             openapi.Parameter(
-                'end_date',
+                "end_date",
                 openapi.IN_QUERY,
                 description="End date filter (YYYY-MM-DD)",
                 type=openapi.TYPE_STRING,
-                format='date',
-                required=False
+                format="date",
+                required=False,
             ),
             openapi.Parameter(
-                'tz',
+                "tz",
                 openapi.IN_QUERY,
-                description="IANA timezone name (e.g., 'America/New_York', 'Europe/London'). Dates are interpreted in this timezone. Defaults to UTC.",
+                description=(
+                    "IANA timezone name (e.g., 'America/New_York', 'Europe/London'). Dates are "
+                    "interpreted in this timezone. Defaults to UTC."
+                ),
                 type=openapi.TYPE_STRING,
                 required=False,
-                default='UTC'
+                default="UTC",
             ),
         ],
         responses={
@@ -919,18 +1015,18 @@ interaction with the app. This is a session-based analysis.
                 schema=openapi.Schema(
                     type=openapi.TYPE_OBJECT,
                     properties={
-                        'app': openapi.Schema(type=openapi.TYPE_OBJECT),
-                        'filters': openapi.Schema(type=openapi.TYPE_OBJECT),
-                        'data_quality': openapi.Schema(type=openapi.TYPE_OBJECT),
-                        'time_to_conversion': openapi.Schema(type=openapi.TYPE_OBJECT),
-                        'time_distribution': openapi.Schema(type=openapi.TYPE_OBJECT),
-                    }
-                )
+                        "app": openapi.Schema(type=openapi.TYPE_OBJECT),
+                        "filters": openapi.Schema(type=openapi.TYPE_OBJECT),
+                        "data_quality": openapi.Schema(type=openapi.TYPE_OBJECT),
+                        "time_to_conversion": openapi.Schema(type=openapi.TYPE_OBJECT),
+                        "time_distribution": openapi.Schema(type=openapi.TYPE_OBJECT),
+                    },
+                ),
             ),
             400: openapi.Response(description="Missing required parameters or insufficient data"),
             401: openapi.Response(description="Unauthorized - missing or invalid app_key"),
         },
-        tags=['Analytics']
+        tags=["Analytics"],
     )
     def get(self, request):
         """
@@ -940,55 +1036,64 @@ interaction with the app. This is a session-based analysis.
         app = request.user
 
         # Validate required parameters
-        conversion_events_param = request.query_params.get('conversion_events')
+        conversion_events_param = request.query_params.get("conversion_events")
 
         if not conversion_events_param:
             # Get user's actual event types to help them
             event_types = list(
                 Event.objects.filter(app=app)
-                .values_list('event_name', flat=True)
+                .values_list("event_name", flat=True)
                 .distinct()
-                .order_by('event_name')[:20]
+                .order_by("event_name")[:20]
             )
-            return Response({
-                'error': 'conversion_events parameter is required',
-                'detail': 'Please specify which events to count as conversions.',
-                'your_event_types': event_types,
-                'example': '?conversion_events=' + (','.join(event_types[:2]) if len(event_types) >= 2 else 'purchase,subscription')
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {
+                    "error": "conversion_events parameter is required",
+                    "detail": "Please specify which events to count as conversions.",
+                    "your_event_types": event_types,
+                    "example": "?conversion_events="
+                    + (
+                        ",".join(event_types[:2])
+                        if len(event_types) >= 2
+                        else "purchase,subscription"
+                    ),
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         # Parse conversion events
-        conversion_events = [
-            e.strip() for e in conversion_events_param.split(',')
-            if e.strip()
-        ]
+        conversion_events = [e.strip() for e in conversion_events_param.split(",") if e.strip()]
 
         if not conversion_events:
-            return Response({
-                'error': 'conversion_events parameter is empty',
-                'detail': 'Please specify at least one event name.',
-                'example': '?conversion_events=purchase,subscription'
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {
+                    "error": "conversion_events parameter is empty",
+                    "detail": "Please specify at least one event name.",
+                    "example": "?conversion_events=purchase,subscription",
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         # Parse date filters
-        start_date = request.query_params.get('start_date')
-        end_date = request.query_params.get('end_date')
-        tz_name = request.query_params.get('tz', 'UTC')
+        start_date = request.query_params.get("start_date")
+        end_date = request.query_params.get("end_date")
+        tz_name = request.query_params.get("tz", "UTC")
 
         # PERF-009: Check cache before running expensive analysis
-        from django.core.cache import cache
-        from django.conf import settings
         import hashlib
+
+        from django.conf import settings
+        from django.core.cache import cache
 
         cache_params = f"{','.join(sorted(conversion_events))}:{start_date}:{end_date}:{tz_name}"
         cache_hash = hashlib.md5(cache_params.encode()).hexdigest()[:16]
-        cache_key = f'time_to_conversion:{app.id}:{cache_hash}'
+        cache_key = f"time_to_conversion:{app.id}:{cache_hash}"
 
         cached_result = cache.get(cache_key)
         if cached_result is not None:
             # Check if this is a cached error response
-            if '_error' in cached_result:
-                return Response(cached_result['_error'], status=status.HTTP_400_BAD_REQUEST)
+            if "_error" in cached_result:
+                return Response(cached_result["_error"], status=status.HTTP_400_BAD_REQUEST)
             return Response(cached_result, status=status.HTTP_200_OK)
 
         # Parse dates with timezone awareness
@@ -996,8 +1101,7 @@ interaction with the app. This is a session-based analysis.
             start_datetime, end_datetime = parse_date_range(start_date, end_date, tz_name)
         except ValueError:
             return Response(
-                {'error': 'Invalid date format. Use YYYY-MM-DD'},
-                status=status.HTTP_400_BAD_REQUEST
+                {"error": "Invalid date format. Use YYYY-MM-DD"}, status=status.HTTP_400_BAD_REQUEST
             )
 
         # Build base queryset
@@ -1009,30 +1113,26 @@ interaction with the app. This is a session-based analysis.
             events_qs = events_qs.filter(timestamp__lte=end_datetime)
 
         # Get total sessions count for coverage calculation
-        all_sessions_count = events_qs.values('session_id').distinct().count()
+        all_sessions_count = events_qs.values("session_id").distinct().count()
 
         # Get conversion analysis data (session-based)
         analysis_result = self._calculate_time_to_conversion(
             app, events_qs, conversion_events, all_sessions_count
         )
 
-        if 'error' in analysis_result:
+        if "error" in analysis_result:
             # PERF-009: Cache error responses too (shorter TTL - 1 min)
-            cache.set(cache_key, {'_error': analysis_result}, timeout=60)
+            cache.set(cache_key, {"_error": analysis_result}, timeout=60)
             return Response(analysis_result, status=status.HTTP_400_BAD_REQUEST)
 
         response_data = {
-            'app': {
-                'id': app.id,
-                'name': app.name,
-                'slug': app.slug
+            "app": {"id": app.id, "name": app.name, "slug": app.slug},
+            "filters": {
+                "start_date": start_date,
+                "end_date": end_date,
+                "conversion_events": conversion_events,
             },
-            'filters': {
-                'start_date': start_date,
-                'end_date': end_date,
-                'conversion_events': conversion_events
-            },
-            **analysis_result
+            **analysis_result,
         }
 
         # PERF-009: Cache the result for 3 minutes
@@ -1040,8 +1140,7 @@ interaction with the app. This is a session-based analysis.
 
         return Response(response_data, status=status.HTTP_200_OK)
 
-    def _calculate_time_to_conversion(self, app, events_qs, conversion_events,
-                                       all_sessions_count):
+    def _calculate_time_to_conversion(self, app, events_qs, conversion_events, all_sessions_count):
         """
         Calculate time-to-conversion statistics using session-based analysis.
 
@@ -1059,7 +1158,7 @@ interaction with the app. This is a session-based analysis.
         base_sql, base_params = events_qs.query.sql_with_params()
 
         # Build conversion events placeholder for SQL
-        conversion_placeholders = ', '.join(['%s'] * len(conversion_events))
+        conversion_placeholders = ", ".join(["%s"] * len(conversion_events))
 
         # Session-based time-to-conversion query
         # Strategy:
@@ -1093,7 +1192,8 @@ interaction with the app. This is a session-based analysis.
                 sfe.session_id,
                 sfe.first_event_time,
                 sfc.first_conversion_time,
-                EXTRACT(EPOCH FROM (sfc.first_conversion_time - sfe.first_event_time)) / 60.0 as time_to_conversion_minutes
+                EXTRACT(EPOCH FROM (sfc.first_conversion_time - sfe.first_event_time)) / 60.0
+                    as time_to_conversion_minutes
             FROM session_first_event sfe
             JOIN session_first_conversion sfc ON sfe.session_id = sfc.session_id
             WHERE sfc.first_conversion_time >= sfe.first_event_time
@@ -1128,45 +1228,51 @@ interaction with the app. This is a session-based analysis.
         # Handle zero conversions case
         if sessions_with_conversions == 0:
             return {
-                'data_quality': {
-                    'sessions_with_conversions': 0,
-                    'total_sessions': all_sessions_count,
-                    'coverage_percent': 0,
-                    'warning': None,
-                    'small_sample_warning': None
+                "data_quality": {
+                    "sessions_with_conversions": 0,
+                    "total_sessions": all_sessions_count,
+                    "coverage_percent": 0,
+                    "warning": None,
+                    "small_sample_warning": None,
                 },
-                'time_to_conversion': self._calculate_percentile_stats([]),
-                'time_distribution': self._calculate_time_distribution([])
+                "time_to_conversion": self._calculate_percentile_stats([]),
+                "time_distribution": self._calculate_time_distribution([]),
             }
 
         # Calculate coverage percentage
-        coverage_percent = (sessions_with_conversions / all_sessions_count * 100) if all_sessions_count > 0 else 0
+        coverage_percent = (
+            (sessions_with_conversions / all_sessions_count * 100) if all_sessions_count > 0 else 0
+        )
 
         # Generate warnings
         warning = None
         small_sample_warning = None
-        
+
         if coverage_percent < 5:
-            warning = f'Low conversion rate: only {coverage_percent:.1f}% of sessions converted'
-        
+            warning = f"Low conversion rate: only {coverage_percent:.1f}% of sessions converted"
+
         # Add small sample warning if < 10 sessions (for UI to show advisory)
         if sessions_with_conversions < 10:
-            small_sample_warning = f'Small sample size: {sessions_with_conversions} converting session{"s" if sessions_with_conversions != 1 else ""}. Results may vary with more data.'
+            small_sample_warning = (
+                f"Small sample size: {sessions_with_conversions} converting "
+                f"session{'s' if sessions_with_conversions != 1 else ''}. Results may vary with "
+                "more data."
+            )
 
         # Calculate statistics
         time_stats = self._calculate_percentile_stats(conversion_times)
         time_distribution = self._calculate_time_distribution(conversion_times)
 
         return {
-            'data_quality': {
-                'sessions_with_conversions': sessions_with_conversions,
-                'total_sessions': all_sessions_count,
-                'coverage_percent': round(coverage_percent, 2),
-                'warning': warning,
-                'small_sample_warning': small_sample_warning
+            "data_quality": {
+                "sessions_with_conversions": sessions_with_conversions,
+                "total_sessions": all_sessions_count,
+                "coverage_percent": round(coverage_percent, 2),
+                "warning": warning,
+                "small_sample_warning": small_sample_warning,
             },
-            'time_to_conversion': time_stats,
-            'time_distribution': time_distribution
+            "time_to_conversion": time_stats,
+            "time_distribution": time_distribution,
         }
 
     def _calculate_percentile_stats(self, values):
@@ -1177,13 +1283,13 @@ interaction with the app. This is a session-based analysis.
         """
         if not values:
             return {
-                'median_minutes': 0,
-                'mean_minutes': 0,
-                'p25_minutes': 0,
-                'p75_minutes': 0,
-                'p90_minutes': 0,
-                'min_minutes': 0,
-                'max_minutes': 0
+                "median_minutes": 0,
+                "mean_minutes": 0,
+                "p25_minutes": 0,
+                "p75_minutes": 0,
+                "p90_minutes": 0,
+                "min_minutes": 0,
+                "max_minutes": 0,
             }
 
         sorted_values = sorted(values)
@@ -1201,13 +1307,13 @@ interaction with the app. This is a session-based analysis.
             return sorted_values[f] * (c - k) + sorted_values[c] * (k - f)
 
         return {
-            'median_minutes': round(percentile(50), 2),
-            'mean_minutes': round(sum(values) / len(values), 2),
-            'p25_minutes': round(percentile(25), 2),
-            'p75_minutes': round(percentile(75), 2),
-            'p90_minutes': round(percentile(90), 2),
-            'min_minutes': round(min(values), 2),
-            'max_minutes': round(max(values), 2)
+            "median_minutes": round(percentile(50), 2),
+            "mean_minutes": round(sum(values) / len(values), 2),
+            "p25_minutes": round(percentile(25), 2),
+            "p75_minutes": round(percentile(75), 2),
+            "p90_minutes": round(percentile(90), 2),
+            "min_minutes": round(min(values), 2),
+            "max_minutes": round(max(values), 2),
         }
 
     def _calculate_time_distribution(self, conversion_times):
@@ -1224,34 +1330,26 @@ interaction with the app. This is a session-based analysis.
 
         if total == 0:
             return {
-                'under_5_min': {'count': 0, 'percent': 0},
-                '5_to_15_min': {'count': 0, 'percent': 0},
-                '15_to_60_min': {'count': 0, 'percent': 0},
-                '1_to_2_hours': {'count': 0, 'percent': 0}
+                "under_5_min": {"count": 0, "percent": 0},
+                "5_to_15_min": {"count": 0, "percent": 0},
+                "15_to_60_min": {"count": 0, "percent": 0},
+                "1_to_2_hours": {"count": 0, "percent": 0},
             }
 
-        buckets = {
-            'under_5_min': 0,
-            '5_to_15_min': 0,
-            '15_to_60_min': 0,
-            '1_to_2_hours': 0
-        }
+        buckets = {"under_5_min": 0, "5_to_15_min": 0, "15_to_60_min": 0, "1_to_2_hours": 0}
 
         for time_minutes in conversion_times:
             if time_minutes < 5:
-                buckets['under_5_min'] += 1
+                buckets["under_5_min"] += 1
             elif time_minutes < 15:
-                buckets['5_to_15_min'] += 1
+                buckets["5_to_15_min"] += 1
             elif time_minutes < 60:
-                buckets['15_to_60_min'] += 1
+                buckets["15_to_60_min"] += 1
             else:
-                buckets['1_to_2_hours'] += 1
+                buckets["1_to_2_hours"] += 1
 
         return {
-            key: {
-                'count': count,
-                'percent': round(count / total * 100, 2)
-            }
+            key: {"count": count, "percent": round(count / total * 100, 2)}
             for key, count in buckets.items()
         }
 
@@ -1308,6 +1406,7 @@ class StepTimingView(APIView):
             }
         }
     """
+
     authentication_classes = [AppKeyAuthentication]
     permission_classes = [HasValidAppKey]
 
@@ -1324,7 +1423,8 @@ This endpoint analyzes events within the **same session_id**. This means:
 
 **Example Use Cases:**
 - How long does onboarding take? (`steps=onboarding_start,onboarding_complete`)
-- Where do sessions slow down in signup? (`steps=signup_start,email_entered,password_set,signup_complete`)
+- Where do sessions slow down in signup?
+  (`steps=signup_start,email_entered,password_set,signup_complete`)
 - How long between pricing view and purchase? (`steps=pricing_view,purchase`)
 
 **Statistics Provided:**
@@ -1335,35 +1435,38 @@ This endpoint analyzes events within the **same session_id**. This means:
         """,
         manual_parameters=[
             openapi.Parameter(
-                'steps',
+                "steps",
                 openapi.IN_QUERY,
                 description="Comma-separated list of funnel step event names (required, minimum 2)",
                 type=openapi.TYPE_STRING,
-                required=True
+                required=True,
             ),
             openapi.Parameter(
-                'start_date',
+                "start_date",
                 openapi.IN_QUERY,
                 description="Start date filter (YYYY-MM-DD)",
                 type=openapi.TYPE_STRING,
-                format='date',
-                required=False
+                format="date",
+                required=False,
             ),
             openapi.Parameter(
-                'end_date',
+                "end_date",
                 openapi.IN_QUERY,
                 description="End date filter (YYYY-MM-DD)",
                 type=openapi.TYPE_STRING,
-                format='date',
-                required=False
+                format="date",
+                required=False,
             ),
             openapi.Parameter(
-                'tz',
+                "tz",
                 openapi.IN_QUERY,
-                description="IANA timezone name (e.g., 'America/New_York', 'Europe/London'). Dates are interpreted in this timezone. Defaults to UTC.",
+                description=(
+                    "IANA timezone name (e.g., 'America/New_York', 'Europe/London'). Dates are "
+                    "interpreted in this timezone. Defaults to UTC."
+                ),
                 type=openapi.TYPE_STRING,
                 required=False,
-                default='UTC'
+                default="UTC",
             ),
         ],
         responses={
@@ -1382,7 +1485,7 @@ This endpoint analyzes events within the **same session_id**. This means:
                                 "median_seconds": 45,
                                 "mean_seconds": 52,
                                 "p25_seconds": 30,
-                                "p75_seconds": 65
+                                "p75_seconds": 65,
                             },
                             {
                                 "from": "onboarding_complete",
@@ -1391,23 +1494,23 @@ This endpoint analyzes events within the **same session_id**. This means:
                                 "median_seconds": 120,
                                 "mean_seconds": 145,
                                 "p25_seconds": 60,
-                                "p75_seconds": 180
-                            }
+                                "p75_seconds": 180,
+                            },
                         ],
                         "funnel_summary": {
                             "sessions_with_first_step": 1234,
                             "sessions_with_all_steps": 234,
                             "completion_rate": 0.190,
                             "median_total_seconds": 165,
-                            "mean_total_seconds": 197
-                        }
+                            "mean_total_seconds": 197,
+                        },
                     }
-                }
+                },
             ),
             400: openapi.Response(description="Missing or invalid steps parameter"),
             401: openapi.Response(description="Unauthorized - missing or invalid app_key"),
         },
-        tags=['Analytics']
+        tags=["Analytics"],
     )
     def get(self, request):
         """
@@ -1417,51 +1520,60 @@ This endpoint analyzes events within the **same session_id**. This means:
         app = request.user
 
         # Validate required parameters
-        steps_param = request.query_params.get('steps')
+        steps_param = request.query_params.get("steps")
 
         if not steps_param:
             # Get user's actual event types to help them
             event_types = list(
                 Event.objects.filter(app=app)
-                .values_list('event_name', flat=True)
+                .values_list("event_name", flat=True)
                 .distinct()
-                .order_by('event_name')[:20]
+                .order_by("event_name")[:20]
             )
-            return Response({
-                'error': 'steps parameter is required',
-                'detail': 'Please specify the funnel steps as comma-separated event names.',
-                'your_event_types': event_types,
-                'example': '?steps=' + (','.join(event_types[:3]) if len(event_types) >= 3 else 'step1,step2,step3')
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {
+                    "error": "steps parameter is required",
+                    "detail": "Please specify the funnel steps as comma-separated event names.",
+                    "your_event_types": event_types,
+                    "example": "?steps="
+                    + (",".join(event_types[:3]) if len(event_types) >= 3 else "step1,step2,step3"),
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         # Parse steps
-        steps = [s.strip() for s in steps_param.split(',') if s.strip()]
+        steps = [s.strip() for s in steps_param.split(",") if s.strip()]
 
         if len(steps) < 2:
-            return Response({
-                'error': 'steps parameter requires at least 2 events',
-                'detail': 'A funnel needs at least a start and end step.',
-                'example': '?steps=onboarding_start,onboarding_complete'
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {
+                    "error": "steps parameter requires at least 2 events",
+                    "detail": "A funnel needs at least a start and end step.",
+                    "example": "?steps=onboarding_start,onboarding_complete",
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         if len(steps) > 10:
-            return Response({
-                'error': 'Maximum 10 steps allowed for step timing analysis',
-                'detail': 'Please reduce the number of funnel steps to 10 or fewer.'
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {
+                    "error": "Maximum 10 steps allowed for step timing analysis",
+                    "detail": "Please reduce the number of funnel steps to 10 or fewer.",
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         # Parse date filters
-        start_date = request.query_params.get('start_date')
-        end_date = request.query_params.get('end_date')
-        tz_name = request.query_params.get('tz', 'UTC')
+        start_date = request.query_params.get("start_date")
+        end_date = request.query_params.get("end_date")
+        tz_name = request.query_params.get("tz", "UTC")
 
         # Parse dates with timezone awareness
         try:
             start_datetime, end_datetime = parse_date_range(start_date, end_date, tz_name)
         except ValueError:
             return Response(
-                {'error': 'Invalid date format. Use YYYY-MM-DD'},
-                status=status.HTTP_400_BAD_REQUEST
+                {"error": "Invalid date format. Use YYYY-MM-DD"}, status=status.HTTP_400_BAD_REQUEST
             )
 
         # Build base queryset
@@ -1475,19 +1587,15 @@ This endpoint analyzes events within the **same session_id**. This means:
         # Calculate step timing analysis
         analysis_result = self._calculate_step_timing(events_qs, steps)
 
-        return Response({
-            'app': {
-                'id': app.id,
-                'name': app.name,
-                'slug': app.slug
+        return Response(
+            {
+                "app": {"id": app.id, "name": app.name, "slug": app.slug},
+                "steps": steps,
+                "filters": {"start_date": start_date, "end_date": end_date},
+                **analysis_result,
             },
-            'steps': steps,
-            'filters': {
-                'start_date': start_date,
-                'end_date': end_date
-            },
-            **analysis_result
-        }, status=status.HTTP_200_OK)
+            status=status.HTTP_200_OK,
+        )
 
     def _calculate_step_timing(self, events_qs, steps):
         """
@@ -1500,22 +1608,21 @@ This endpoint analyzes events within the **same session_id**. This means:
             dict with 'transitions' and 'funnel_summary'
         """
         # Get all relevant events for the funnel steps
-        relevant_events = events_qs.filter(
-            event_name__in=steps
-        ).values(
-            'session_id', 'event_name', 'timestamp'
-        ).order_by('session_id', 'timestamp')
+        relevant_events = (
+            events_qs.filter(event_name__in=steps)
+            .values("session_id", "event_name", "timestamp")
+            .order_by("session_id", "timestamp")
+        )
 
         # Group events by session
         sessions = {}
         for event in relevant_events:
-            session_id = event['session_id']
+            session_id = event["session_id"]
             if session_id not in sessions:
                 sessions[session_id] = []
-            sessions[session_id].append({
-                'event_name': event['event_name'],
-                'timestamp': event['timestamp']
-            })
+            sessions[session_id].append(
+                {"event_name": event["event_name"], "timestamp": event["timestamp"]}
+            )
 
         # For each session, find step transitions
         # Build a mapping of step index for ordering
@@ -1527,17 +1634,17 @@ This endpoint analyzes events within the **same session_id**. This means:
         sessions_with_first_step = 0
         sessions_with_all_steps = 0
 
-        for session_id, session_events in sessions.items():
+        for _session_id, session_events in sessions.items():
             # Find the first occurrence of each step in order
             step_occurrences = {}
 
             for event in session_events:
-                event_name = event['event_name']
+                event_name = event["event_name"]
                 if event_name in step_index:
                     idx = step_index[event_name]
                     # Only record the first occurrence of each step
                     if idx not in step_occurrences:
-                        step_occurrences[idx] = event['timestamp']
+                        step_occurrences[idx] = event["timestamp"]
 
             # Check if this session has the first step
             if 0 in step_occurrences:
@@ -1579,30 +1686,30 @@ This endpoint analyzes events within the **same session_id**. This means:
         transitions = []
         for i in range(len(steps) - 1):
             times = transition_times[i]
-            transitions.append({
-                'from': steps[i],
-                'to': steps[i + 1],
-                'sessions_analyzed': len(times),
-                **self._calculate_time_stats(times)
-            })
+            transitions.append(
+                {
+                    "from": steps[i],
+                    "to": steps[i + 1],
+                    "sessions_analyzed": len(times),
+                    **self._calculate_time_stats(times),
+                }
+            )
 
         # Build funnel summary
         completion_rate = (
             sessions_with_all_steps / sessions_with_first_step
-            if sessions_with_first_step > 0 else 0
+            if sessions_with_first_step > 0
+            else 0
         )
 
         funnel_summary = {
-            'sessions_with_first_step': sessions_with_first_step,
-            'sessions_with_all_steps': sessions_with_all_steps,
-            'completion_rate': round(completion_rate, 3),
-            **self._calculate_total_funnel_stats(total_funnel_times)
+            "sessions_with_first_step": sessions_with_first_step,
+            "sessions_with_all_steps": sessions_with_all_steps,
+            "completion_rate": round(completion_rate, 3),
+            **self._calculate_total_funnel_stats(total_funnel_times),
         }
 
-        return {
-            'transitions': transitions,
-            'funnel_summary': funnel_summary
-        }
+        return {"transitions": transitions, "funnel_summary": funnel_summary}
 
     def _calculate_time_stats(self, times):
         """
@@ -1611,12 +1718,7 @@ This endpoint analyzes events within the **same session_id**. This means:
         Returns dict with median_seconds, mean_seconds, p25_seconds, p75_seconds.
         """
         if not times:
-            return {
-                'median_seconds': 0,
-                'mean_seconds': 0,
-                'p25_seconds': 0,
-                'p75_seconds': 0
-            }
+            return {"median_seconds": 0, "mean_seconds": 0, "p25_seconds": 0, "p75_seconds": 0}
 
         sorted_times = sorted(times)
         n = len(sorted_times)
@@ -1633,10 +1735,10 @@ This endpoint analyzes events within the **same session_id**. This means:
             return sorted_times[f] * (c - k) + sorted_times[c] * (k - f)
 
         return {
-            'median_seconds': round(percentile(50), 2),
-            'mean_seconds': round(sum(times) / len(times), 2),
-            'p25_seconds': round(percentile(25), 2),
-            'p75_seconds': round(percentile(75), 2)
+            "median_seconds": round(percentile(50), 2),
+            "mean_seconds": round(sum(times) / len(times), 2),
+            "p25_seconds": round(percentile(25), 2),
+            "p75_seconds": round(percentile(75), 2),
         }
 
     def _calculate_total_funnel_stats(self, total_times):
@@ -1646,10 +1748,7 @@ This endpoint analyzes events within the **same session_id**. This means:
         Returns dict with median_total_seconds, mean_total_seconds.
         """
         if not total_times:
-            return {
-                'median_total_seconds': 0,
-                'mean_total_seconds': 0
-            }
+            return {"median_total_seconds": 0, "mean_total_seconds": 0}
 
         sorted_times = sorted(total_times)
         n = len(sorted_times)
@@ -1662,10 +1761,7 @@ This endpoint analyzes events within the **same session_id**. This means:
 
         mean = sum(total_times) / len(total_times)
 
-        return {
-            'median_total_seconds': round(median, 2),
-            'mean_total_seconds': round(mean, 2)
-        }
+        return {"median_total_seconds": round(median, 2), "mean_total_seconds": round(mean, 2)}
 
 
 class ConversionPathsView(APIView):
@@ -1700,6 +1796,7 @@ class ConversionPathsView(APIView):
         4. Group identical paths and count frequency
         5. Rank by number of sessions, calculate timing statistics
     """
+
     authentication_classes = [AppKeyAuthentication]
     permission_classes = [HasValidAppKey]
 
@@ -1732,56 +1829,59 @@ Automatically discover the most common behavior sequences that lead to conversio
         """,
         manual_parameters=[
             openapi.Parameter(
-                'conversion_events',
+                "conversion_events",
                 openapi.IN_QUERY,
                 description="REQUIRED: Comma-separated event names to count as conversions",
                 type=openapi.TYPE_STRING,
-                required=True
+                required=True,
             ),
             openapi.Parameter(
-                'limit',
+                "limit",
                 openapi.IN_QUERY,
                 description="Maximum number of paths to return (default: 5, max: 20)",
                 type=openapi.TYPE_INTEGER,
-                required=False
+                required=False,
             ),
             openapi.Parameter(
-                'min_sessions',
+                "min_sessions",
                 openapi.IN_QUERY,
                 description="Minimum sessions for a path to be included (default: 3)",
                 type=openapi.TYPE_INTEGER,
-                required=False
+                required=False,
             ),
             openapi.Parameter(
-                'max_path_length',
+                "max_path_length",
                 openapi.IN_QUERY,
                 description="Maximum events in a path before conversion (default: 10)",
                 type=openapi.TYPE_INTEGER,
-                required=False
+                required=False,
             ),
             openapi.Parameter(
-                'start_date',
+                "start_date",
                 openapi.IN_QUERY,
                 description="Start date filter (YYYY-MM-DD)",
                 type=openapi.TYPE_STRING,
-                format='date',
-                required=False
+                format="date",
+                required=False,
             ),
             openapi.Parameter(
-                'end_date',
+                "end_date",
                 openapi.IN_QUERY,
                 description="End date filter (YYYY-MM-DD)",
                 type=openapi.TYPE_STRING,
-                format='date',
-                required=False
+                format="date",
+                required=False,
             ),
             openapi.Parameter(
-                'tz',
+                "tz",
                 openapi.IN_QUERY,
-                description="IANA timezone name (e.g., 'America/New_York', 'Europe/London'). Dates are interpreted in this timezone. Defaults to UTC.",
+                description=(
+                    "IANA timezone name (e.g., 'America/New_York', 'Europe/London'). Dates are "
+                    "interpreted in this timezone. Defaults to UTC."
+                ),
                 type=openapi.TYPE_STRING,
                 required=False,
-                default='UTC'
+                default="UTC",
             ),
         ],
         responses={
@@ -1796,12 +1896,12 @@ Automatically discover the most common behavior sequences that lead to conversio
                             "end_date": None,
                             "limit": 5,
                             "min_sessions": 3,
-                            "max_path_length": 10
+                            "max_path_length": 10,
                         },
                         "data_quality": {
                             "total_converting_sessions": 234,
                             "paths_analyzed": 187,
-                            "unique_paths_found": 42
+                            "unique_paths_found": 42,
                         },
                         "top_conversion_paths": [
                             {
@@ -1812,19 +1912,26 @@ Automatically discover the most common behavior sequences that lead to conversio
                                 "avg_duration_minutes": 15.5,
                                 "step_timings": [
                                     {"from": "app_open", "to": "feature_demo", "avg_minutes": 2.3},
-                                    {"from": "feature_demo", "to": "pricing_view", "avg_minutes": 8.1},
-                                    {"from": "pricing_view", "to": "purchase", "avg_minutes": 5.1}
-                                ]
+                                    {
+                                        "from": "feature_demo",
+                                        "to": "pricing_view",
+                                        "avg_minutes": 8.1,
+                                    },
+                                    {"from": "pricing_view", "to": "purchase", "avg_minutes": 5.1},
+                                ],
                             }
                         ],
-                        "interpretation": "These paths show what sessions do before they convert. Each session is analyzed independently."
+                        "interpretation": (
+                            "These paths show what sessions do before they convert. Each session "
+                            "is analyzed independently."
+                        ),
                     }
-                }
+                },
             ),
             400: openapi.Response(description="Missing or invalid parameters"),
             401: openapi.Response(description="Unauthorized - missing or invalid app_key"),
         },
-        tags=['Analytics']
+        tags=["Analytics"],
     )
     def get(self, request):
         """
@@ -1834,80 +1941,93 @@ Automatically discover the most common behavior sequences that lead to conversio
         app = request.user
 
         # Validate required parameters
-        conversion_events_param = request.query_params.get('conversion_events')
+        conversion_events_param = request.query_params.get("conversion_events")
 
         if not conversion_events_param:
             # Get user's actual event types to help them
             event_types = list(
                 Event.objects.filter(app=app)
-                .values_list('event_name', flat=True)
+                .values_list("event_name", flat=True)
                 .distinct()
-                .order_by('event_name')[:20]
+                .order_by("event_name")[:20]
             )
-            return Response({
-                'error': 'conversion_events parameter is required',
-                'detail': 'Please specify which events to count as conversions.',
-                'your_event_types': event_types,
-                'example': '?conversion_events=' + (
-                    ','.join(event_types[:2]) if len(event_types) >= 2
-                    else 'purchase,subscription'
-                )
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {
+                    "error": "conversion_events parameter is required",
+                    "detail": "Please specify which events to count as conversions.",
+                    "your_event_types": event_types,
+                    "example": "?conversion_events="
+                    + (
+                        ",".join(event_types[:2])
+                        if len(event_types) >= 2
+                        else "purchase,subscription"
+                    ),
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         # Parse conversion events
-        conversion_events = [
-            e.strip() for e in conversion_events_param.split(',')
-            if e.strip()
-        ]
+        conversion_events = [e.strip() for e in conversion_events_param.split(",") if e.strip()]
 
         if not conversion_events:
-            return Response({
-                'error': 'conversion_events parameter is empty',
-                'detail': 'Please specify at least one event name.',
-                'example': '?conversion_events=purchase,subscription'
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {
+                    "error": "conversion_events parameter is empty",
+                    "detail": "Please specify at least one event name.",
+                    "example": "?conversion_events=purchase,subscription",
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         # Parse optional parameters
         try:
-            limit = int(request.query_params.get('limit', 5))
+            limit = int(request.query_params.get("limit", 5))
             limit = min(max(1, limit), 20)  # Clamp between 1 and 20
         except (ValueError, TypeError):
-            return Response({
-                'error': 'Invalid limit parameter',
-                'detail': 'limit must be an integer between 1 and 20'
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {
+                    "error": "Invalid limit parameter",
+                    "detail": "limit must be an integer between 1 and 20",
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         try:
             # Default to 1 - show all paths, even unique ones
-            min_sessions = int(request.query_params.get('min_sessions', 1))
+            min_sessions = int(request.query_params.get("min_sessions", 1))
             min_sessions = max(1, min_sessions)  # At least 1
         except (ValueError, TypeError):
-            return Response({
-                'error': 'Invalid min_sessions parameter',
-                'detail': 'min_sessions must be a positive integer'
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {
+                    "error": "Invalid min_sessions parameter",
+                    "detail": "min_sessions must be a positive integer",
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         try:
-            max_path_length = int(request.query_params.get('max_path_length', 10))
+            max_path_length = int(request.query_params.get("max_path_length", 10))
             max_path_length = min(max(2, max_path_length), 50)  # Clamp between 2 and 50
         except (ValueError, TypeError):
-            return Response({
-                'error': 'Invalid max_path_length parameter',
-                'detail': 'max_path_length must be an integer between 2 and 50'
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {
+                    "error": "Invalid max_path_length parameter",
+                    "detail": "max_path_length must be an integer between 2 and 50",
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         # Parse date filters
-        start_date = request.query_params.get('start_date')
-        end_date = request.query_params.get('end_date')
-        tz_name = request.query_params.get('tz', 'UTC')
+        start_date = request.query_params.get("start_date")
+        end_date = request.query_params.get("end_date")
+        tz_name = request.query_params.get("tz", "UTC")
 
         # Parse dates with timezone awareness
         try:
             start_datetime, end_datetime = parse_date_range(start_date, end_date, tz_name)
         except ValueError:
             return Response(
-                {'error': 'Invalid date format. Use YYYY-MM-DD'},
-                status=status.HTTP_400_BAD_REQUEST
+                {"error": "Invalid date format. Use YYYY-MM-DD"}, status=status.HTTP_400_BAD_REQUEST
             )
 
         # Build base queryset
@@ -1919,13 +2039,17 @@ Automatically discover the most common behavior sequences that lead to conversio
             events_qs = events_qs.filter(timestamp__lte=end_datetime)
 
         # PERF-009: Check cache before running expensive analysis
-        from django.core.cache import cache
-        from django.conf import settings
         import hashlib
 
-        cache_params = f"{','.join(sorted(conversion_events))}:{start_date}:{end_date}:{limit}:{min_sessions}:{max_path_length}:{tz_name}"
+        from django.conf import settings
+        from django.core.cache import cache
+
+        cache_params = (
+            f"{','.join(sorted(conversion_events))}:{start_date}:{end_date}:"
+            f"{limit}:{min_sessions}:{max_path_length}:{tz_name}"
+        )
         cache_hash = hashlib.md5(cache_params.encode()).hexdigest()[:16]
-        cache_key = f'conversion_paths:{app.id}:{cache_hash}'
+        cache_key = f"conversion_paths:{app.id}:{cache_hash}"
 
         cached_result = cache.get(cache_key)
         if cached_result is not None:
@@ -1933,37 +2057,43 @@ Automatically discover the most common behavior sequences that lead to conversio
 
         # Calculate conversion paths (session-based)
         analysis_result = self._discover_conversion_paths(
-            app, events_qs, conversion_events,
-            limit=limit, min_sessions=min_sessions, max_path_length=max_path_length
+            app,
+            events_qs,
+            conversion_events,
+            limit=limit,
+            min_sessions=min_sessions,
+            max_path_length=max_path_length,
         )
 
         # Add small sample warning if sessions are low
-        total_converting = analysis_result['data_quality'].get('total_converting_sessions', 0)
+        total_converting = analysis_result["data_quality"].get("total_converting_sessions", 0)
         small_sample_warning = None
         if 0 < total_converting < 10:
-            small_sample_warning = f'Small sample size: {total_converting} converting session{"s" if total_converting != 1 else ""}. Results may vary with more data.'
+            small_sample_warning = (
+                f"Small sample size: {total_converting} converting "
+                f"session{'s' if total_converting != 1 else ''}. Results may vary with more data."
+            )
 
         # Enrich data_quality with warning
-        data_quality = analysis_result['data_quality']
-        data_quality['small_sample_warning'] = small_sample_warning
+        data_quality = analysis_result["data_quality"]
+        data_quality["small_sample_warning"] = small_sample_warning
 
         response_data = {
-            'app': {
-                'id': app.id,
-                'name': app.name,
-                'slug': app.slug
+            "app": {"id": app.id, "name": app.name, "slug": app.slug},
+            "filters": {
+                "conversion_events": conversion_events,
+                "start_date": start_date,
+                "end_date": end_date,
+                "limit": limit,
+                "min_sessions": min_sessions,
+                "max_path_length": max_path_length,
             },
-            'filters': {
-                'conversion_events': conversion_events,
-                'start_date': start_date,
-                'end_date': end_date,
-                'limit': limit,
-                'min_sessions': min_sessions,
-                'max_path_length': max_path_length
-            },
-            'data_quality': data_quality,
-            'top_conversion_paths': analysis_result['paths'],
-            'interpretation': 'These paths show what sessions do before they convert. Each session is analyzed independently.'
+            "data_quality": data_quality,
+            "top_conversion_paths": analysis_result["paths"],
+            "interpretation": (
+                "These paths show what sessions do before they convert. Each session is analyzed "
+                "independently."
+            ),
         }
 
         # PERF-009: Cache the result for 3 minutes
@@ -1971,8 +2101,9 @@ Automatically discover the most common behavior sequences that lead to conversio
 
         return Response(response_data, status=status.HTTP_200_OK)
 
-    def _discover_conversion_paths(self, app, events_qs, conversion_events,
-                                    limit=5, min_sessions=1, max_path_length=10):
+    def _discover_conversion_paths(
+        self, app, events_qs, conversion_events, limit=5, min_sessions=1, max_path_length=10
+    ):
         """
         Discover the most common paths leading to conversion within sessions.
 
@@ -1989,8 +2120,9 @@ Automatically discover the most common behavior sequences that lead to conversio
         Returns:
             dict with 'data_quality' and 'paths' keys
         """
-        from django.db import connection
         from collections import defaultdict
+
+        from django.db import connection
 
         # Keep app_id and table_name for the second query
         app_id = app.id
@@ -2000,19 +2132,19 @@ Automatically discover the most common behavior sequences that lead to conversio
         conversion_events_list = list(conversion_events)
         if not conversion_events_list:
             return {
-                'data_quality': {
-                    'total_converting_sessions': 0,
-                    'paths_analyzed': 0,
-                    'unique_paths_found': 0
+                "data_quality": {
+                    "total_converting_sessions": 0,
+                    "paths_analyzed": 0,
+                    "unique_paths_found": 0,
                 },
-                'paths': []
+                "paths": [],
             }
 
         # Get the SQL and params from the Django queryset (includes date filters!)
         base_sql, base_params = events_qs.query.sql_with_params()
 
         # Create SQL placeholders for conversion events
-        conversion_placeholders = ','.join(['%s'] * len(conversion_events_list))
+        conversion_placeholders = ",".join(["%s"] * len(conversion_events_list))
 
         # SQL Query 1: Get all paths in a single query using CTE
         # Session-based: analyze paths within each session that has a conversion
@@ -2065,12 +2197,12 @@ Automatically discover the most common behavior sequences that lead to conversio
 
         if not rows:
             return {
-                'data_quality': {
-                    'total_converting_sessions': 0,
-                    'paths_analyzed': 0,
-                    'unique_paths_found': 0
+                "data_quality": {
+                    "total_converting_sessions": 0,
+                    "paths_analyzed": 0,
+                    "unique_paths_found": 0,
                 },
-                'paths': []
+                "paths": [],
             }
 
         # Extract total_sessions from first row (same for all rows)
@@ -2089,9 +2221,7 @@ Automatically discover the most common behavior sequences that lead to conversio
 
             # Python: Remove consecutive duplicates and limit to max_path_length
             # Also stop at first conversion event
-            path = self._normalize_path(
-                event_path_raw, conversion_events_list, max_path_length
-            )
+            path = self._normalize_path(event_path_raw, conversion_events_list, max_path_length)
 
             if path and len(path) >= 1:
                 paths_analyzed += 1
@@ -2101,7 +2231,8 @@ Automatically discover the most common behavior sequences that lead to conversio
         # Filter and rank paths
         unique_paths_found = len(path_counts)
         qualified_paths = [
-            (path, session_ids) for path, session_ids in path_counts.items()
+            (path, session_ids)
+            for path, session_ids in path_counts.items()
             if len(session_ids) >= min_sessions
         ]
 
@@ -2113,18 +2244,18 @@ Automatically discover the most common behavior sequences that lead to conversio
 
         if not top_paths:
             return {
-                'data_quality': {
-                    'total_converting_sessions': total_converting_sessions,
-                    'paths_analyzed': paths_analyzed,
-                    'unique_paths_found': unique_paths_found
+                "data_quality": {
+                    "total_converting_sessions": total_converting_sessions,
+                    "paths_analyzed": paths_analyzed,
+                    "unique_paths_found": unique_paths_found,
                 },
-                'paths': []
+                "paths": [],
             }
 
         # SQL Query 2: Get timestamps for sessions in top paths only
         # This is much more efficient than getting timestamps for all sessions
         top_path_session_ids = set()
-        for path, session_ids in top_paths:
+        for _path, session_ids in top_paths:
             top_path_session_ids.update(session_ids)
 
         session_timestamps = self._get_session_timestamps_bulk(
@@ -2145,41 +2276,43 @@ Automatically discover the most common behavior sequences that lead to conversio
             for sid in session_ids:
                 ts_data = session_timestamps.get(sid, {})
                 if ts_data:
-                    sessions_with_timestamps.append({
-                        'timestamps': ts_data.get('timestamps', []),
-                        'total_duration': ts_data.get('total_duration')
-                    })
+                    sessions_with_timestamps.append(
+                        {
+                            "timestamps": ts_data.get("timestamps", []),
+                            "total_duration": ts_data.get("total_duration"),
+                        }
+                    )
 
             # Calculate average duration
             durations = [
-                s['total_duration'] for s in sessions_with_timestamps
-                if s.get('total_duration') is not None
+                s["total_duration"]
+                for s in sessions_with_timestamps
+                if s.get("total_duration") is not None
             ]
-            avg_duration_minutes = (
-                sum(durations) / len(durations) / 60.0
-                if durations else 0
-            )
+            avg_duration_minutes = sum(durations) / len(durations) / 60.0 if durations else 0
 
             # Calculate step timings
             step_timings = self._calculate_step_timings(path_list, sessions_with_timestamps)
 
-            result_paths.append({
-                'rank': rank,
-                'path': path_list,
-                'sessions': session_count,
-                'conversion_rate': round(conversion_rate, 4),
-                'avg_duration_minutes': round(avg_duration_minutes, 2),
-                'step_timings': step_timings
-            })
+            result_paths.append(
+                {
+                    "rank": rank,
+                    "path": path_list,
+                    "sessions": session_count,
+                    "conversion_rate": round(conversion_rate, 4),
+                    "avg_duration_minutes": round(avg_duration_minutes, 2),
+                    "step_timings": step_timings,
+                }
+            )
 
         return {
-            'data_quality': {
-                'total_converting_sessions': total_converting_sessions,
-                'paths_analyzed': paths_analyzed,
-                'unique_paths_found': unique_paths_found,
-                'total_unique_paths': unique_paths_found  # Alias for frontend compatibility
+            "data_quality": {
+                "total_converting_sessions": total_converting_sessions,
+                "paths_analyzed": paths_analyzed,
+                "unique_paths_found": unique_paths_found,
+                "total_unique_paths": unique_paths_found,  # Alias for frontend compatibility
             },
-            'paths': result_paths
+            "paths": result_paths,
         }
 
     def _normalize_path(self, event_list, conversion_events, max_length):
@@ -2233,8 +2366,8 @@ Automatically discover the most common behavior sequences that lead to conversio
             return {}
 
         # Create placeholders for session_ids and conversion_events
-        session_placeholders = ','.join(['%s'] * len(session_ids))
-        conversion_placeholders = ','.join(['%s'] * len(conversion_events))
+        session_placeholders = ",".join(["%s"] * len(session_ids))
+        conversion_placeholders = ",".join(["%s"] * len(conversion_events))
 
         sql = f"""
         WITH first_conversions AS (
@@ -2266,6 +2399,7 @@ Automatically discover the most common behavior sequences that lead to conversio
 
         # Group by session_id and extract normalized timestamps
         from collections import defaultdict
+
         session_events = defaultdict(list)
 
         for row in rows:
@@ -2293,10 +2427,7 @@ Automatically discover the most common behavior sequences that lead to conversio
             if len(timestamps) >= 2:
                 total_duration = (timestamps[-1] - timestamps[0]).total_seconds()
 
-            result[session_id] = {
-                'timestamps': timestamps,
-                'total_duration': total_duration
-            }
+            result[session_id] = {"timestamps": timestamps, "total_duration": total_duration}
 
         return result
 
@@ -2321,14 +2452,14 @@ Automatically discover the most common behavior sequences that lead to conversio
         last_event = None
 
         for event in events_list:
-            event_name = event['event_name']
+            event_name = event["event_name"]
 
             # Skip consecutive duplicates
             if event_name == last_event:
                 continue
 
             path.append(event_name)
-            timestamps.append(event['timestamp'])
+            timestamps.append(event["timestamp"])
             last_event = event_name
 
             # Stop if we hit a conversion event
@@ -2345,11 +2476,7 @@ Automatically discover the most common behavior sequences that lead to conversio
         if len(timestamps) >= 2:
             total_duration = (timestamps[-1] - timestamps[0]).total_seconds()
 
-        return {
-            'path': path,
-            'timestamps': timestamps,
-            'total_duration': total_duration
-        }
+        return {"path": path, "timestamps": timestamps, "total_duration": total_duration}
 
     def _calculate_step_timings(self, path, sessions):
         """
@@ -2374,7 +2501,7 @@ Automatically discover the most common behavior sequences that lead to conversio
             # Collect timing data from all sessions
             step_durations = []
             for session_data in sessions:
-                timestamps = session_data.get('timestamps', [])
+                timestamps = session_data.get("timestamps", [])
                 if len(timestamps) > i + 1:
                     duration_seconds = (timestamps[i + 1] - timestamps[i]).total_seconds()
                     step_durations.append(duration_seconds)
@@ -2384,11 +2511,9 @@ Automatically discover the most common behavior sequences that lead to conversio
             if step_durations:
                 avg_minutes = sum(step_durations) / len(step_durations) / 60.0
 
-            step_timings.append({
-                'from': from_event,
-                'to': to_event,
-                'avg_minutes': round(avg_minutes, 2)
-            })
+            step_timings.append(
+                {"from": from_event, "to": to_event, "avg_minutes": round(avg_minutes, 2)}
+            )
 
         return step_timings
 
@@ -2425,6 +2550,7 @@ class DropOffView(APIView):
         4. Rank events by drop-off frequency
         5. Calculate drop-off rate and compare to converting session behavior
     """
+
     authentication_classes = [AppKeyAuthentication]
     permission_classes = [HasValidAppKey]
 
@@ -2456,49 +2582,52 @@ Identify where non-converting sessions end.
         """,
         manual_parameters=[
             openapi.Parameter(
-                'conversion_events',
+                "conversion_events",
                 openapi.IN_QUERY,
                 description="REQUIRED: Comma-separated event names to count as conversions",
                 type=openapi.TYPE_STRING,
-                required=True
+                required=True,
             ),
             openapi.Parameter(
-                'min_sessions',
+                "min_sessions",
                 openapi.IN_QUERY,
                 description="Minimum sessions for a drop-off point to be included (default: 5)",
                 type=openapi.TYPE_INTEGER,
-                required=False
+                required=False,
             ),
             openapi.Parameter(
-                'limit',
+                "limit",
                 openapi.IN_QUERY,
                 description="Maximum number of drop-off points to return (default: 10, max: 50)",
                 type=openapi.TYPE_INTEGER,
-                required=False
+                required=False,
             ),
             openapi.Parameter(
-                'start_date',
+                "start_date",
                 openapi.IN_QUERY,
                 description="Start date filter (YYYY-MM-DD)",
                 type=openapi.TYPE_STRING,
-                format='date',
-                required=False
+                format="date",
+                required=False,
             ),
             openapi.Parameter(
-                'end_date',
+                "end_date",
                 openapi.IN_QUERY,
                 description="End date filter (YYYY-MM-DD)",
                 type=openapi.TYPE_STRING,
-                format='date',
-                required=False
+                format="date",
+                required=False,
             ),
             openapi.Parameter(
-                'tz',
+                "tz",
                 openapi.IN_QUERY,
-                description="IANA timezone name (e.g., 'America/New_York', 'Europe/London'). Dates are interpreted in this timezone. Defaults to UTC.",
+                description=(
+                    "IANA timezone name (e.g., 'America/New_York', 'Europe/London'). Dates are "
+                    "interpreted in this timezone. Defaults to UTC."
+                ),
                 type=openapi.TYPE_STRING,
                 required=False,
-                default='UTC'
+                default="UTC",
             ),
         ],
         responses={
@@ -2512,13 +2641,13 @@ Identify where non-converting sessions end.
                             "start_date": None,
                             "end_date": None,
                             "min_sessions": 5,
-                            "limit": 10
+                            "limit": 10,
                         },
                         "data_quality": {
                             "total_sessions": 500,
                             "converting_sessions": 150,
                             "non_converting_sessions": 350,
-                            "conversion_rate": 0.30
+                            "conversion_rate": 0.30,
                         },
                         "drop_off_points": [
                             {
@@ -2532,8 +2661,8 @@ Identify where non-converting sessions end.
                                     "converters_with_event": 120,
                                     "converters_event_rate": 0.80,
                                     "non_converters_event_rate": 0.45,
-                                    "differential": -0.35
-                                }
+                                    "differential": -0.35,
+                                },
                             }
                         ],
                         "events_more_common_in_non_converters": [
@@ -2541,17 +2670,20 @@ Identify where non-converting sessions end.
                                 "event": "support_contact",
                                 "non_converter_rate": 0.35,
                                 "converter_rate": 0.08,
-                                "differential": 0.27
+                                "differential": 0.27,
                             }
                         ],
-                        "interpretation": "Sessions that don't convert - where do they end? Each session is analyzed independently."
+                        "interpretation": (
+                            "Sessions that don't convert - where do they end? Each session is "
+                            "analyzed independently."
+                        ),
                     }
-                }
+                },
             ),
             400: openapi.Response(description="Missing or invalid parameters"),
             401: openapi.Response(description="Unauthorized - missing or invalid app_key"),
         },
-        tags=['Analytics']
+        tags=["Analytics"],
     )
     def get(self, request):
         """
@@ -2561,70 +2693,80 @@ Identify where non-converting sessions end.
         app = request.user
 
         # Validate required parameters
-        conversion_events_param = request.query_params.get('conversion_events')
+        conversion_events_param = request.query_params.get("conversion_events")
 
         if not conversion_events_param:
             # Get user's actual event types to help them
             event_types = list(
                 Event.objects.filter(app=app)
-                .values_list('event_name', flat=True)
+                .values_list("event_name", flat=True)
                 .distinct()
-                .order_by('event_name')[:20]
+                .order_by("event_name")[:20]
             )
-            return Response({
-                'error': 'conversion_events parameter is required',
-                'detail': 'Please specify which events to count as conversions.',
-                'your_event_types': event_types,
-                'example': '?conversion_events=' + (
-                    ','.join(event_types[:2]) if len(event_types) >= 2
-                    else 'purchase,subscription'
-                )
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {
+                    "error": "conversion_events parameter is required",
+                    "detail": "Please specify which events to count as conversions.",
+                    "your_event_types": event_types,
+                    "example": "?conversion_events="
+                    + (
+                        ",".join(event_types[:2])
+                        if len(event_types) >= 2
+                        else "purchase,subscription"
+                    ),
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         # Parse conversion events
-        conversion_events = [
-            e.strip() for e in conversion_events_param.split(',')
-            if e.strip()
-        ]
+        conversion_events = [e.strip() for e in conversion_events_param.split(",") if e.strip()]
 
         if not conversion_events:
-            return Response({
-                'error': 'conversion_events parameter is empty',
-                'detail': 'Please specify at least one event name.',
-                'example': '?conversion_events=purchase,subscription'
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {
+                    "error": "conversion_events parameter is empty",
+                    "detail": "Please specify at least one event name.",
+                    "example": "?conversion_events=purchase,subscription",
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         # Parse optional parameters
         try:
-            min_sessions = int(request.query_params.get('min_sessions', 5))
+            min_sessions = int(request.query_params.get("min_sessions", 5))
             min_sessions = max(1, min_sessions)  # At least 1
         except (ValueError, TypeError):
-            return Response({
-                'error': 'Invalid min_sessions parameter',
-                'detail': 'min_sessions must be a positive integer'
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {
+                    "error": "Invalid min_sessions parameter",
+                    "detail": "min_sessions must be a positive integer",
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         try:
-            limit = int(request.query_params.get('limit', 10))
+            limit = int(request.query_params.get("limit", 10))
             limit = min(max(1, limit), 50)  # Clamp between 1 and 50
         except (ValueError, TypeError):
-            return Response({
-                'error': 'Invalid limit parameter',
-                'detail': 'limit must be an integer between 1 and 50'
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {
+                    "error": "Invalid limit parameter",
+                    "detail": "limit must be an integer between 1 and 50",
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         # Parse date filters
-        start_date = request.query_params.get('start_date')
-        end_date = request.query_params.get('end_date')
-        tz_name = request.query_params.get('tz', 'UTC')
+        start_date = request.query_params.get("start_date")
+        end_date = request.query_params.get("end_date")
+        tz_name = request.query_params.get("tz", "UTC")
 
         # Parse dates with timezone awareness
         try:
             start_datetime, end_datetime = parse_date_range(start_date, end_date, tz_name)
         except ValueError:
             return Response(
-                {'error': 'Invalid date format. Use YYYY-MM-DD'},
-                status=status.HTTP_400_BAD_REQUEST
+                {"error": "Invalid date format. Use YYYY-MM-DD"}, status=status.HTTP_400_BAD_REQUEST
             )
 
         # Build base queryset
@@ -2636,13 +2778,17 @@ Identify where non-converting sessions end.
             events_qs = events_qs.filter(timestamp__lte=end_datetime)
 
         # PERF-009: Check cache before running expensive analysis
-        from django.core.cache import cache
-        from django.conf import settings
         import hashlib
 
-        cache_params = f"{','.join(sorted(conversion_events))}:{start_date}:{end_date}:{min_sessions}:{limit}:{tz_name}"
+        from django.conf import settings
+        from django.core.cache import cache
+
+        cache_params = (
+            f"{','.join(sorted(conversion_events))}:{start_date}:{end_date}:"
+            f"{min_sessions}:{limit}:{tz_name}"
+        )
         cache_hash = hashlib.md5(cache_params.encode()).hexdigest()[:16]
-        cache_key = f'drop_off:{app.id}:{cache_hash}'
+        cache_key = f"drop_off:{app.id}:{cache_hash}"
 
         cached_result = cache.get(cache_key)
         if cached_result is not None:
@@ -2650,27 +2796,25 @@ Identify where non-converting sessions end.
 
         # Calculate drop-off diagnostics (session-based)
         analysis_result = self._analyze_drop_offs(
-            app, events_qs, conversion_events,
-            min_sessions=min_sessions, limit=limit
+            app, events_qs, conversion_events, min_sessions=min_sessions, limit=limit
         )
 
         response_data = {
-            'app': {
-                'id': app.id,
-                'name': app.name,
-                'slug': app.slug
+            "app": {"id": app.id, "name": app.name, "slug": app.slug},
+            "filters": {
+                "conversion_events": conversion_events,
+                "start_date": start_date,
+                "end_date": end_date,
+                "min_sessions": min_sessions,
+                "limit": limit,
             },
-            'filters': {
-                'conversion_events': conversion_events,
-                'start_date': start_date,
-                'end_date': end_date,
-                'min_sessions': min_sessions,
-                'limit': limit
-            },
-            'data_quality': analysis_result['data_quality'],
-            'drop_off_points': analysis_result['drop_off_points'],
-            'events_more_common_in_non_converters': analysis_result['differential_events'],
-            'interpretation': "Sessions that don't convert - where do they end? Each session is analyzed independently."
+            "data_quality": analysis_result["data_quality"],
+            "drop_off_points": analysis_result["drop_off_points"],
+            "events_more_common_in_non_converters": analysis_result["differential_events"],
+            "interpretation": (
+                "Sessions that don't convert - where do they end? Each session is analyzed "
+                "independently."
+            ),
         }
 
         # PERF-009: Cache the result for 3 minutes
@@ -2678,8 +2822,7 @@ Identify where non-converting sessions end.
 
         return Response(response_data, status=status.HTTP_200_OK)
 
-    def _analyze_drop_offs(self, app, events_qs, conversion_events,
-                           min_sessions=5, limit=10):
+    def _analyze_drop_offs(self, app, events_qs, conversion_events, min_sessions=5, limit=10):
         """
         PERF-010 & PERF-FIX: Optimized drop-off analysis using SQL subqueries.
 
@@ -2697,6 +2840,7 @@ Identify where non-converting sessions end.
             dict with 'data_quality', 'drop_off_points', and 'differential_events'
         """
         from collections import defaultdict
+
         from django.db import connection
 
         # PERF-FIX: Get the SQL and params from the Django queryset (for base filtering)
@@ -2704,7 +2848,7 @@ Identify where non-converting sessions end.
         base_sql, base_params = events_qs.query.sql_with_params()
 
         # Build conversion events placeholder for SQL
-        conversion_placeholders = ', '.join(['%s'] * len(conversion_events))
+        conversion_placeholders = ", ".join(["%s"] * len(conversion_events))
 
         # =========================================================================
         # QUERY 1: Get session counts and classification using SQL subqueries
@@ -2742,26 +2886,26 @@ Identify where non-converting sessions end.
 
         if total_sessions == 0:
             return {
-                'data_quality': {
-                    'total_sessions': 0,
-                    'converting_sessions': 0,
-                    'non_converting_sessions': 0,
-                    'conversion_rate': 0.0
+                "data_quality": {
+                    "total_sessions": 0,
+                    "converting_sessions": 0,
+                    "non_converting_sessions": 0,
+                    "conversion_rate": 0.0,
                 },
-                'drop_off_points': [],
-                'differential_events': []
+                "drop_off_points": [],
+                "differential_events": [],
             }
 
         if non_converting_sessions_count == 0:
             return {
-                'data_quality': {
-                    'total_sessions': total_sessions,
-                    'converting_sessions': converting_sessions_count,
-                    'non_converting_sessions': 0,
-                    'conversion_rate': round(conversion_rate, 4)
+                "data_quality": {
+                    "total_sessions": total_sessions,
+                    "converting_sessions": converting_sessions_count,
+                    "non_converting_sessions": 0,
+                    "conversion_rate": round(conversion_rate, 4),
                 },
-                'drop_off_points': [],
-                'differential_events': []
+                "drop_off_points": [],
+                "differential_events": [],
             }
 
         # =========================================================================
@@ -2826,11 +2970,13 @@ Identify where non-converting sessions end.
         last_event_counts = defaultdict(list)
         for row in last_event_rows:
             session_id, last_event_name, last_timestamp, time_since_first = row
-            last_event_counts[last_event_name].append({
-                'session_id': session_id,
-                'timestamp': last_timestamp,
-                'time_since_first': float(time_since_first) if time_since_first else None
-            })
+            last_event_counts[last_event_name].append(
+                {
+                    "session_id": session_id,
+                    "timestamp": last_timestamp,
+                    "time_since_first": float(time_since_first) if time_since_first else None,
+                }
+            )
 
         # =========================================================================
         # QUERY 3: Get distinct events per session with converter flag (SQL approach)
@@ -2893,44 +3039,65 @@ Identify where non-converting sessions end.
             if event_name in conversion_events:
                 continue
 
-            drop_off_rate = sessions_dropped / non_converting_sessions_count if non_converting_sessions_count > 0 else 0
+            drop_off_rate = (
+                sessions_dropped / non_converting_sessions_count
+                if non_converting_sessions_count > 0
+                else 0
+            )
 
             # Calculate average time before exit
-            times = [s['time_since_first'] for s in session_data_list if s['time_since_first'] is not None]
+            times = [
+                s["time_since_first"]
+                for s in session_data_list
+                if s["time_since_first"] is not None
+            ]
             avg_time_before_exit_minutes = sum(times) / len(times) / 60.0 if times else 0
 
             # Calculate converter comparison
             converters_with_event = converter_event_counts.get(event_name, 0)
             non_converters_with_event = non_converter_event_counts.get(event_name, 0)
 
-            converters_event_rate = converters_with_event / converting_sessions_count if converting_sessions_count > 0 else 0
-            non_converters_event_rate = non_converters_with_event / non_converting_sessions_count if non_converting_sessions_count > 0 else 0
+            converters_event_rate = (
+                converters_with_event / converting_sessions_count
+                if converting_sessions_count > 0
+                else 0
+            )
+            non_converters_event_rate = (
+                non_converters_with_event / non_converting_sessions_count
+                if non_converting_sessions_count > 0
+                else 0
+            )
 
             # Impact score: higher means more impactful drop-off point
-            # Combines drop-off frequency with differential (how much less converters hit this event)
+            # Combines drop-off frequency with differential
+            # (how much less converters hit this event)
             differential = non_converters_event_rate - converters_event_rate
-            impact_score = drop_off_rate * (1 + max(0, differential))  # Boost if event is more common in non-converters
+            impact_score = drop_off_rate * (
+                1 + max(0, differential)
+            )  # Boost if event is more common in non-converters
 
-            drop_off_points.append({
-                'event': event_name,
-                'sessions_dropped': sessions_dropped,
-                'drop_off_rate': round(drop_off_rate, 4),
-                'avg_time_before_exit_minutes': round(avg_time_before_exit_minutes, 2),
-                'impact_score': round(impact_score, 4),
-                'converter_comparison': {
-                    'converters_with_event': converters_with_event,
-                    'converters_event_rate': round(converters_event_rate, 4),
-                    'non_converters_event_rate': round(non_converters_event_rate, 4),
-                    'differential': round(differential, 4)
+            drop_off_points.append(
+                {
+                    "event": event_name,
+                    "sessions_dropped": sessions_dropped,
+                    "drop_off_rate": round(drop_off_rate, 4),
+                    "avg_time_before_exit_minutes": round(avg_time_before_exit_minutes, 2),
+                    "impact_score": round(impact_score, 4),
+                    "converter_comparison": {
+                        "converters_with_event": converters_with_event,
+                        "converters_event_rate": round(converters_event_rate, 4),
+                        "non_converters_event_rate": round(non_converters_event_rate, 4),
+                        "differential": round(differential, 4),
+                    },
                 }
-            })
+            )
 
         # Sort by sessions_dropped (frequency) - most common drop-off points first
         # This is intuitive: higher sessions = more users abandoning at this point
-        drop_off_points.sort(key=lambda x: x['sessions_dropped'], reverse=True)
+        drop_off_points.sort(key=lambda x: x["sessions_dropped"], reverse=True)
 
         for rank, point in enumerate(drop_off_points[:limit], 1):
-            point['rank'] = rank
+            point["rank"] = rank
 
         # Build events more common in non-converters list
         all_events = set(converter_event_counts.keys()) | set(non_converter_event_counts.keys())
@@ -2940,32 +3107,42 @@ Identify where non-converting sessions end.
             if event_name in conversion_events:
                 continue  # Skip conversion events themselves
 
-            converters_rate = converter_event_counts.get(event_name, 0) / converting_sessions_count if converting_sessions_count > 0 else 0
-            non_converters_rate = non_converter_event_counts.get(event_name, 0) / non_converting_sessions_count if non_converting_sessions_count > 0 else 0
+            converters_rate = (
+                converter_event_counts.get(event_name, 0) / converting_sessions_count
+                if converting_sessions_count > 0
+                else 0
+            )
+            non_converters_rate = (
+                non_converter_event_counts.get(event_name, 0) / non_converting_sessions_count
+                if non_converting_sessions_count > 0
+                else 0
+            )
 
             differential = non_converters_rate - converters_rate
 
             # Only include events that are more common in non-converters
             if differential > 0.05:  # At least 5% difference
-                differential_events.append({
-                    'event': event_name,
-                    'non_converter_rate': round(non_converters_rate, 4),
-                    'converter_rate': round(converters_rate, 4),
-                    'differential': round(differential, 4)
-                })
+                differential_events.append(
+                    {
+                        "event": event_name,
+                        "non_converter_rate": round(non_converters_rate, 4),
+                        "converter_rate": round(converters_rate, 4),
+                        "differential": round(differential, 4),
+                    }
+                )
 
         # Sort by differential (most different first)
-        differential_events.sort(key=lambda x: x['differential'], reverse=True)
+        differential_events.sort(key=lambda x: x["differential"], reverse=True)
 
         return {
-            'data_quality': {
-                'total_sessions': total_sessions,
-                'converting_sessions': converting_sessions_count,
-                'non_converting_sessions': non_converting_sessions_count,
-                'conversion_rate': round(conversion_rate, 4)
+            "data_quality": {
+                "total_sessions": total_sessions,
+                "converting_sessions": converting_sessions_count,
+                "non_converting_sessions": non_converting_sessions_count,
+                "conversion_rate": round(conversion_rate, 4),
             },
-            'drop_off_points': drop_off_points[:limit],
-            'differential_events': differential_events[:10]  # Top 10 differential events
+            "drop_off_points": drop_off_points[:limit],
+            "differential_events": differential_events[:10],  # Top 10 differential events
         }
 
 
@@ -3003,6 +3180,7 @@ class EventCorrelationView(APIView):
         4. Separate into positive and negative correlations
         5. Rank by absolute lift value
     """
+
     authentication_classes = [AppKeyAuthentication]
     permission_classes = [HasValidAppKey]
 
@@ -3021,7 +3199,8 @@ Identify which events correlate with conversion (positive or negative lift).
 **What This Endpoint Does:**
 1. For each event type, calculates conversion rate of sessions that include it vs don't
 2. Computes lift score: `(rate_with / rate_without - 1) × 100`
-3. Separates events into positive correlation (boost conversion) and negative correlation (hurt conversion)
+3. Separates events into positive correlation (boost conversion) and negative correlation
+   (hurt conversion)
 4. Ranks by absolute lift value
 
 **Lift Score Interpretation:**
@@ -3042,49 +3221,52 @@ Identify which events correlate with conversion (positive or negative lift).
         """,
         manual_parameters=[
             openapi.Parameter(
-                'conversion_events',
+                "conversion_events",
                 openapi.IN_QUERY,
                 description="REQUIRED: Comma-separated event names to count as conversions",
                 type=openapi.TYPE_STRING,
-                required=True
+                required=True,
             ),
             openapi.Parameter(
-                'min_sessions',
+                "min_sessions",
                 openapi.IN_QUERY,
                 description="Minimum sessions for an event to be included (default: 10)",
                 type=openapi.TYPE_INTEGER,
-                required=False
+                required=False,
             ),
             openapi.Parameter(
-                'limit',
+                "limit",
                 openapi.IN_QUERY,
                 description="Maximum events per category (default: 10, max: 50)",
                 type=openapi.TYPE_INTEGER,
-                required=False
+                required=False,
             ),
             openapi.Parameter(
-                'start_date',
+                "start_date",
                 openapi.IN_QUERY,
                 description="Start date filter (YYYY-MM-DD)",
                 type=openapi.TYPE_STRING,
-                format='date',
-                required=False
+                format="date",
+                required=False,
             ),
             openapi.Parameter(
-                'end_date',
+                "end_date",
                 openapi.IN_QUERY,
                 description="End date filter (YYYY-MM-DD)",
                 type=openapi.TYPE_STRING,
-                format='date',
-                required=False
+                format="date",
+                required=False,
             ),
             openapi.Parameter(
-                'tz',
+                "tz",
                 openapi.IN_QUERY,
-                description="IANA timezone name (e.g., 'America/New_York', 'Europe/London'). Dates are interpreted in this timezone. Defaults to UTC.",
+                description=(
+                    "IANA timezone name (e.g., 'America/New_York', 'Europe/London'). Dates are "
+                    "interpreted in this timezone. Defaults to UTC."
+                ),
                 type=openapi.TYPE_STRING,
                 required=False,
-                default='UTC'
+                default="UTC",
             ),
         ],
         responses={
@@ -3098,14 +3280,14 @@ Identify which events correlate with conversion (positive or negative lift).
                             "start_date": None,
                             "end_date": None,
                             "min_sessions": 10,
-                            "limit": 10
+                            "limit": 10,
                         },
                         "data_quality": {
                             "total_sessions": 500,
                             "converting_sessions": 150,
                             "non_converting_sessions": 350,
                             "baseline_conversion_rate": 0.30,
-                            "events_analyzed": 15
+                            "events_analyzed": 15,
                         },
                         "positive_correlations": [
                             {
@@ -3117,7 +3299,7 @@ Identify which events correlate with conversion (positive or negative lift).
                                 "conversion_rate_with": 0.52,
                                 "conversion_rate_without": 0.15,
                                 "converts_with": 237,
-                                "converts_without": 7
+                                "converts_without": 7,
                             }
                         ],
                         "negative_correlations": [
@@ -3130,18 +3312,21 @@ Identify which events correlate with conversion (positive or negative lift).
                                 "conversion_rate_with": 0.11,
                                 "conversion_rate_without": 0.34,
                                 "converts_with": 14,
-                                "converts_without": 128
+                                "converts_without": 128,
                             }
                         ],
                         "neutral_events": ["app_open", "screen_view"],
-                        "interpretation": "Sessions that include X: correlation with conversion. Each session analyzed independently."
+                        "interpretation": (
+                            "Sessions that include X: correlation with conversion. Each session "
+                            "analyzed independently."
+                        ),
                     }
-                }
+                },
             ),
             400: openapi.Response(description="Missing or invalid parameters"),
             401: openapi.Response(description="Unauthorized - missing or invalid app_key"),
         },
-        tags=['Analytics']
+        tags=["Analytics"],
     )
     def get(self, request):
         """
@@ -3151,80 +3336,94 @@ Identify which events correlate with conversion (positive or negative lift).
         app = request.user
 
         # Validate required parameters
-        conversion_events_param = request.query_params.get('conversion_events')
+        conversion_events_param = request.query_params.get("conversion_events")
 
         if not conversion_events_param:
             # Get user's actual event types to help them
             event_types = list(
                 Event.objects.filter(app=app)
-                .values_list('event_name', flat=True)
+                .values_list("event_name", flat=True)
                 .distinct()
-                .order_by('event_name')[:20]
+                .order_by("event_name")[:20]
             )
-            return Response({
-                'error': 'conversion_events parameter is required',
-                'detail': 'Please specify which events to count as conversions.',
-                'your_event_types': event_types,
-                'example': '?conversion_events=' + (
-                    ','.join(event_types[:2]) if len(event_types) >= 2
-                    else 'purchase,subscription'
-                )
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {
+                    "error": "conversion_events parameter is required",
+                    "detail": "Please specify which events to count as conversions.",
+                    "your_event_types": event_types,
+                    "example": "?conversion_events="
+                    + (
+                        ",".join(event_types[:2])
+                        if len(event_types) >= 2
+                        else "purchase,subscription"
+                    ),
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         # Parse conversion events
-        conversion_events = [
-            e.strip() for e in conversion_events_param.split(',')
-            if e.strip()
-        ]
+        conversion_events = [e.strip() for e in conversion_events_param.split(",") if e.strip()]
 
         if not conversion_events:
-            return Response({
-                'error': 'conversion_events parameter is empty',
-                'detail': 'Please specify at least one event name.',
-                'example': '?conversion_events=purchase,subscription'
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {
+                    "error": "conversion_events parameter is empty",
+                    "detail": "Please specify at least one event name.",
+                    "example": "?conversion_events=purchase,subscription",
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         # Parse optional parameters
         try:
-            min_sessions = int(request.query_params.get('min_sessions', self.DEFAULT_MIN_SESSIONS))
+            min_sessions = int(request.query_params.get("min_sessions", self.DEFAULT_MIN_SESSIONS))
             min_sessions = max(1, min_sessions)  # At least 1
         except (ValueError, TypeError):
-            return Response({
-                'error': 'Invalid min_sessions parameter',
-                'detail': 'min_sessions must be a positive integer'
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {
+                    "error": "Invalid min_sessions parameter",
+                    "detail": "min_sessions must be a positive integer",
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         try:
-            limit = int(request.query_params.get('limit', 10))
+            limit = int(request.query_params.get("limit", 10))
             limit = min(max(1, limit), 50)  # Clamp between 1 and 50
         except (ValueError, TypeError):
-            return Response({
-                'error': 'Invalid limit parameter',
-                'detail': 'limit must be an integer between 1 and 50'
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {
+                    "error": "Invalid limit parameter",
+                    "detail": "limit must be an integer between 1 and 50",
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         # Parse date filters
-        start_date = request.query_params.get('start_date')
-        end_date = request.query_params.get('end_date')
-        tz_name = request.query_params.get('tz', 'UTC')
+        start_date = request.query_params.get("start_date")
+        end_date = request.query_params.get("end_date")
+        tz_name = request.query_params.get("tz", "UTC")
 
         # Parse dates with timezone awareness
         try:
             start_datetime, end_datetime = parse_date_range(start_date, end_date, tz_name)
         except ValueError:
             return Response(
-                {'error': 'Invalid date format. Use YYYY-MM-DD'},
-                status=status.HTTP_400_BAD_REQUEST
+                {"error": "Invalid date format. Use YYYY-MM-DD"}, status=status.HTTP_400_BAD_REQUEST
             )
 
         # PERF-013: Check cache before running expensive analysis
-        from django.core.cache import cache
-        from django.conf import settings
         import hashlib
 
-        cache_params = f"{','.join(sorted(conversion_events))}:{start_date}:{end_date}:{min_sessions}:{limit}:{tz_name}"
+        from django.conf import settings
+        from django.core.cache import cache
+
+        cache_params = (
+            f"{','.join(sorted(conversion_events))}:{start_date}:{end_date}:"
+            f"{min_sessions}:{limit}:{tz_name}"
+        )
         cache_hash = hashlib.md5(cache_params.encode()).hexdigest()[:16]
-        cache_key = f'event_correlation:{app.id}:{cache_hash}'
+        cache_key = f"event_correlation:{app.id}:{cache_hash}"
 
         cached_result = cache.get(cache_key)
         if cached_result is not None:
@@ -3240,28 +3439,26 @@ Identify which events correlate with conversion (positive or negative lift).
 
         # Calculate event correlations (session-based)
         analysis_result = self._analyze_event_correlations(
-            app, events_qs, conversion_events,
-            min_sessions=min_sessions, limit=limit
+            app, events_qs, conversion_events, min_sessions=min_sessions, limit=limit
         )
 
         response_data = {
-            'app': {
-                'id': app.id,
-                'name': app.name,
-                'slug': app.slug
+            "app": {"id": app.id, "name": app.name, "slug": app.slug},
+            "filters": {
+                "conversion_events": conversion_events,
+                "start_date": start_date,
+                "end_date": end_date,
+                "min_sessions": min_sessions,
+                "limit": limit,
             },
-            'filters': {
-                'conversion_events': conversion_events,
-                'start_date': start_date,
-                'end_date': end_date,
-                'min_sessions': min_sessions,
-                'limit': limit
-            },
-            'data_quality': analysis_result['data_quality'],
-            'positive_correlations': analysis_result['positive_correlations'],
-            'negative_correlations': analysis_result['negative_correlations'],
-            'neutral_events': analysis_result['neutral_events'],
-            'interpretation': 'Sessions that include X: correlation with conversion. Each session analyzed independently.'
+            "data_quality": analysis_result["data_quality"],
+            "positive_correlations": analysis_result["positive_correlations"],
+            "negative_correlations": analysis_result["negative_correlations"],
+            "neutral_events": analysis_result["neutral_events"],
+            "interpretation": (
+                "Sessions that include X: correlation with conversion. Each session analyzed "
+                "independently."
+            ),
         }
 
         # PERF-013: Cache the result (3 min TTL)
@@ -3269,8 +3466,9 @@ Identify which events correlate with conversion (positive or negative lift).
 
         return Response(response_data, status=status.HTTP_200_OK)
 
-    def _analyze_event_correlations(self, app, events_qs, conversion_events,
-                                     min_sessions=10, limit=10):
+    def _analyze_event_correlations(
+        self, app, events_qs, conversion_events, min_sessions=10, limit=10
+    ):
         """
         PERF-011 & PERF-FIX: Optimized event correlation analysis using SQL (session-based).
 
@@ -3292,7 +3490,7 @@ Identify which events correlate with conversion (positive or negative lift).
         base_sql, base_params = events_qs.query.sql_with_params()
 
         # Build conversion events placeholder for SQL
-        conversion_placeholders = ', '.join(['%s'] * len(conversion_events))
+        conversion_placeholders = ", ".join(["%s"] * len(conversion_events))
 
         # =========================================================================
         # Single query that computes everything in SQL:
@@ -3377,8 +3575,14 @@ Identify which events correlate with conversion (positive or negative lift).
         WHERE (total_sessions - sessions_with_event) >= %s  -- Ensure enough sessions without
         """
 
-        # Parameters: base_params + conversion_events + conversion_events + min_sessions + min_sessions
-        params = list(base_params) + list(conversion_events) + list(conversion_events) + [min_sessions, min_sessions]
+        # Parameters: base_params + conversion_events + conversion_events
+        # + min_sessions + min_sessions
+        params = (
+            list(base_params)
+            + list(conversion_events)
+            + list(conversion_events)
+            + [min_sessions, min_sessions]
+        )
 
         with connection.cursor() as cursor:
             cursor.execute(correlation_sql, params)
@@ -3386,19 +3590,19 @@ Identify which events correlate with conversion (positive or negative lift).
 
         if not rows:
             return {
-                'data_quality': {
-                    'total_sessions': 0,
-                    'converting_sessions': 0,
-                    'non_converting_sessions': 0,
-                    'baseline_conversion_rate': 0.0,
-                    'events_analyzed': 0,
-                    'events_filtered_out': 0,
-                    'total_event_types': 0,
-                    'min_sessions_threshold': min_sessions
+                "data_quality": {
+                    "total_sessions": 0,
+                    "converting_sessions": 0,
+                    "non_converting_sessions": 0,
+                    "baseline_conversion_rate": 0.0,
+                    "events_analyzed": 0,
+                    "events_filtered_out": 0,
+                    "total_event_types": 0,
+                    "min_sessions_threshold": min_sessions,
                 },
-                'positive_correlations': [],
-                'negative_correlations': [],
-                'neutral_events': []
+                "positive_correlations": [],
+                "negative_correlations": [],
+                "neutral_events": [],
             }
 
         # Get total sessions and event types from first row (same for all)
@@ -3407,7 +3611,7 @@ Identify which events correlate with conversion (positive or negative lift).
         total_event_types = rows[0][7] if rows and len(rows[0]) > 7 else 0
         non_converting_sessions_count = total_sessions - total_converters
         baseline_conversion_rate = total_converters / total_sessions if total_sessions > 0 else 0.0
-        
+
         # Calculate filtered events count
         events_analyzed = len(rows)
         events_filtered_out = max(0, total_event_types - events_analyzed)
@@ -3430,7 +3634,9 @@ Identify which events correlate with conversion (positive or negative lift).
 
             # Calculate conversion rates
             rate_with = converters_with / sessions_with_count if sessions_with_count > 0 else 0
-            rate_without = converters_without / sessions_without_count if sessions_without_count > 0 else 0
+            rate_without = (
+                converters_without / sessions_without_count if sessions_without_count > 0 else 0
+            )
 
             # Calculate lift (avoid division by zero)
             if rate_without > 0:
@@ -3444,14 +3650,14 @@ Identify which events correlate with conversion (positive or negative lift).
                 lift_percent = 0.0
 
             event_data = {
-                'event': event_name,
-                'lift_percent': round(lift_percent, 1),
-                'sessions_with_event': sessions_with_count,
-                'sessions_without_event': sessions_without_count,
-                'conversion_rate_with': round(rate_with, 4),
-                'conversion_rate_without': round(rate_without, 4),
-                'converts_with': converters_with,
-                'converts_without': converters_without
+                "event": event_name,
+                "lift_percent": round(lift_percent, 1),
+                "sessions_with_event": sessions_with_count,
+                "sessions_without_event": sessions_without_count,
+                "conversion_rate_with": round(rate_with, 4),
+                "conversion_rate_without": round(rate_without, 4),
+                "converts_with": converters_with,
+                "converts_without": converters_without,
             }
 
             if lift_percent > NEUTRAL_THRESHOLD:
@@ -3462,35 +3668,36 @@ Identify which events correlate with conversion (positive or negative lift).
                 neutral_events.append(event_name)
 
         # Sort by absolute lift (highest first) and add ranks
-        positive_correlations.sort(key=lambda x: x['lift_percent'], reverse=True)
-        negative_correlations.sort(key=lambda x: x['lift_percent'])  # Most negative first
+        positive_correlations.sort(key=lambda x: x["lift_percent"], reverse=True)
+        negative_correlations.sort(key=lambda x: x["lift_percent"])  # Most negative first
 
         for rank, item in enumerate(positive_correlations[:limit], 1):
-            item['rank'] = rank
+            item["rank"] = rank
 
         for rank, item in enumerate(negative_correlations[:limit], 1):
-            item['rank'] = rank
+            item["rank"] = rank
 
         return {
-            'data_quality': {
-                'total_sessions': total_sessions,
-                'converting_sessions': total_converters,
-                'non_converting_sessions': non_converting_sessions_count,
-                'baseline_conversion_rate': round(baseline_conversion_rate, 4),
-                'events_analyzed': events_analyzed,
-                'events_filtered_out': events_filtered_out,
-                'total_event_types': total_event_types,
-                'min_sessions_threshold': min_sessions
+            "data_quality": {
+                "total_sessions": total_sessions,
+                "converting_sessions": total_converters,
+                "non_converting_sessions": non_converting_sessions_count,
+                "baseline_conversion_rate": round(baseline_conversion_rate, 4),
+                "events_analyzed": events_analyzed,
+                "events_filtered_out": events_filtered_out,
+                "total_event_types": total_event_types,
+                "min_sessions_threshold": min_sessions,
             },
-            'positive_correlations': positive_correlations[:limit],
-            'negative_correlations': negative_correlations[:limit],
-            'neutral_events': sorted(neutral_events)[:limit]
+            "positive_correlations": positive_correlations[:limit],
+            "negative_correlations": negative_correlations[:limit],
+            "neutral_events": sorted(neutral_events)[:limit],
         }
 
 
 # NOTE: ConversionSignalsView was removed in v2.0.0
 # This view required cross-session user tracking which is not compatible
 # with session-based analytics. Use EventCorrelationView for similar insights.
+
 
 class SegmentComparisonView(APIView):
     """
@@ -3511,7 +3718,8 @@ class SegmentComparisonView(APIView):
     Query Parameters:
         conversion_events (required): Comma-separated list of event names to
             count as conversions (e.g., "purchase,subscription_start")
-        segment_by (optional): How to segment data - 'platform' (default), 'country', 'depth', or 'hour'
+        segment_by (optional): How to segment data: 'platform' (default), 'country', 'depth',
+            or 'hour'
         granularity (optional): Time period grouping - 'day' (default), 'week',
             'month', 'quarter', 'year'
         from (optional): Start date in YYYY-MM-DD format
@@ -3560,11 +3768,12 @@ class SegmentComparisonView(APIView):
             ]
         }
     """
+
     authentication_classes = [AppKeyAuthentication]
     permission_classes = [HasValidAppKey]
 
-    VALID_GRANULARITIES = ('day', 'week', 'month', 'quarter', 'year')
-    VALID_SEGMENT_TYPES = ('platform', 'country', 'depth', 'hour')
+    VALID_GRANULARITIES = ("day", "week", "month", "quarter", "year")
+    VALID_SEGMENT_TYPES = ("platform", "country", "depth", "hour")
 
     @swagger_auto_schema(
         operation_summary="Segment Comparison",
@@ -3603,56 +3812,65 @@ are exposed. Country data comes from request headers only - no IP geolocation.
         """,
         manual_parameters=[
             openapi.Parameter(
-                'X-App-Key',
+                "X-App-Key",
                 openapi.IN_HEADER,
                 description="App Key for authentication",
                 type=openapi.TYPE_STRING,
-                required=True
+                required=True,
             ),
             openapi.Parameter(
-                'conversion_events',
+                "conversion_events",
                 openapi.IN_QUERY,
-                description="REQUIRED: Comma-separated event names to count as conversions (e.g., purchase,subscription_complete)",
+                description=(
+                    "REQUIRED: Comma-separated event names to count as conversions (e.g., "
+                    "purchase,subscription_complete)"
+                ),
                 type=openapi.TYPE_STRING,
-                required=True
+                required=True,
             ),
             openapi.Parameter(
-                'segment_by',
+                "segment_by",
                 openapi.IN_QUERY,
-                description="Segmentation type: platform (default), country, depth (events per session), or hour (0-23 UTC)",
+                description=(
+                    "Segmentation type: platform (default), country, depth (events per session), "
+                    "or hour (0-23 UTC)"
+                ),
                 type=openapi.TYPE_STRING,
-                enum=['platform', 'country', 'depth', 'hour'],
-                required=False
+                enum=["platform", "country", "depth", "hour"],
+                required=False,
             ),
             openapi.Parameter(
-                'granularity',
+                "granularity",
                 openapi.IN_QUERY,
                 description="Time period grouping: day (default), week, month, quarter, year",
                 type=openapi.TYPE_STRING,
-                enum=['day', 'week', 'month', 'quarter', 'year'],
-                required=False
+                enum=["day", "week", "month", "quarter", "year"],
+                required=False,
             ),
             openapi.Parameter(
-                'from',
+                "from",
                 openapi.IN_QUERY,
                 description="Start date in YYYY-MM-DD format",
                 type=openapi.TYPE_STRING,
-                required=False
+                required=False,
             ),
             openapi.Parameter(
-                'to',
+                "to",
                 openapi.IN_QUERY,
                 description="End date in YYYY-MM-DD format",
                 type=openapi.TYPE_STRING,
-                required=False
+                required=False,
             ),
             openapi.Parameter(
-                'tz',
+                "tz",
                 openapi.IN_QUERY,
-                description="IANA timezone name (e.g., 'America/New_York', 'Europe/London'). Dates are interpreted in this timezone. Defaults to UTC.",
+                description=(
+                    "IANA timezone name (e.g., 'America/New_York', 'Europe/London'). Dates are "
+                    "interpreted in this timezone. Defaults to UTC."
+                ),
                 type=openapi.TYPE_STRING,
                 required=False,
-                default='UTC'
+                default="UTC",
             ),
         ],
         responses={
@@ -3669,37 +3887,60 @@ are exposed. Country data comes from request headers only - no IP geolocation.
                             "total_segments": 2,
                             "total_conversions": 570,
                             "total_sessions": 8027,
-                            "overall_conversion_rate": 0.068
+                            "overall_conversion_rate": 0.068,
                         },
-                        "interpretation": "Session-scoped analysis: each unique session_id counted once per period",
+                        "interpretation": (
+                            "Session-scoped analysis: each unique session_id counted once per "
+                            "period"
+                        ),
                         "segments": [
                             {
                                 "segment": "iOS",
                                 "summary": {
                                     "total_active_sessions": 4497,
                                     "total_conversions": 359,
-                                    "conversion_rate": 0.080
+                                    "conversion_rate": 0.080,
                                 },
                                 "periods": [
-                                    {"period": "2025-11", "active_sessions": 2341, "conversions": 187, "conversion_rate": 0.080},
-                                    {"period": "2025-10", "active_sessions": 2156, "conversions": 172, "conversion_rate": 0.080}
-                                ]
+                                    {
+                                        "period": "2025-11",
+                                        "active_sessions": 2341,
+                                        "conversions": 187,
+                                        "conversion_rate": 0.080,
+                                    },
+                                    {
+                                        "period": "2025-10",
+                                        "active_sessions": 2156,
+                                        "conversions": 172,
+                                        "conversion_rate": 0.080,
+                                    },
+                                ],
                             },
                             {
                                 "segment": "Android",
                                 "summary": {
                                     "total_active_sessions": 3530,
                                     "total_conversions": 211,
-                                    "conversion_rate": 0.060
+                                    "conversion_rate": 0.060,
                                 },
                                 "periods": [
-                                    {"period": "2025-11", "active_sessions": 1876, "conversions": 112, "conversion_rate": 0.060},
-                                    {"period": "2025-10", "active_sessions": 1654, "conversions": 99, "conversion_rate": 0.060}
-                                ]
-                            }
-                        ]
+                                    {
+                                        "period": "2025-11",
+                                        "active_sessions": 1876,
+                                        "conversions": 112,
+                                        "conversion_rate": 0.060,
+                                    },
+                                    {
+                                        "period": "2025-10",
+                                        "active_sessions": 1654,
+                                        "conversions": 99,
+                                        "conversion_rate": 0.060,
+                                    },
+                                ],
+                            },
+                        ],
                     }
-                }
+                },
             ),
             400: openapi.Response(
                 description="Bad Request - missing conversion_events or invalid parameters",
@@ -3707,65 +3948,93 @@ are exposed. Country data comes from request headers only - no IP geolocation.
                     "application/json": {
                         "error": "conversion_events parameter required",
                         "detail": "Please specify which events to count as conversions.",
-                        "your_event_types": ["app_open", "screen_view", "button_click", "checkout_start", "payment_success"],
-                        "example": "?conversion_events=payment_success,checkout_start"
+                        "your_event_types": [
+                            "app_open",
+                            "screen_view",
+                            "button_click",
+                            "checkout_start",
+                            "payment_success",
+                        ],
+                        "example": "?conversion_events=payment_success,checkout_start",
                     }
-                }
+                },
             ),
-            401: "Unauthorized - missing or invalid app_key"
-        }
+            401: "Unauthorized - missing or invalid app_key",
+        },
     )
     def get(self, request):
         # Get the authenticated app
         app = request.user
 
         # Parse query parameters
-        conversion_events_str = request.query_params.get('conversion_events')
-        segment_by = request.query_params.get('segment_by', 'platform').lower()
-        granularity = request.query_params.get('granularity', 'day').lower()
-        from_date_str = request.query_params.get('from')
-        to_date_str = request.query_params.get('to')
+        conversion_events_str = request.query_params.get("conversion_events")
+        segment_by = request.query_params.get("segment_by", "platform").lower()
+        granularity = request.query_params.get("granularity", "day").lower()
+        from_date_str = request.query_params.get("from")
+        to_date_str = request.query_params.get("to")
 
         # Validate conversion_events parameter (REQUIRED)
         if not conversion_events_str:
             # Get user's actual event types to help them
             event_types = list(
                 Event.objects.filter(app=app)
-                .values_list('event_name', flat=True)
+                .values_list("event_name", flat=True)
                 .distinct()
-                .order_by('event_name')[:20]
+                .order_by("event_name")[:20]
             )
-            return Response({
-                'error': 'conversion_events parameter required',
-                'detail': 'Please specify which events to count as conversions.',
-                'your_event_types': event_types,
-                'example': '?conversion_events=' + (','.join(event_types[:2]) if len(event_types) >= 2 else 'purchase,subscription')
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {
+                    "error": "conversion_events parameter required",
+                    "detail": "Please specify which events to count as conversions.",
+                    "your_event_types": event_types,
+                    "example": "?conversion_events="
+                    + (
+                        ",".join(event_types[:2])
+                        if len(event_types) >= 2
+                        else "purchase,subscription"
+                    ),
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         # Parse conversion events (comma-separated, trimmed)
-        conversion_events = [e.strip() for e in conversion_events_str.split(',') if e.strip()]
+        conversion_events = [e.strip() for e in conversion_events_str.split(",") if e.strip()]
 
         if not conversion_events:
-            return Response({
-                'error': 'conversion_events parameter is empty',
-                'detail': 'Please specify at least one event name.',
-                'example': '?conversion_events=purchase,subscription'
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {
+                    "error": "conversion_events parameter is empty",
+                    "detail": "Please specify at least one event name.",
+                    "example": "?conversion_events=purchase,subscription",
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         # Validate segment_by
         if segment_by not in self.VALID_SEGMENT_TYPES:
-            return Response({
-                'error': f'Invalid segment_by. Must be one of: {", ".join(self.VALID_SEGMENT_TYPES)}'
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {
+                    "error": (
+                        f"Invalid segment_by. Must be one of: {', '.join(self.VALID_SEGMENT_TYPES)}"
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         # Validate granularity
         if granularity not in self.VALID_GRANULARITIES:
-            return Response({
-                'error': f'Invalid granularity. Must be one of: {", ".join(self.VALID_GRANULARITIES)}'
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {
+                    "error": (
+                        "Invalid granularity. Must be one of: "
+                        f"{', '.join(self.VALID_GRANULARITIES)}"
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         # Get timezone parameter
-        tz_name = request.query_params.get('tz', 'UTC')
+        tz_name = request.query_params.get("tz", "UTC")
 
         # Start with events for this app
         events = Event.objects.filter(app=app)
@@ -3775,14 +4044,14 @@ are exposed. Country data comes from request headers only - no IP geolocation.
             from_datetime, to_datetime = parse_date_range(from_date_str, to_date_str, tz_name)
         except ValueError:
             return Response(
-                {'error': 'Invalid date format. Use YYYY-MM-DD'},
-                status=status.HTTP_400_BAD_REQUEST
+                {"error": "Invalid date format. Use YYYY-MM-DD"}, status=status.HTTP_400_BAD_REQUEST
             )
 
         # Default date range: last 30 days if not specified
         if not from_datetime and not to_datetime:
             import pytz
-            tz = pytz.timezone(tz_name) if tz_name != 'UTC' else pytz.UTC
+
+            tz = pytz.timezone(tz_name) if tz_name != "UTC" else pytz.UTC
             to_datetime = timezone.now().astimezone(tz)
             from_datetime = to_datetime - timedelta(days=30)
             events = events.filter(timestamp__gte=from_datetime, timestamp__lte=to_datetime)
@@ -3793,7 +4062,8 @@ are exposed. Country data comes from request headers only - no IP geolocation.
         elif not to_datetime:
             # If only from_date specified, go until now
             import pytz
-            tz = pytz.timezone(tz_name) if tz_name != 'UTC' else pytz.UTC
+
+            tz = pytz.timezone(tz_name) if tz_name != "UTC" else pytz.UTC
             to_datetime = timezone.now().astimezone(tz)
             events = events.filter(timestamp__gte=from_datetime, timestamp__lte=to_datetime)
         else:
@@ -3803,16 +4073,20 @@ are exposed. Country data comes from request headers only - no IP geolocation.
                 events = events.filter(timestamp__lte=to_datetime)
 
         # PERF-016: Check cache before running expensive analysis
-        from django.core.cache import cache
-        from django.conf import settings
         import hashlib
 
+        from django.conf import settings
+        from django.core.cache import cache
+
         # Use actual date strings for cache key
-        cache_from = from_datetime.strftime('%Y-%m-%d') if from_datetime else None
-        cache_to = to_datetime.strftime('%Y-%m-%d') if to_datetime else None
-        cache_params = f"{','.join(sorted(conversion_events))}:{segment_by}:{granularity}:{cache_from}:{cache_to}:{tz_name}"
+        cache_from = from_datetime.strftime("%Y-%m-%d") if from_datetime else None
+        cache_to = to_datetime.strftime("%Y-%m-%d") if to_datetime else None
+        cache_params = (
+            f"{','.join(sorted(conversion_events))}:{segment_by}:{granularity}:"
+            f"{cache_from}:{cache_to}:{tz_name}"
+        )
         cache_hash = hashlib.md5(cache_params.encode()).hexdigest()[:16]
-        cache_key = f'segment_comparison:{app.id}:{cache_hash}'
+        cache_key = f"segment_comparison:{app.id}:{cache_hash}"
 
         cached_result = cache.get(cache_key)
         if cached_result is not None:
@@ -3820,63 +4094,71 @@ are exposed. Country data comes from request headers only - no IP geolocation.
 
         # Choose truncation function based on granularity
         trunc_functions = {
-            'day': TruncDay,
-            'week': TruncWeek,
-            'month': TruncMonth,
-            'quarter': TruncQuarter,
-            'year': TruncYear,
+            "day": TruncDay,
+            "week": TruncWeek,
+            "month": TruncMonth,
+            "quarter": TruncQuarter,
+            "year": TruncYear,
         }
         trunc_func = trunc_functions[granularity]
 
         # Calculate segment data based on segment_by type
-        if segment_by == 'depth':
+        if segment_by == "depth":
             # Session depth segmentation (events per session)
-            segments_data = self._calculate_depth_segments(app.id, from_datetime, to_datetime, conversion_events, trunc_func)
-        elif segment_by == 'hour':
+            segments_data = self._calculate_depth_segments(
+                app.id, from_datetime, to_datetime, conversion_events, trunc_func
+            )
+        elif segment_by == "hour":
             # Hourly session patterns (hour of day 0-23)
-            segments_data = self._calculate_hourly_segments(app.id, from_datetime, to_datetime, conversion_events)
+            segments_data = self._calculate_hourly_segments(
+                app.id, from_datetime, to_datetime, conversion_events
+            )
         else:
             # Field-based segmentation (platform, country)
-            segment_field = 'platform' if segment_by == 'platform' else 'country'
-            segments_data = self._calculate_field_segments(events, conversion_events, trunc_func, segment_field)
+            segment_field = "platform" if segment_by == "platform" else "country"
+            segments_data = self._calculate_field_segments(
+                events, conversion_events, trunc_func, segment_field
+            )
 
         # Format response
         date_range = {
-            'from': from_datetime.strftime('%Y-%m-%d') if from_datetime else None,
-            'to': to_datetime.strftime('%Y-%m-%d') if to_datetime else None
+            "from": from_datetime.strftime("%Y-%m-%d") if from_datetime else None,
+            "to": to_datetime.strftime("%Y-%m-%d") if to_datetime else None,
         }
 
         # Calculate overall summary
-        total_conversions = sum(s['summary']['total_conversions'] for s in segments_data)
-        total_sessions = sum(s['summary']['total_active_sessions'] for s in segments_data)
+        total_conversions = sum(s["summary"]["total_conversions"] for s in segments_data)
+        total_sessions = sum(s["summary"]["total_active_sessions"] for s in segments_data)
         overall_rate = round(total_conversions / total_sessions, 4) if total_sessions > 0 else 0.0
 
         # Format periods
         for segment in segments_data:
-            segment['periods'] = [
+            segment["periods"] = [
                 {
-                    'period': self._format_period_label(p['period'], granularity),
-                    'active_sessions': p['active_sessions'],
-                    'conversions': p['conversions'],
-                    'conversion_rate': p['conversion_rate']
+                    "period": self._format_period_label(p["period"], granularity),
+                    "active_sessions": p["active_sessions"],
+                    "conversions": p["conversions"],
+                    "conversion_rate": p["conversion_rate"],
                 }
-                for p in segment['periods']
+                for p in segment["periods"]
             ]
 
         response_data = {
-            'app_name': app.name,
-            'granularity': granularity,
-            'segment_by': segment_by,
-            'conversion_events': conversion_events,
-            'date_range': date_range,
-            'summary': {
-                'total_segments': len(segments_data),
-                'total_conversions': total_conversions,
-                'total_sessions': total_sessions,
-                'overall_conversion_rate': overall_rate
+            "app_name": app.name,
+            "granularity": granularity,
+            "segment_by": segment_by,
+            "conversion_events": conversion_events,
+            "date_range": date_range,
+            "summary": {
+                "total_segments": len(segments_data),
+                "total_conversions": total_conversions,
+                "total_sessions": total_sessions,
+                "overall_conversion_rate": overall_rate,
             },
-            'interpretation': 'Session-scoped analysis: each unique session_id counted once per period',
-            'segments': segments_data
+            "interpretation": (
+                "Session-scoped analysis: each unique session_id counted once per period"
+            ),
+            "segments": segments_data,
         }
 
         # PERF-016: Cache the result (3 min TTL)
@@ -3896,36 +4178,37 @@ are exposed. Country data comes from request headers only - no IP geolocation.
         Returns list of segment dicts with summary and periods.
         """
         from collections import defaultdict
-        from django.db.models import Case, When, IntegerField
+
+        from django.db.models import Case, IntegerField, When
 
         # Filter to events with session_id for session counting
-        events_with_session = events.filter(session_id__isnull=False).exclude(session_id='')
+        events_with_session = events.filter(session_id__isnull=False).exclude(session_id="")
 
         # Single query using CASE to count both active sessions and conversions
         segment_data = (
-            events_with_session
-            .annotate(period=trunc_func('timestamp'))
-            .values('period', segment_field)
+            events_with_session.annotate(period=trunc_func("timestamp"))
+            .values("period", segment_field)
             .annotate(
-                unique_sessions=Count('session_id', distinct=True),
+                unique_sessions=Count("session_id", distinct=True),
                 conversions=Count(
                     Case(
-                        When(event_name__in=conversion_events, then=1),
-                        output_field=IntegerField()
+                        When(event_name__in=conversion_events, then=1), output_field=IntegerField()
                     )
-                )
+                ),
             )
         )
 
         # Build segment data structure from single query result
-        segment_periods = defaultdict(lambda: defaultdict(lambda: {'active_sessions': 0, 'conversions': 0}))
+        segment_periods = defaultdict(
+            lambda: defaultdict(lambda: {"active_sessions": 0, "conversions": 0})
+        )
 
         for item in segment_data:
-            segment = item[segment_field] or 'Unknown'
-            period = item['period']
+            segment = item[segment_field] or "Unknown"
+            period = item["period"]
             if period:
-                segment_periods[segment][period]['active_sessions'] = item['unique_sessions']
-                segment_periods[segment][period]['conversions'] = item['conversions']
+                segment_periods[segment][period]["active_sessions"] = item["unique_sessions"]
+                segment_periods[segment][period]["conversions"] = item["conversions"]
 
         # Build response segments
         segments = []
@@ -3936,34 +4219,40 @@ are exposed. Country data comes from request headers only - no IP geolocation.
             sorted_periods = sorted(periods.items(), key=lambda x: x[0], reverse=True)
 
             # Calculate segment summary
-            total_sessions = sum(p['active_sessions'] for p in periods.values())
-            total_conversions = sum(p['conversions'] for p in periods.values())
-            segment_rate = round(total_conversions / total_sessions, 4) if total_sessions > 0 else 0.0
+            total_sessions = sum(p["active_sessions"] for p in periods.values())
+            total_conversions = sum(p["conversions"] for p in periods.values())
+            segment_rate = (
+                round(total_conversions / total_sessions, 4) if total_sessions > 0 else 0.0
+            )
 
             period_list = []
             for period_dt, period_data in sorted_periods:
-                sessions = period_data['active_sessions']
-                conversions = period_data['conversions']
+                sessions = period_data["active_sessions"]
+                conversions = period_data["conversions"]
                 rate = round(conversions / sessions, 4) if sessions > 0 else 0.0
-                period_list.append({
-                    'period': period_dt,
-                    'active_sessions': sessions,
-                    'conversions': conversions,
-                    'conversion_rate': rate
-                })
+                period_list.append(
+                    {
+                        "period": period_dt,
+                        "active_sessions": sessions,
+                        "conversions": conversions,
+                        "conversion_rate": rate,
+                    }
+                )
 
-            segments.append({
-                'segment': segment_name,
-                'summary': {
-                    'total_active_sessions': total_sessions,
-                    'total_conversions': total_conversions,
-                    'conversion_rate': segment_rate
-                },
-                'periods': period_list
-            })
+            segments.append(
+                {
+                    "segment": segment_name,
+                    "summary": {
+                        "total_active_sessions": total_sessions,
+                        "total_conversions": total_conversions,
+                        "conversion_rate": segment_rate,
+                    },
+                    "periods": period_list,
+                }
+            )
 
         # Sort segments by total conversions (descending)
-        segments.sort(key=lambda x: x['summary']['total_conversions'], reverse=True)
+        segments.sort(key=lambda x: x["summary"]["total_conversions"], reverse=True)
 
         return segments
 
@@ -3986,23 +4275,24 @@ are exposed. Country data comes from request headers only - no IP geolocation.
         Returns list of segment dicts with summary and periods.
         """
         from collections import defaultdict
+
         from django.db import connection
 
         # Determine the truncation SQL based on trunc_func
-        trunc_name = trunc_func.__name__.replace('Trunc', '').lower()
-        if trunc_name == 'day':
+        trunc_name = trunc_func.__name__.replace("Trunc", "").lower()
+        if trunc_name == "day":
             trunc_sql = "DATE_TRUNC('day', MIN(timestamp))"
-        elif trunc_name == 'week':
+        elif trunc_name == "week":
             trunc_sql = "DATE_TRUNC('week', MIN(timestamp))"
-        elif trunc_name == 'month':
+        elif trunc_name == "month":
             trunc_sql = "DATE_TRUNC('month', MIN(timestamp))"
-        elif trunc_name == 'quarter':
+        elif trunc_name == "quarter":
             trunc_sql = "DATE_TRUNC('quarter', MIN(timestamp))"
         else:  # year
             trunc_sql = "DATE_TRUNC('year', MIN(timestamp))"
 
         # Build conversion events SQL array (properly escaped)
-        conversion_events_sql = ', '.join([f"'{e}'" for e in conversion_events])
+        conversion_events_sql = ", ".join([f"'{e}'" for e in conversion_events])
 
         # Build date filter SQL
         date_filter = ""
@@ -4021,7 +4311,8 @@ are exposed. Country data comes from request headers only - no IP geolocation.
                 session_id,
                 {trunc_sql} as period,
                 COUNT(*) as event_count,
-                MAX(CASE WHEN event_name IN ({conversion_events_sql}) THEN 1 ELSE 0 END) as converted
+                MAX(CASE WHEN event_name IN ({conversion_events_sql}) THEN 1 ELSE 0 END)
+                    as converted
             FROM analytics_event
             WHERE app_id = %s
                 AND session_id IS NOT NULL
@@ -4072,16 +4363,18 @@ are exposed. Country data comes from request headers only - no IP geolocation.
             rows = cursor.fetchall()
 
         # Build segment data structure
-        segment_periods = defaultdict(lambda: defaultdict(lambda: {'active_sessions': 0, 'conversions': 0}))
+        segment_periods = defaultdict(
+            lambda: defaultdict(lambda: {"active_sessions": 0, "conversions": 0})
+        )
 
         for row in rows:
             depth_bucket, period, session_count, conversions = row
             if period:
-                segment_periods[depth_bucket][period]['active_sessions'] = session_count
-                segment_periods[depth_bucket][period]['conversions'] = conversions
+                segment_periods[depth_bucket][period]["active_sessions"] = session_count
+                segment_periods[depth_bucket][period]["conversions"] = conversions
 
         # Define bucket order for consistent sorting
-        bucket_order = ['1', '2', '3', '4', '5', '6-10', '11-20', '21+']
+        bucket_order = ["1", "2", "3", "4", "5", "6-10", "11-20", "21+"]
 
         # Build response segments in bucket order (always include all 8 buckets)
         segments = []
@@ -4093,31 +4386,37 @@ are exposed. Country data comes from request headers only - no IP geolocation.
             sorted_periods = sorted(periods.items(), key=lambda x: x[0], reverse=True)
 
             # Calculate segment summary
-            total_sessions = sum(p['active_sessions'] for p in periods.values())
-            total_conversions = sum(p['conversions'] for p in periods.values())
-            segment_rate = round(total_conversions / total_sessions, 4) if total_sessions > 0 else 0.0
+            total_sessions = sum(p["active_sessions"] for p in periods.values())
+            total_conversions = sum(p["conversions"] for p in periods.values())
+            segment_rate = (
+                round(total_conversions / total_sessions, 4) if total_sessions > 0 else 0.0
+            )
 
             period_list = []
             for period_dt, period_data in sorted_periods:
-                sessions = period_data['active_sessions']
-                conversions = period_data['conversions']
+                sessions = period_data["active_sessions"]
+                conversions = period_data["conversions"]
                 rate = round(conversions / sessions, 4) if sessions > 0 else 0.0
-                period_list.append({
-                    'period': period_dt,
-                    'active_sessions': sessions,
-                    'conversions': conversions,
-                    'conversion_rate': rate
-                })
+                period_list.append(
+                    {
+                        "period": period_dt,
+                        "active_sessions": sessions,
+                        "conversions": conversions,
+                        "conversion_rate": rate,
+                    }
+                )
 
-            segments.append({
-                'segment': bucket_name,
-                'summary': {
-                    'total_active_sessions': total_sessions,
-                    'total_conversions': total_conversions,
-                    'conversion_rate': segment_rate
-                },
-                'periods': period_list
-            })
+            segments.append(
+                {
+                    "segment": bucket_name,
+                    "summary": {
+                        "total_active_sessions": total_sessions,
+                        "total_conversions": total_conversions,
+                        "conversion_rate": segment_rate,
+                    },
+                    "periods": period_list,
+                }
+            )
 
         return segments
 
@@ -4142,7 +4441,7 @@ are exposed. Country data comes from request headers only - no IP geolocation.
         from django.db import connection
 
         # Build conversion events SQL array (properly escaped)
-        conversion_events_sql = ', '.join([f"'{e}'" for e in conversion_events])
+        conversion_events_sql = ", ".join([f"'{e}'" for e in conversion_events])
 
         # Build date filter SQL
         date_filter = ""
@@ -4161,7 +4460,8 @@ are exposed. Country data comes from request headers only - no IP geolocation.
             SELECT
                 session_id,
                 EXTRACT(HOUR FROM MIN(timestamp) AT TIME ZONE 'UTC') as session_hour,
-                MAX(CASE WHEN event_name IN ({conversion_events_sql}) THEN 1 ELSE 0 END) as converted
+                MAX(CASE WHEN event_name IN ({conversion_events_sql}) THEN 1 ELSE 0 END)
+                    as converted
             FROM analytics_event
             WHERE app_id = %s
                 AND session_id IS NOT NULL
@@ -4183,36 +4483,38 @@ are exposed. Country data comes from request headers only - no IP geolocation.
             rows = cursor.fetchall()
 
         # Build segment data structure with all 24 hours (fill missing with zeros)
-        hourly_data = {i: {'session_count': 0, 'conversions': 0} for i in range(24)}
+        hourly_data = {i: {"session_count": 0, "conversions": 0} for i in range(24)}
 
         for row in rows:
             hour, session_count, conversions = row
             if hour is not None and 0 <= hour <= 23:
                 hourly_data[int(hour)] = {
-                    'session_count': session_count,
-                    'conversions': conversions or 0
+                    "session_count": session_count,
+                    "conversions": conversions or 0,
                 }
 
         # Build response segments in hour order (0-23)
         segments = []
         for hour in range(24):
             data = hourly_data[hour]
-            session_count = data['session_count']
-            conversions = data['conversions']
+            session_count = data["session_count"]
+            conversions = data["conversions"]
             rate = round(conversions / session_count, 4) if session_count > 0 else 0.0
 
             # For hourly segments, we don't have period breakdowns
             # The segment itself IS the breakdown (by hour)
             # So we use a single "period" entry that spans the entire date range
-            segments.append({
-                'segment': str(hour),
-                'summary': {
-                    'total_active_sessions': session_count,
-                    'total_conversions': conversions,
-                    'conversion_rate': rate
-                },
-                'periods': []  # No time-based periods for hourly analysis
-            })
+            segments.append(
+                {
+                    "segment": str(hour),
+                    "summary": {
+                        "total_active_sessions": session_count,
+                        "total_conversions": conversions,
+                        "conversion_rate": rate,
+                    },
+                    "periods": [],  # No time-based periods for hourly analysis
+                }
+            )
 
         return segments
 
@@ -4227,20 +4529,20 @@ are exposed. Country data comes from request headers only - no IP geolocation.
         Returns:
             Formatted string label for the period
         """
-        if granularity == 'day':
-            return dt.strftime('%Y-%m-%d')
-        elif granularity == 'week':
+        if granularity == "day":
+            return dt.strftime("%Y-%m-%d")
+        elif granularity == "week":
             # ISO week format: YYYY-Www
             iso_cal = dt.isocalendar()
             return f"{iso_cal[0]}-W{iso_cal[1]:02d}"
-        elif granularity == 'month':
-            return dt.strftime('%Y-%m')
-        elif granularity == 'quarter':
+        elif granularity == "month":
+            return dt.strftime("%Y-%m")
+        elif granularity == "quarter":
             quarter = (dt.month - 1) // 3 + 1
             return f"{dt.year}-Q{quarter}"
-        elif granularity == 'year':
+        elif granularity == "year":
             return str(dt.year)
-        return dt.strftime('%Y-%m-%d')
+        return dt.strftime("%Y-%m-%d")
 
 
 class GlobeStatsView(APIView):
@@ -4293,74 +4595,79 @@ class GlobeStatsView(APIView):
         """,
         manual_parameters=[
             openapi.Parameter(
-                'app_key',
+                "app_key",
                 openapi.IN_QUERY,
                 description="Your application's API key (required)",
                 type=openapi.TYPE_STRING,
-                required=True
+                required=True,
             ),
             openapi.Parameter(
-                'from',
+                "from",
                 openapi.IN_QUERY,
                 description="Start date in YYYY-MM-DD format (required)",
                 type=openapi.TYPE_STRING,
                 format=openapi.FORMAT_DATE,
-                required=True
+                required=True,
             ),
             openapi.Parameter(
-                'to',
+                "to",
                 openapi.IN_QUERY,
                 description="End date in YYYY-MM-DD format (required)",
                 type=openapi.TYPE_STRING,
                 format=openapi.FORMAT_DATE,
-                required=True
+                required=True,
             ),
             openapi.Parameter(
-                'tz',
+                "tz",
                 openapi.IN_QUERY,
-                description="IANA timezone name (e.g., 'America/New_York', 'Europe/London'). Dates are interpreted in this timezone. Defaults to UTC.",
+                description=(
+                    "IANA timezone name (e.g., 'America/New_York', 'Europe/London'). Dates are "
+                    "interpreted in this timezone. Defaults to UTC."
+                ),
                 type=openapi.TYPE_STRING,
                 required=False,
-                default='UTC'
+                default="UTC",
             ),
             openapi.Parameter(
-                'conversion_events',
+                "conversion_events",
                 openapi.IN_QUERY,
-                description="Comma-separated list of event names to count as conversions (optional)",
+                description=(
+                    "Comma-separated list of event names to count as conversions (optional)"
+                ),
                 type=openapi.TYPE_STRING,
-                required=False
+                required=False,
             ),
         ],
         responses={
             200: openapi.Response(
                 description="Country-level statistics",
                 examples={
-                    'application/json': {
-                        'data': [
+                    "application/json": {
+                        "data": [
                             {
-                                'country': 'US',
-                                'events': 1234,
-                                'sessions': 567,
-                                'conversions': 89,
-                                'conversion_rate': 15.7
+                                "country": "US",
+                                "events": 1234,
+                                "sessions": 567,
+                                "conversions": 89,
+                                "conversion_rate": 15.7,
                             },
                             {
-                                'country': 'GB',
-                                'events': 890,
-                                'sessions': 345,
-                                'conversions': 45,
-                                'conversion_rate': 13.0
-                            }
+                                "country": "GB",
+                                "events": 890,
+                                "sessions": 345,
+                                "conversions": 45,
+                                "conversion_rate": 13.0,
+                            },
                         ],
-                        'cached': True,
-                        'cache_expires_in': 900
+                        "cached": True,
+                        "cache_expires_in": 900,
                     }
-                }
+                },
             ),
             400: "Bad request - missing or invalid parameters",
             401: "Unauthorized - invalid or missing API key",
-            500: "Internal server error"
-        }
+            500: "Internal server error",
+        },
     )
     def get(self, request):
         """
@@ -4370,27 +4677,28 @@ class GlobeStatsView(APIView):
         Implements 15-minute caching and performance monitoring.
         """
         import time
-        from django.core.cache import cache
-        from django.conf import settings
-        from django.db import connection
-        from django.db.models import Count, Q, Case, When, IntegerField
 
-        logger = logging.getLogger('analytics.performance')
+        from django.conf import settings
+        from django.core.cache import cache
+        from django.db import connection
+        from django.db.models import Case, Count, IntegerField, When
+
+        logger = logging.getLogger("analytics.performance")
         start_time = time.time()
 
         try:
             # Extract and validate parameters
-            app_key = request.GET.get('app_key')
-            from_date_str = request.GET.get('from')
-            to_date_str = request.GET.get('to')
-            conversion_events_str = request.GET.get('conversion_events', '')
-            tz_name = request.GET.get('tz', 'UTC')
+            app_key = request.GET.get("app_key")
+            from_date_str = request.GET.get("from")
+            to_date_str = request.GET.get("to")
+            conversion_events_str = request.GET.get("conversion_events", "")
+            tz_name = request.GET.get("tz", "UTC")
 
             # Validate required parameters
             if not all([app_key, from_date_str, to_date_str]):
                 return Response(
-                    {'error': 'Missing required parameters: app_key, from, to'},
-                    status=status.HTTP_400_BAD_REQUEST
+                    {"error": "Missing required parameters: app_key, from, to"},
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
 
             # Parse dates with timezone awareness
@@ -4401,47 +4709,54 @@ class GlobeStatsView(APIView):
                 to_date = to_datetime.date() if to_datetime else None
             except ValueError:
                 return Response(
-                    {'error': 'Invalid date format. Use YYYY-MM-DD'},
-                    status=status.HTTP_400_BAD_REQUEST
+                    {"error": "Invalid date format. Use YYYY-MM-DD"},
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
 
             # Validate date range
             if from_date and to_date and from_date > to_date:
                 return Response(
-                    {'error': 'from date must be before or equal to to date'},
-                    status=status.HTTP_400_BAD_REQUEST
+                    {"error": "from date must be before or equal to to date"},
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
 
             # Parse conversion events
             conversion_events = []
             if conversion_events_str:
-                conversion_events = [e.strip() for e in conversion_events_str.split(',') if e.strip()]
+                conversion_events = [
+                    e.strip() for e in conversion_events_str.split(",") if e.strip()
+                ]
 
             # Build cache key
             import hashlib
-            conversion_hash = hashlib.md5(','.join(sorted(conversion_events)).encode()).hexdigest()[:8]
-            cache_key = f'globe_stats_{app_key}_{conversion_hash}_{from_date_str}_{to_date_str}_{tz_name}'
+
+            conversion_hash = hashlib.md5(",".join(sorted(conversion_events)).encode()).hexdigest()[
+                :8
+            ]
+            cache_key = (
+                f"globe_stats_{app_key}_{conversion_hash}_{from_date_str}_{to_date_str}_{tz_name}"
+            )
 
             # Check cache
             cached_data = cache.get(cache_key)
             if cached_data is not None:
                 total_duration = time.time() - start_time
                 logger.info(
-                    f"globe-stats cache hit: {total_duration*1000:.0f}ms | "
+                    f"globe-stats cache hit: {total_duration * 1000:.0f}ms | "
                     f"app_key={app_key} | from={from_date_str} | to={to_date_str}"
                 )
-                cache_ttl = getattr(settings, 'GLOBE_STATS_CACHE_TTL', 900)
-                return Response({
-                    'data': cached_data,
-                    'cached': True,
-                    'cache_expires_in': cache_ttl
-                })
+                cache_ttl = getattr(settings, "GLOBE_STATS_CACHE_TTL", 900)
+                return Response(
+                    {"data": cached_data, "cached": True, "cache_expires_in": cache_ttl}
+                )
 
             # Get app from request (set by AppKeyAuthentication as request.user)
             app = request.user
 
             # Set query timeout from settings
-            query_timeout = getattr(settings, 'GLOBE_STATS_QUERY_TIMEOUT', 30) * 1000  # Convert to milliseconds
+            query_timeout = (
+                getattr(settings, "GLOBE_STATS_QUERY_TIMEOUT", 30) * 1000
+            )  # Convert to milliseconds
             with connection.cursor() as cursor:
                 cursor.execute(f"SET statement_timeout = {query_timeout}")
 
@@ -4450,37 +4765,33 @@ class GlobeStatsView(APIView):
                 app=app,
                 timestamp__gte=from_datetime,
                 timestamp__lte=to_datetime,
-                country__isnull=False  # Only include events with country data
-            ).only('country', 'session_id', 'event_name')
+                country__isnull=False,  # Only include events with country data
+            ).only("country", "session_id", "event_name")
 
             # Execute optimized query: GROUP BY country only (no period grouping)
             query_start = time.time()
 
             # Build aggregation
-            aggregation = {
-                'events': Count('id'),
-                'sessions': Count('session_id', distinct=True)
-            }
+            aggregation = {"events": Count("id"), "sessions": Count("session_id", distinct=True)}
 
             # Add conversion counting if conversion events specified
             if conversion_events:
-                aggregation['conversions'] = Count(
+                aggregation["conversions"] = Count(
                     Case(
-                        When(event_name__in=conversion_events, then=1),
-                        output_field=IntegerField()
+                        When(event_name__in=conversion_events, then=1), output_field=IntegerField()
                     )
                 )
 
             results = list(
-                queryset.values('country')
+                queryset.values("country")
                 .annotate(**aggregation)
-                .order_by('-events')  # Order by event count descending
+                .order_by("-events")  # Order by event count descending
             )
 
             query_duration = time.time() - query_start
 
             # Log slow queries using threshold from settings
-            slow_query_threshold = getattr(settings, 'GLOBE_STATS_SLOW_QUERY_THRESHOLD', 2)
+            slow_query_threshold = getattr(settings, "GLOBE_STATS_SLOW_QUERY_THRESHOLD", 2)
             if query_duration > slow_query_threshold:
                 logger.warning(
                     f"Slow globe-stats query: {query_duration:.2f}s | "
@@ -4492,27 +4803,26 @@ class GlobeStatsView(APIView):
             enhanced_results = []
             for item in results:
                 country_data = {
-                    'country': item['country'],
-                    'events': item['events'],
-                    'sessions': item['sessions']
+                    "country": item["country"],
+                    "events": item["events"],
+                    "sessions": item["sessions"],
                 }
 
                 # Add conversion metrics if available
                 if conversion_events:
-                    conversions = item.get('conversions', 0)
-                    country_data['conversions'] = conversions
-                    country_data['conversion_rate'] = round(
-                        (conversions / item['sessions'] * 100) if item['sessions'] > 0 else 0,
-                        2
+                    conversions = item.get("conversions", 0)
+                    country_data["conversions"] = conversions
+                    country_data["conversion_rate"] = round(
+                        (conversions / item["sessions"] * 100) if item["sessions"] > 0 else 0, 2
                     )
                 else:
-                    country_data['conversions'] = 0
-                    country_data['conversion_rate'] = 0
+                    country_data["conversions"] = 0
+                    country_data["conversion_rate"] = 0
 
                 enhanced_results.append(country_data)
 
             # Cache with TTL from settings
-            cache_ttl = getattr(settings, 'GLOBE_STATS_CACHE_TTL', 900)
+            cache_ttl = getattr(settings, "GLOBE_STATS_CACHE_TTL", 900)
             cache.set(cache_key, enhanced_results, cache_ttl)
 
             # Calculate total response time
@@ -4520,26 +4830,26 @@ class GlobeStatsView(APIView):
 
             # Log performance metrics
             logger.info(
-                f"globe-stats completed: {total_duration*1000:.0f}ms | "
-                f"query={query_duration*1000:.0f}ms | "
+                f"globe-stats completed: {total_duration * 1000:.0f}ms | "
+                f"query={query_duration * 1000:.0f}ms | "
                 f"countries={len(enhanced_results)} | "
                 f"cached=False"
             )
 
             # Build response
             response_data = {
-                'data': enhanced_results,
-                'cached': False,
-                'cache_expires_in': cache_ttl
+                "data": enhanced_results,
+                "cached": False,
+                "cache_expires_in": cache_ttl,
             }
 
             # Add debug info in DEBUG mode
-            if getattr(settings, 'DEBUG', False):
-                response_data['_debug'] = {
-                    'query_time_ms': int(query_duration * 1000),
-                    'total_time_ms': int(total_duration * 1000),
-                    'result_count': len(enhanced_results),
-                    'conversion_events': conversion_events
+            if getattr(settings, "DEBUG", False):
+                response_data["_debug"] = {
+                    "query_time_ms": int(query_duration * 1000),
+                    "total_time_ms": int(total_duration * 1000),
+                    "result_count": len(enhanced_results),
+                    "conversion_events": conversion_events,
                 }
 
             return Response(response_data)
@@ -4549,14 +4859,11 @@ class GlobeStatsView(APIView):
                 f"globe-stats error: {str(e)} | "
                 f"app_key={request.GET.get('app_key')} | "
                 f"from={request.GET.get('from')} | to={request.GET.get('to')}",
-                exc_info=True
+                exc_info=True,
             )
 
-            error_detail = str(e) if getattr(settings, 'DEBUG', False) else 'Internal server error'
+            error_detail = str(e) if getattr(settings, "DEBUG", False) else "Internal server error"
             return Response(
-                {
-                    'error': 'Failed to fetch globe statistics',
-                    'detail': error_detail
-                },
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {"error": "Failed to fetch globe statistics", "detail": error_detail},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )

@@ -210,7 +210,7 @@ function updateFilterSummary() {
         } else if (currentDatePreset === '90d') {
             dateLabelText = 'Last 90 days';
         } else {
-            dateLabelText = `${fromDate.toLocaleDateString('en-US', options)} – ${toDate.toLocaleDateString('en-US', options)}`;
+            dateLabelText = `${fromDate.toLocaleDateString('en-US', options)}-${toDate.toLocaleDateString('en-US', options)}`;
         }
     }
     
@@ -493,7 +493,7 @@ function addCustomConversionEvent() {
     // Show feedback
     const isPending = !knownEventTypes.includes(eventName);
     if (isPending && typeof showToast === 'function') {
-        showToast(`Added "${eventName}" - will match when events are tracked.`, 'success');
+        showToast(`Added "${eventName}". It will match when events are tracked.`, 'success');
     }
     
     // Clear tab cache

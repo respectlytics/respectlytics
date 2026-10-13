@@ -34,8 +34,8 @@
         </div>
         <div class="flex-1 min-w-0">
             <p class="text-sm text-slate-300">
-                <span class="font-medium text-amber-400">Granted access expires in {{ subscription.granted_access_days_remaining }} day{{ subscription.granted_access_days_remaining|pluralize }}</span>
-                — your limit will return to {{ subscription.monthly_event_limit|floatformat:0 }} events/month.
+                <span class="font-medium text-amber-400">Granted access expires in {{ subscription.granted_access_days_remaining }} day{{ subscription.granted_access_days_remaining|pluralize }}.</span>
+                Your limit will then return to {{ subscription.monthly_event_limit|floatformat:0 }} events/month.
             </p>
         </div>
         <a href="/" class="text-xs text-amber-400 hover:text-amber-300 font-medium whitespace-nowrap">
@@ -151,7 +151,7 @@
         <!-- Warning Messages -->
         {% if subscription.effective_monthly_limit > 0 %}
             {% if usage_percent >= 90 %}
-            <p class="text-xs text-red-400 pt-1">⚠️ Approaching limit - consider upgrading</p>
+            <p class="text-xs text-red-400 pt-1">⚠️ Approaching limit. Consider upgrading.</p>
             {% elif usage_percent >= 75 %}
             <p class="text-xs text-yellow-400 pt-1">Getting close to your limit</p>
             {% endif %}

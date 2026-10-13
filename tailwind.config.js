@@ -8,12 +8,16 @@ module.exports = {
     './billing/templates/**/*.html',
     './analytics/templates/**/*.html',
     './tools/templates/**/*.html',
-    './pseo/templates/**/*.html',
     './static/js/**/*.js',
   ],
   theme: {
     extend: {
       colors: {
+        // The faintest text tone: notes, breadcrumbs, captions. slate-500 reads
+        // at under 4.5:1 on the dark surfaces; this passes on every one of them.
+        slate: {
+          450: '#8492a8',
+        },
         brand: {
           50: '#EEF2FF',
           100: '#E0E7FF',

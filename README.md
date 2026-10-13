@@ -139,6 +139,8 @@ All configuration is via environment variables. See [.env.example](.env.example)
 | `EMAIL_HOST_USER` | SMTP username | _(empty)_ |
 | `EMAIL_HOST_PASSWORD` | SMTP password | _(empty)_ |
 | `DEFAULT_FROM_EMAIL` | From address for outgoing email | `Respectlytics <noreply@localhost>` |
+| `SITE_URL` | This server's address, for the links in security emails | `http://localhost:8080` |
+| `SECURITY_CONTACT_EMAIL` | Receives admin security alerts (lockouts, banned addresses); none are sent without it | _(empty)_ |
 
 > **Production:** Always set `SECRET_KEY` to a random string, `DEBUG=False`, and `ALLOWED_HOSTS` to your domain.
 > If running behind an HTTPS reverse proxy (nginx, Caddy), also set `SECURE_SSL=True`.

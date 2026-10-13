@@ -1,8 +1,9 @@
 """
 Gunicorn configuration file for Respectlytics
 """
-import os
+
 import multiprocessing
+import os
 
 # Server Socket (bind is set per-environment below)
 backlog = 2048
@@ -19,7 +20,7 @@ timeout = 30
 keepalive = 2
 
 # Development vs Production
-DEBUG = os.environ.get('DEBUG', 'True') == 'True'
+DEBUG = os.environ.get("DEBUG", "True") == "True"
 
 if DEBUG:
     # Development settings
@@ -27,10 +28,10 @@ if DEBUG:
     workers = 1
     threads = 3
     reload = True  # Auto-reload on code changes
-    loglevel = 'info'
+    loglevel = "info"
     # Disable access log - use Django's middleware logging instead (has API key sanitization)
     accesslog = None
-    errorlog = '-'   # Log to stderr
+    errorlog = "-"  # Log to stderr
     # Disable preload on macOS dev - fork() crashes with threaded scheduler
     preload_app = False
 else:
@@ -41,21 +42,21 @@ else:
     workers = 1
     threads = 3
     reload = False
-    loglevel = 'warning'
+    loglevel = "warning"
     # Disable access log - use Django's middleware logging instead (has API key sanitization)
     accesslog = None
-    errorlog = '-'  # Log to stderr for App Platform log aggregation
+    errorlog = "-"  # Log to stderr for App Platform log aggregation
     # Enable preload in production - scheduler runs once in master
     preload_app = True
     # Required for DigitalOcean App Platform (Docker container temp dir issues)
-    worker_tmp_dir = '/dev/shm'
+    worker_tmp_dir = "/dev/shm"
 
 # Logging
 # Note: accesslog disabled in favor of Django's RequestLoggingMiddleware
 # which sanitizes API keys through SanitizeAppKeyFilter
 
 # Process Naming
-proc_name = 'respectlytics'
+proc_name = "respectlytics"
 
 # Server Mechanics
 daemon = False

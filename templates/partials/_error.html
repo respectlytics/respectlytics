@@ -1,0 +1,23 @@
+{% comment %}
+The body of the 400, 403 and 404 pages, in the site's hero style. Pass
+`code`, `title` and `text`; `signin` adds a sign-in button. The 500 page is
+standalone (templates/500.html) because it must render with no request.
+{% endcomment %}
+<section class="w-full bg-[#0f172a] bg-[radial-gradient(60%_80%_at_20%_0%,rgba(99,102,241,0.16),transparent_70%)]" data-hero>
+    <div class="max-w-4xl mx-auto px-4 md:px-6 pt-16 md:pt-24 pb-24 md:pb-32">
+        <h1 class="page-h1 max-w-3xl">{{ title }}</h1>
+        <p class="page-lead mt-4 max-w-2xl">{{ text }}</p>
+        <div class="mt-8 flex flex-col sm:flex-row gap-3">
+            {% if signin %}<a href="{% url 'login' %}" class="btn-primary">Sign in</a>{% endif %}
+            <a href="/" class="{% if signin %}btn-secondary{% else %}btn-primary{% endif %}">Go to the homepage</a>
+            {% if not signin %}<a href="https://respectlytics.com/sdk/" class="btn-secondary">Read the SDK docs</a>{% endif %}
+        </div>
+        <p class="mt-10 flex flex-wrap gap-x-6 gap-y-2">
+            <a href="/" class="text-link">Pricing</a>
+            <a href="/" class="text-link">Blog</a>
+            <a href="/" class="text-link">FAQ</a>
+            <a href="/" class="text-link">Contact</a>
+        </p>
+        <p class="mt-10 text-sm text-slate-450">Error {{ code }}</p>
+    </div>
+</section>

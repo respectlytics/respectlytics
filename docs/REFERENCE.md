@@ -311,6 +311,8 @@ API endpoints are rate-limited using `django-ratelimit`. Default limits prevent 
 | `EMAIL_HOST_USER` | SMTP username | _(empty)_ | No |
 | `EMAIL_HOST_PASSWORD` | SMTP password | _(empty)_ | No |
 | `DEFAULT_FROM_EMAIL` | Sender address for outgoing email | `Respectlytics <noreply@localhost>` | No |
+| `SITE_URL` | This server's address, for the links in security emails | `http://localhost:8080` | **Yes** (production) |
+| `SECURITY_CONTACT_EMAIL` | Receives admin security alerts (lockouts, banned addresses); none are sent without it | _(empty)_ | No |
 
 ### Generating a Secret Key
 
@@ -513,8 +515,8 @@ For read-heavy workloads, configure Django database routing with a read replica:
 
 ```python
 DATABASES = {
-    'default': env.db('DATABASE_URL'),
-    'replica': env.db('DATABASE_REPLICA_URL'),
+    "default": env.db("DATABASE_URL"),
+    "replica": env.db("DATABASE_REPLICA_URL"),
 }
 ```
 

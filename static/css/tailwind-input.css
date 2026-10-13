@@ -13,4 +13,340 @@
     .btn-gradient:hover {
         box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
     }
+
+    /* The buyer pages (website/landing/) and the homepage share this system,
+       defined once. A page is a stack of section cards, each with a title, one
+       line that says what it is for, and its content.
+
+       Colour carries the hierarchy, from strongest to weakest:
+         white          page and section titles
+         slate-100      item titles, emphasis in body copy
+         brand-300      the one line that says what is different (taglines)
+         slate-300      body copy
+         slate-400      descriptions and leads
+         slate-450      labels, notes, breadcrumbs (the faintest tone that still reads)
+       Type stays modest: a headline is a statement, not a poster. */
+    /* w-full matters: <main> is a flex column, and a flex item centred with
+       auto margins sizes to its widest unbreakable line (a long line of code)
+       instead of the screen. */
+    .page-stack {
+        @apply w-full max-w-4xl mx-auto px-4 md:px-6 pb-20 flex flex-col gap-5;
+    }
+    .section-card {
+        @apply rounded-2xl border border-white/[0.07] bg-[#121a2b] p-6 md:p-9;
+        box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.04);
+    }
+    .section-title {
+        @apply text-[1.2rem] md:text-[1.35rem] font-semibold text-white tracking-[-0.01em] leading-snug;
+    }
+    .section-lead {
+        @apply mt-2 max-w-2xl text-slate-400 leading-relaxed;
+    }
+    .section-body {
+        @apply mt-7 text-slate-300 leading-relaxed;
+    }
+
+    .hero-h1 {
+        @apply text-[2.1rem] md:text-[2.9rem] font-semibold text-white tracking-[-0.03em] leading-[1.08];
+    }
+    .page-h1 {
+        @apply text-[1.8rem] md:text-[2.3rem] font-semibold text-white tracking-[-0.025em] leading-[1.15];
+    }
+    .page-lead {
+        @apply text-[1.05rem] md:text-[1.13rem] text-slate-400 leading-relaxed;
+    }
+    .accent-text {
+        @apply bg-gradient-to-r from-brand-300 via-violet-300 to-fuchsia-300 bg-clip-text text-transparent;
+    }
+
+    .item-title {
+        @apply font-semibold text-slate-100;
+    }
+    .item-text {
+        @apply mt-1 ml-0 text-slate-400 leading-relaxed;
+    }
+    .icon-tile {
+        @apply grid h-10 w-10 flex-none place-items-center rounded-xl bg-brand-500/10 text-brand-300 ring-1 ring-inset ring-brand-400/20;
+    }
+    /* A picture of what an item says, so its words can stay short. The
+       pictures live in website/templates/website/illustrations/, inline SVG in
+       the hero's language: phones, the five-dot event, the logo tile, indigo
+       for what flows and rose for what is refused. Each is aria-hidden, since
+       the title and text beside it say the same thing in words. */
+    .illo {
+        @apply block overflow-hidden rounded-xl bg-[#0c1322] ring-1 ring-inset ring-white/[0.06];
+    }
+    /* One frame shape for every picture, so cards in a row line up even when
+       a drawing is narrower than 16:9 (it is centred in the frame). */
+    .illo > svg {
+        @apply block aspect-video h-auto w-full;
+    }
+    .illo-grid {
+        @apply mt-7 grid gap-x-8 gap-y-10 sm:grid-cols-2;
+    }
+    .illo-grid .item-title {
+        @apply mt-5;
+    }
+    /* A section's words beside one picture of them: side by side from md up,
+       the picture first on a phone. */
+    .illo-aside {
+        @apply mt-7 grid gap-8 text-slate-300 leading-relaxed md:grid-cols-2 md:items-center;
+    }
+    .text-link {
+        @apply font-medium text-brand-300 underline-offset-4 hover:text-brand-200 hover:underline;
+    }
+    .code-chip {
+        @apply rounded-md bg-white/[0.05] px-1.5 py-0.5 font-mono text-[0.85em] text-brand-200 ring-1 ring-inset ring-white/10;
+    }
+    /* A block of code with a header naming the file it belongs in. A button
+       with data-copy in the header copies the block (partials/_code_highlighting.html). */
+    .code-card {
+        @apply overflow-hidden rounded-xl bg-[#0a1020] ring-1 ring-inset ring-white/[0.08];
+    }
+    .code-card-head {
+        @apply flex items-center justify-between gap-4 border-b border-white/[0.07] px-4 py-2 font-mono text-xs text-slate-450;
+    }
+    .code-card pre {
+        @apply m-0 overflow-x-auto px-5 py-4 text-[13px] leading-6;
+    }
+    .code-copy {
+        @apply rounded-md px-2 py-1 font-sans text-xs font-medium text-slate-400 transition-colors hover:bg-white/[0.06] hover:text-white;
+    }
+
+    /* #5558e8 rather than brand-500: white on brand-500 is 4.46:1, just under
+       the 4.5:1 that small text needs. */
+    .btn-primary {
+        @apply inline-flex items-center justify-center gap-2 rounded-xl bg-[#5558e8] px-5 py-3 font-semibold text-white no-underline transition-colors hover:bg-brand-600;
+        box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.18), 0 10px 30px -12px rgba(99, 102, 241, 0.7);
+    }
+    .btn-secondary {
+        @apply inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-5 py-3 font-semibold text-slate-100 no-underline transition-colors hover:bg-white/[0.07];
+    }
+
+    /* Long-form pages (the blog posts) are one reading column set by .article,
+       with the same colour hierarchy as above. Headings, paragraphs, lists and
+       inline code take their look from here, whatever classes a post carries,
+       so fifty posts cannot drift into fifty designs. A box inside an article
+       has one of five meanings and no other: article-box (neutral),
+       article-summary (the short answer), article-note (a caution),
+       article-good and article-bad (the two sides of a comparison). */
+    .article-column {
+        @apply max-w-3xl mx-auto px-4 md:px-6;
+    }
+    .article {
+        @apply prose prose-invert max-w-none text-[1.0625rem] leading-[1.75];
+        --tw-prose-invert-body: theme(colors.slate.300);
+        --tw-prose-invert-headings: theme(colors.white);
+        --tw-prose-invert-lead: theme(colors.slate.400);
+        --tw-prose-invert-links: theme(colors.brand.300);
+        --tw-prose-invert-bold: theme(colors.slate.100);
+        --tw-prose-invert-counters: theme(colors.slate.450);
+        --tw-prose-invert-bullets: theme(colors.slate.600);
+        --tw-prose-invert-hr: rgba(255, 255, 255, 0.08);
+        --tw-prose-invert-quotes: theme(colors.slate.200);
+        --tw-prose-invert-quote-borders: rgba(129, 140, 248, 0.4);
+        --tw-prose-invert-captions: theme(colors.slate.500);
+        --tw-prose-invert-code: theme(colors.brand.200);
+        --tw-prose-invert-pre-code: theme(colors.slate.200);
+        --tw-prose-invert-pre-bg: #0a1020;
+        --tw-prose-invert-th-borders: rgba(255, 255, 255, 0.1);
+        --tw-prose-invert-td-borders: rgba(255, 255, 255, 0.06);
+    }
+    .article > h2,
+    .article > section > h2 {
+        @apply mt-14 mb-4 scroll-mt-24 text-[1.4rem] md:text-[1.55rem] font-semibold text-white tracking-[-0.015em] leading-snug;
+    }
+    .article > h3,
+    .article > section > h3 {
+        @apply mt-10 mb-3 scroll-mt-24 text-[1.15rem] font-semibold text-slate-100 leading-snug;
+    }
+    .article > h4,
+    .article > section > h4 {
+        @apply mt-8 mb-2 text-base font-semibold text-slate-100;
+    }
+    .article > p,
+    .article > section > p {
+        @apply text-slate-300;
+    }
+    .article a:not([class*="btn"]) {
+        @apply font-medium text-brand-300 no-underline underline-offset-4 hover:text-brand-200 hover:underline;
+    }
+    .article :not(pre) > code {
+        @apply rounded-md bg-white/[0.05] px-1.5 py-0.5 font-mono text-[0.85em] font-normal text-brand-200 ring-1 ring-inset ring-white/10;
+        overflow-wrap: anywhere;
+    }
+    .article code::before,
+    .article code::after {
+        content: none;
+    }
+    .article pre {
+        @apply rounded-xl text-[13px] leading-6 ring-1 ring-inset ring-white/[0.08];
+    }
+    .article .code-card {
+        @apply my-6;
+    }
+    .article .code-card pre {
+        @apply my-0 rounded-none ring-0;
+    }
+    .article-box,
+    .article-summary,
+    .article-note,
+    .article-good,
+    .article-bad,
+    .article-toc {
+        @apply my-8 rounded-xl border p-5 md:p-6;
+    }
+    .article-box,
+    .article-toc {
+        @apply border-white/[0.07] bg-[#121a2b];
+    }
+    .article-summary {
+        @apply border-brand-400/25 bg-brand-500/[0.07];
+    }
+    .article-note {
+        @apply border-amber-400/25 bg-amber-400/[0.05];
+    }
+    .article-good {
+        @apply border-emerald-400/20 bg-emerald-400/[0.05];
+    }
+    .article-bad {
+        @apply border-rose-400/20 bg-rose-400/[0.05];
+    }
+    /* Inside any box, grid or wrapper the container sets the outer spacing,
+       so its first and last child never add their own. */
+    .article div > :first-child,
+    .article nav > :first-child {
+        @apply mt-0;
+    }
+    .article div > :last-child,
+    .article nav > :last-child {
+        @apply mb-0;
+    }
+    .article > :first-child,
+    .article > section:first-child > :first-child {
+        @apply mt-0;
+    }
+    .article li:first-child {
+        @apply mt-0;
+    }
+    .article li:last-child {
+        @apply mb-0;
+    }
+    .article :is(.article-box, .article-summary, .article-note, .article-good, .article-bad) :is(h3, h4) {
+        @apply mt-0 mb-2 text-base font-semibold text-slate-100;
+    }
+    .article .article-note :is(h3, h4) {
+        @apply text-amber-200;
+    }
+    .article .article-good :is(h3, h4) {
+        @apply text-emerald-200;
+    }
+    .article .article-bad :is(h3, h4) {
+        @apply text-rose-200;
+    }
+    .article .grid > * {
+        @apply my-0;
+    }
+    /* A list whose items carry their own mark (a tick, a step number) gets no bullet indent. */
+    .article :is(ul, ol):has(> li.flex) {
+        @apply list-none pl-0;
+    }
+    .article li.flex {
+        @apply pl-0;
+    }
+    /* A box that sits inside another is an inset, never a second card. */
+    .article-inset {
+        @apply my-3 rounded-lg bg-white/[0.035] px-4 py-3;
+    }
+    .article-inset-good {
+        @apply bg-emerald-400/[0.06];
+    }
+    .article-inset-bad {
+        @apply bg-rose-400/[0.06];
+    }
+    .article-inset-note {
+        @apply bg-amber-400/[0.06];
+    }
+    .article-inset-summary {
+        @apply bg-brand-500/[0.08];
+    }
+    .article > .lead {
+        @apply mt-0 mb-6 text-[1.15rem] leading-relaxed text-slate-200;
+    }
+    .article-toc h2 {
+        @apply mt-0 mb-3 text-sm font-semibold text-slate-200;
+    }
+    .article-toc ul,
+    .article-toc ol {
+        @apply my-0 list-none space-y-1.5 pl-0 text-[0.95rem];
+    }
+    .article-toc li {
+        @apply my-0 pl-0;
+    }
+    .article .article-toc a {
+        @apply font-normal text-slate-400 hover:text-white hover:no-underline;
+    }
 }
+
+/* The hint bubble on the calculators' field labels (tools/templates/tools).
+   Hidden with display:none rather than visibility, so a bubble near the edge
+   of a phone screen cannot widen the page while nobody is looking at it. */
+.tooltip-trigger { position: relative; cursor: help; }
+.tooltip-trigger .tooltip-content {
+    display: none;
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 50;
+    width: max-content;
+    max-width: min(280px, calc(100vw - 2rem));
+    margin-bottom: 6px;
+    padding: 8px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    background: #1e293b;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    color: #cbd5e1;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1.4;
+}
+.tooltip-trigger:hover .tooltip-content,
+.tooltip-trigger:focus-within .tooltip-content { display: block; }
+.tooltip-trigger .tooltip-content::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: #1e293b;
+}
+
+/* Code colours, for every <code class="language-..."> block on the site
+   (templates/partials/_code_highlighting.html loads Prism only where needed).
+   Kept outside @layer so Tailwind never drops them: the token classes are
+   written by Prism at runtime and appear in no template. One palette, tuned
+   to the brand: violet keywords, sky functions, emerald strings, amber
+   numbers and types, indigo properties, slate punctuation and comments. */
+code[class*="language-"],
+pre[class*="language-"] {
+    color: #e2e8f0;
+    background: none;
+    text-shadow: none;
+    tab-size: 4;
+    hyphens: none;
+}
+.token.comment, .token.prolog, .token.doctype, .token.cdata { color: #8492a8; font-style: italic; }
+.token.punctuation { color: #94a3b8; }
+.token.keyword, .token.atrule, .token.important, .token.rule { color: #c4b5fd; }
+.token.function, .token.function-variable { color: #7dd3fc; }
+.token.string, .token.char, .token.attr-value, .token.template-string, .token.inserted, .token.url { color: #6ee7b7; }
+.token.number, .token.boolean, .token.constant, .token.symbol { color: #fcd34d; }
+.token.class-name, .token.builtin, .token.annotation, .token.decorator, .token.type-annotation { color: #fde68a; }
+.token.property, .token.key, .token.attr-name, .token.parameter { color: #a5b4fc; }
+.token.tag, .token.selector, .token.deleted { color: #f9a8d4; }
+.token.operator, .token.entity { color: #cbd5e1; }
+.token.variable, .token.regex { color: #fdba74; }
+.token.namespace { opacity: 0.8; }

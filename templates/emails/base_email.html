@@ -1,0 +1,93 @@
+{% comment %}
+The community edition's email layout: the hosted service's own, without the web fonts
+it loads from the hosted site and without the links to it, so an email from a
+self-hosted server makes the reader's mail client contact nothing but that server.
+{% endcomment %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Respectlytics{% endblock %}</title>
+    <style>
+        /* Reset */
+        body, html { margin: 0; padding: 0; }
+        body { font-family: 'Schibsted Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; }
+        
+        /* Dark theme colors matching Respectlytics */
+        .wrapper { background-color: #0f172a; padding: 40px 20px; }
+        .container { max-width: 600px; margin: 0 auto; background-color: #1e293b; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); overflow: hidden; }
+        .header { padding: 32px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .logo { font-size: 24px; font-weight: 800; color: #f8fafc; }
+        .logo-accent { color: #a855f7; }
+        .content { padding: 32px; }
+        .footer { padding: 24px 32px; border-top: 1px solid rgba(255,255,255,0.1); text-align: center; }
+        
+        /* Typography */
+        h1 { color: #f8fafc; font-size: 24px; font-weight: 700; margin: 0 0 16px 0; }
+        h2 { color: #f8fafc; font-size: 20px; font-weight: 600; margin: 0 0 12px 0; }
+        p { color: #cbd5e1; font-size: 16px; line-height: 1.6; margin: 0 0 16px 0; }
+        .text-muted { color: #64748b; font-size: 14px; }
+        .text-small { font-size: 14px; }
+        
+        /* Buttons */
+        .btn { display: inline-block; padding: 14px 28px; font-size: 16px; font-weight: 600; text-decoration: none; border-radius: 8px; text-align: center; }
+        .btn-primary { background-color: #7c3aed; color: #ffffff !important; }
+        .btn-primary:link, .btn-primary:visited, .btn-primary:hover, .btn-primary:active { color: #ffffff !important; }
+        .btn-secondary { background-color: #334155; color: #f8fafc !important; border: 1px solid rgba(255,255,255,0.1); }
+        
+        /* Cards */
+        .card { background-color: rgba(15,23,42,0.5); border-radius: 12px; padding: 20px; margin: 20px 0; }
+        
+        /* Progress bar */
+        .progress-bar { background-color: #1e293b; border-radius: 8px; height: 8px; overflow: hidden; margin: 12px 0; }
+        .progress-fill { height: 100%; border-radius: 8px; }
+        .progress-green { background-color: #22c55e; }
+        .progress-yellow { background-color: #eab308; }
+        .progress-red { background-color: #ef4444; }
+        
+        /* Alert boxes */
+        .alert { padding: 16px; border-radius: 8px; margin: 16px 0; }
+        .alert-warning { background-color: rgba(234,179,8,0.1); border: 1px solid rgba(234,179,8,0.3); }
+        .alert-warning p { color: #fbbf24; }
+        .alert-danger { background-color: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); }
+        .alert-danger p { color: #f87171; }
+        .alert-success { background-color: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.3); }
+        .alert-success p { color: #4ade80; }
+        
+        /* Links */
+        a { color: #a855f7; }
+        a:hover { color: #c084fc; }
+        
+        /* Utilities */
+        .text-center { text-align: center; }
+        .mb-0 { margin-bottom: 0; }
+        .mt-24 { margin-top: 24px; }
+    </style>
+</head>
+<body>
+    <div class="wrapper">
+        <div class="container">
+            <!-- Header -->
+            <div class="header">
+                <div class="logo">Respect<span class="logo-accent">lytics</span></div>
+            </div>
+            
+            <!-- Content -->
+            <div class="content">
+                {% block content %}{% endblock %}
+            </div>
+            
+            <!-- Footer -->
+            <div class="footer">
+                <p class="text-muted mb-0">
+                    Sent by Respectlytics at {{ site_url }}
+                </p>
+                <p class="text-muted text-small mt-24">
+                    <a href="{{ site_url }}/dashboard/">Open your dashboard</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

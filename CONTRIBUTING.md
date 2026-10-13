@@ -25,7 +25,8 @@ Open an issue with the "Feature Request" label. Describe:
 1. **Fork** the repository
 2. **Create a branch** from `main`: `git checkout -b feature/your-feature`
 3. **Make your changes** following the code style guidelines below
-4. **Test** your changes thoroughly
+4. **Test** your changes thoroughly, and run `ruff check .` (the version `ruff.toml` names);
+   CI runs it on every pull request
 5. **Commit** with clear, descriptive messages
 6. **Push** your branch and open a **Pull Request**
 

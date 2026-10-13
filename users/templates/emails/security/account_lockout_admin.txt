@@ -17,7 +17,7 @@ This could indicate:
 The account will automatically unlock after {{ lockout_duration }}.
 You can manually unlock it from the Django admin if needed.
 
-View in Admin: {{ base_url }}/nidibatisinizadmin/auth/user/
+View in Admin: {{ admin_users_url }}
 
 ---
 Respectlytics Security System

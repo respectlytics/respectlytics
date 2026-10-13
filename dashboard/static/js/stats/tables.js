@@ -112,7 +112,7 @@ function renderPeriodDetailsTable() {
     
     // Format change percentage for display (matching Retention/Segments badge style)
     function formatChange(pct) {
-        if (pct === null) return '<span class="inline-block px-2 py-1 rounded-lg text-sm font-medium bg-slate-700 text-slate-400">—</span>';
+        if (pct === null) return '<span class="inline-block px-2 py-1 rounded-lg text-sm font-medium bg-slate-700 text-slate-400">n/a</span>';
         if (pct === Infinity) return '<span class="inline-block px-2 py-1 rounded-lg text-sm font-semibold bg-emerald-500/15 text-emerald-400">+∞</span>';
         if (pct === -Infinity) return '<span class="inline-block px-2 py-1 rounded-lg text-sm font-semibold bg-rose-500/15 text-rose-400">-∞</span>';
         if (pct > 0) {

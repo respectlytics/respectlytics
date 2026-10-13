@@ -13,30 +13,32 @@ These endpoints provide advanced analytics for understanding session conversion 
 
 All analytics are session-based (no cross-session tracking by design).
 """
+
 from django.urls import path
+
 from .views import (
-    DAUView, 
-    ConversionSummaryView, 
-    TimeToConversionView, 
-    StepTimingView,
     ConversionPathsView,
+    ConversionSummaryView,
+    DAUView,
     DropOffView,
     EventCorrelationView,
-    SegmentComparisonView,
     GlobeStatsView,
+    SegmentComparisonView,
+    StepTimingView,
+    TimeToConversionView,
 )
 
-app_name = 'conversion'
+app_name = "conversion"
 
 urlpatterns = [
     # Conversion Intelligence endpoints - Session-Based Analytics
-    path('dau/', DAUView.as_view(), name='dau'),
-    path('conversions/', ConversionSummaryView.as_view(), name='conversions'),
-    path('time-to-conversion/', TimeToConversionView.as_view(), name='time-to-conversion'),
-    path('step-timing/', StepTimingView.as_view(), name='step-timing'),
-    path('conversion-paths/', ConversionPathsView.as_view(), name='conversion-paths'),
-    path('drop-off/', DropOffView.as_view(), name='drop-off'),
-    path('event-correlation/', EventCorrelationView.as_view(), name='event-correlation'),
-    path('segments/', SegmentComparisonView.as_view(), name='segments'),
-    path('globe-stats/', GlobeStatsView.as_view(), name='globe-stats'),
+    path("dau/", DAUView.as_view(), name="dau"),
+    path("conversions/", ConversionSummaryView.as_view(), name="conversions"),
+    path("time-to-conversion/", TimeToConversionView.as_view(), name="time-to-conversion"),
+    path("step-timing/", StepTimingView.as_view(), name="step-timing"),
+    path("conversion-paths/", ConversionPathsView.as_view(), name="conversion-paths"),
+    path("drop-off/", DropOffView.as_view(), name="drop-off"),
+    path("event-correlation/", EventCorrelationView.as_view(), name="event-correlation"),
+    path("segments/", SegmentComparisonView.as_view(), name="segments"),
+    path("globe-stats/", GlobeStatsView.as_view(), name="globe-stats"),
 ]

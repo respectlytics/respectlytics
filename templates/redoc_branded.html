@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% if admin_mode %}Admin Docs - Respectlytics{% else %}REST API Reference - Documentation | Respectlytics{% endif %}</title>
+    <title>{% if admin_mode %}Admin Docs | Respectlytics{% else %}REST API Reference: Documentation | Respectlytics{% endif %}</title>
     <link rel="stylesheet" href="{% static 'css/fonts.css' %}">
 
     {% if not admin_mode %}
@@ -16,7 +16,7 @@
     <link rel="canonical" href="https://respectlytics.com/api/v1/reference/">
 
     <!-- OpenGraph -->
-    <meta property="og:title" content="REST API Reference - Documentation | Respectlytics">
+    <meta property="og:title" content="REST API Reference: Documentation | Respectlytics">
     <meta property="og:description" content="Explore the Respectlytics REST API. Endpoints, schemas, authentication, and code examples for privacy-first mobile analytics.">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://respectlytics.com/api/v1/reference/">
@@ -29,7 +29,7 @@
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="REST API Reference - Documentation | Respectlytics">
+    <meta name="twitter:title" content="REST API Reference: Documentation | Respectlytics">
     <meta name="twitter:description" content="Explore the Respectlytics REST API. Endpoints, schemas, authentication, and code examples for privacy-first mobile analytics.">
     <meta name="twitter:image" content="https://respectlytics.com{% static 'images/og/sdk-documentation.jpg' %}">
     <meta name="twitter:image:alt" content="Respectlytics REST API Reference Documentation">
@@ -40,7 +40,7 @@
       "@context": "https://schema.org",
       "@type": "TechArticle",
       "name": "Respectlytics REST API Reference",
-      "headline": "REST API Reference - Interactive Documentation",
+      "headline": "REST API Reference: Interactive Documentation",
       "description": "Complete REST API reference for Respectlytics privacy-first mobile analytics. Explore endpoints, request/response schemas, authentication methods, and code examples.",
       "url": "https://respectlytics.com/api/v1/reference/",
       "inLanguage": "en",
@@ -504,10 +504,10 @@
 
             <h2>Primary Endpoints</h2>
             <ul>
-                <li><strong>POST /api/v1/events/</strong> — Ingest analytics events.</li>
-                <li><strong>POST /api/v1/events/batch/</strong> — Ingest events in batch.</li>
-                <li><strong>GET /api/v1/stats/</strong> — Retrieve aggregated analytics metrics.</li>
-                <li><strong>POST /api/v1/events/delete/</strong> — Delete events in a selected date range with optional filters.</li>
+                <li><strong>POST /api/v1/events/</strong>: Ingest analytics events.</li>
+                <li><strong>POST /api/v1/events/batch/</strong>: Ingest events in batch.</li>
+                <li><strong>GET /api/v1/stats/</strong>: Retrieve aggregated analytics metrics.</li>
+                <li><strong>POST /api/v1/events/delete/</strong>: Delete events in a selected date range with optional filters.</li>
             </ul>
         </div>
         <noscript>
@@ -1265,7 +1265,7 @@
                     const desc = match[4] || '';
 
                     // Build styled HTML: purple text on light gray background for the endpoint part
-                    const descPrefix = desc ? ' — ' : '';
+                    const descPrefix = desc ? ': ' : '';
                     li.innerHTML = `<span class="endpoint-inline">${method} ${path}</span>${descPrefix}${desc}`;
 
                     // Mark as processed

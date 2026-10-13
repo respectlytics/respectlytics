@@ -20,4 +20,4 @@ Your account will be temporarily locked after 5 failed attempts for your protect
 For your security, we recommend using a strong, unique password and never sharing it with anyone.
 
 ---
-Respectlytics - Privacy-first mobile analytics
+Respectlytics. Privacy-first mobile analytics.

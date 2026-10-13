@@ -34,14 +34,22 @@ from django.conf import settings
 # Where a reverse proxy of the server's own sits: the machine itself, or a
 # private network such as Docker's. Python's own is_private would also count
 # the documentation and other reserved ranges, which are not proxies of ours.
-PROXY_NETWORKS = tuple(ipaddress.ip_network(n) for n in (
-    '127.0.0.0/8', '::1/128', '10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16', 'fc00::/7',
-))
+PROXY_NETWORKS = tuple(
+    ipaddress.ip_network(n)
+    for n in (
+        "127.0.0.0/8",
+        "::1/128",
+        "10.0.0.0/8",
+        "172.16.0.0/12",
+        "192.168.0.0/16",
+        "fc00::/7",
+    )
+)
 
 
 def _address(value):
     try:
-        return ipaddress.ip_address((value or '').strip())
+        return ipaddress.ip_address((value or "").strip())
     except ValueError:
         return None
 
@@ -51,13 +59,13 @@ def _is_proxy(address):
 
 
 def get_client_ip(request) -> str:
-    for header in getattr(settings, 'TRUSTED_CLIENT_IP_HEADERS', ()):
+    for header in getattr(settings, "TRUSTED_CLIENT_IP_HEADERS", ()):
         address = _address(request.META.get(header))
         if address:
             return str(address)
 
-    address = request.META.get('REMOTE_ADDR', '')
-    hops = request.META.get('HTTP_X_FORWARDED_FOR', '').split(',')
+    address = request.META.get("REMOTE_ADDR", "")
+    hops = request.META.get("HTTP_X_FORWARDED_FOR", "").split(",")
     current = _address(address)
     while current and _is_proxy(current) and hops:
         previous = _address(hops.pop())

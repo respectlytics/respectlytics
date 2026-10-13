@@ -1,0 +1,104 @@
+{% load static %}{% comment %}
+Syntax colours for every code block on the site, from one place.
+
+Included once, at the end of templates/base.html. It does nothing on a page
+without code, so those pages load no highlighter at all. On a page with code
+it loads the Prism core and only the language components that page uses,
+straight from static/vendor/prism (assets/vendor.toml pins every file), and
+colours each <code class="language-..."> block. The colours are the token
+palette in static/css/tailwind-input.css.
+
+Code written by a script after the page loads (the free tools' results) is
+coloured by calling window.highlightCode(element) once it is in the page.
+
+A button with data-copy inside a .code-card copies that card's code.
+
+See .github/instructions/code-syntax-highlighting.instructions.md.
+{% endcomment %}<script>
+(function () {
+    var CORE = "{% static 'vendor/prism/prism.min.js' %}";
+    // Components the core does not include. markup (html, xml), css, clike and
+    // javascript are in the core; every component below needs only those.
+    var COMPONENTS = {
+        swift: "{% static 'vendor/prism/components/prism-swift.min.js' %}",
+        kotlin: "{% static 'vendor/prism/components/prism-kotlin.min.js' %}",
+        dart: "{% static 'vendor/prism/components/prism-dart.min.js' %}",
+        jsx: "{% static 'vendor/prism/components/prism-jsx.min.js' %}",
+        typescript: "{% static 'vendor/prism/components/prism-typescript.min.js' %}",
+        bash: "{% static 'vendor/prism/components/prism-bash.min.js' %}",
+        yaml: "{% static 'vendor/prism/components/prism-yaml.min.js' %}",
+        json: "{% static 'vendor/prism/components/prism-json.min.js' %}",
+        http: "{% static 'vendor/prism/components/prism-http.min.js' %}",
+        python: "{% static 'vendor/prism/components/prism-python.min.js' %}",
+        sql: "{% static 'vendor/prism/components/prism-sql.min.js' %}",
+        groovy: "{% static 'vendor/prism/components/prism-groovy.min.js' %}"
+    };
+    var ALIASES = {
+        js: 'javascript', ts: 'typescript', sh: 'bash', shell: 'bash', zsh: 'bash',
+        yml: 'yaml', py: 'python', gradle: 'groovy', kts: 'kotlin', kt: 'kotlin'
+    };
+    var loaded = {};
+    var pending = {};
+
+    function script(src) {
+        if (!pending[src]) {
+            pending[src] = new Promise(function (resolve, reject) {
+                var s = document.createElement('script');
+                s.src = src;
+                s.async = false;  // components run after the core, in order
+                s.onload = resolve;
+                s.onerror = reject;
+                document.head.appendChild(s);
+            });
+        }
+        return pending[src];
+    }
+
+    function languagesIn(blocks) {
+        var names = {};
+        blocks.forEach(function (block) {
+            var match = /\blanguage-([\w-]+)/.exec(block.className);
+            if (match) {
+                var name = ALIASES[match[1]] || match[1];
+                if (COMPONENTS[name]) { names[name] = true; }
+            }
+        });
+        return Object.keys(names);
+    }
+
+    window.highlightCode = function (root) {
+        var blocks = Array.prototype.slice.call(
+            (root || document).querySelectorAll('code[class*="language-"]'));
+        if (!blocks.length) { return; }
+        var steps = [];
+        if (!window.Prism || !window.Prism.highlightElement) {
+            window.Prism = window.Prism || {};
+            window.Prism.manual = true;  // colour after the components arrive
+            steps.push(script(CORE));
+        }
+        languagesIn(blocks).forEach(function (name) {
+            if (!loaded[name] && !(window.Prism.languages && window.Prism.languages[name])) {
+                steps.push(script(COMPONENTS[name]).then(function () { loaded[name] = true; }));
+            }
+        });
+        Promise.all(steps).then(function () {
+            blocks.forEach(function (block) { window.Prism.highlightElement(block); });
+        }).catch(function () { /* an uncoloured block still reads fine */ });
+    };
+
+    window.highlightCode(document);
+
+    document.addEventListener('click', function (event) {
+        var button = event.target.closest('[data-copy]');
+        var card = button && button.closest('.code-card');
+        var pre = card && card.querySelector('pre');
+        if (!pre || !navigator.clipboard) { return; }
+        navigator.clipboard.writeText(pre.innerText.replace(/\n+$/, '')).then(function () {
+            button.dataset.label = button.dataset.label || button.textContent;
+            button.textContent = 'Copied';
+            clearTimeout(button.copyTimer);
+            button.copyTimer = setTimeout(function () { button.textContent = button.dataset.label; }, 1600);
+        });
+    });
+})();
+</script>
