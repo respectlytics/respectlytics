@@ -21,7 +21,7 @@ LOCMEM = {'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'
 # What respectlytics.com trusts: App Platform's header, then Cloudflare's. The
 # tests name it themselves because they also run in the community edition,
 # whose settings trust no header by default.
-APP_PLATFORM_HEADERS = ('HTTP_DO_CONNECTING_IP', 'HTTP_CF_CONNECTING_IP')
+APP_PLATFORM_HEADERS = ('HTTP_CF_CONNECTING_IP', 'HTTP_DO_CONNECTING_IP')
 COMMUNITY = getattr(settings, 'RESPECTLYTICS_EDITION', None) == 'community'
 
 # Cloudflare sends every Worker, on every account, from this one address.
@@ -57,13 +57,19 @@ class HostedClientIpTests(SimpleTestCase):
         self.assertEqual(self.ip(REMOTE_ADDR='10.244.0.7', HTTP_CF_CONNECTING_IP='2001:db8::7'),
                          '2001:db8::7')
 
+    def test_cloudflare_outranks_a_do_connecting_ip_a_client_could_have_written(self):
+        """Cloudflare documents that it overwrites CF-Connecting-IP; DigitalOcean
+        does not say the same of do-connecting-ip."""
+        self.assertEqual(self.ip(REMOTE_ADDR='10.244.0.7', HTTP_CF_CONNECTING_IP='203.0.113.7',
+                                 HTTP_DO_CONNECTING_IP='198.51.100.1'), '203.0.113.7')
+
     def test_a_forged_forwarded_for_changes_nothing(self):
         self.assertEqual(self.ip(REMOTE_ADDR='10.244.0.7', HTTP_DO_CONNECTING_IP='203.0.113.7',
                                  HTTP_X_FORWARDED_FOR='198.51.100.1, 10.244.0.9'), '203.0.113.7')
 
     def test_a_header_that_is_not_an_address_is_ignored(self):
-        self.assertEqual(self.ip(REMOTE_ADDR='10.244.0.7', HTTP_DO_CONNECTING_IP='not-an-ip',
-                                 HTTP_CF_CONNECTING_IP='203.0.113.7'), '203.0.113.7')
+        self.assertEqual(self.ip(REMOTE_ADDR='10.244.0.7', HTTP_CF_CONNECTING_IP='not-an-ip',
+                                 HTTP_DO_CONNECTING_IP='203.0.113.7'), '203.0.113.7')
 
 
 @override_settings(TRUSTED_CLIENT_IP_HEADERS=())

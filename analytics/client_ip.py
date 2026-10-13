@@ -10,8 +10,10 @@ client sends its own, can say who the visitor is. Which headers those are
 depends on where the app runs, so settings.TRUSTED_CLIENT_IP_HEADERS names them:
 
 - respectlytics.com runs on DigitalOcean App Platform, whose edge is Cloudflare.
-  App Platform puts the visitor in do-connecting-ip and Cloudflare in
-  CF-Connecting-IP. X-Forwarded-For is no answer there: App Platform fills it
+  Cloudflare puts the visitor in CF-Connecting-IP and documents that it
+  overwrites any value a client sends, so that header comes first; App
+  Platform's do-connecting-ip, of which DigitalOcean says no such thing, is the
+  fallback. X-Forwarded-For is no answer there: App Platform fills it
   with its own ingress server, and before that its first entry is whatever the
   client chose to send, so a ban keyed on it could be dodged by changing the
   header, or aimed at anyone else's address.
