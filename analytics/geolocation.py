@@ -68,27 +68,3 @@ def get_location_from_ip(ip_address: str) -> Tuple[Optional[str], Optional[str]]
     except Exception as e:
         logger.error(f"GeoIP lookup error: {e}")
         return (None, None)
-
-
-def get_client_ip(request) -> str:
-    """
-    Extract the real client IP address from the request.
-    
-    Handles proxies, load balancers, and X-Forwarded-For headers.
-    
-    Args:
-        request: Django HTTP request object
-        
-    Returns:
-        Client IP address as a string
-    """
-    # Check X-Forwarded-For header (used by proxies/load balancers)
-    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-    if x_forwarded_for:
-        # Take the first IP in the chain (the original client)
-        ip = x_forwarded_for.split(',')[0].strip()
-    else:
-        # Fall back to REMOTE_ADDR
-        ip = request.META.get('REMOTE_ADDR', '')
-    
-    return ip

@@ -35,7 +35,8 @@ from .serializers import AppSerializer, EventCreateSerializer, EventSerializer
 from .authentication import AppKeyAuthentication
 from .permissions import HasValidAppKey
 from .throttling import AnonRateThrottle
-from .geolocation import get_location_from_ip, get_client_ip
+from .client_ip import get_client_ip
+from .geolocation import get_location_from_ip
 from .security_logger import log_security_event, SecurityEvent
 from django.http import StreamingHttpResponse
 import logging

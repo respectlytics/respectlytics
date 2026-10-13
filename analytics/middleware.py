@@ -4,7 +4,8 @@ from django.core.cache import cache
 from django.conf import settings
 import logging
 import re
-from .throttling import is_ip_banned, track_failed_auth_attempt, get_client_ip
+from .client_ip import get_client_ip
+from .throttling import ban_ip, is_ip_banned, track_failed_auth_attempt
 
 logger = logging.getLogger(__name__)
 
@@ -117,6 +118,10 @@ MAX_SUSPICIOUS_ATTEMPTS = 10   # Max attempts before ban
 SCAN_WINDOW_SECONDS = 600      # 10 minute window
 SCAN_BAN_DURATION = 3600       # 1 hour ban
 
+# Answered for a banned address too, so that a ban can never look like an
+# outage to whatever monitors the service.
+HEALTH_CHECK_PATH = '/api/v1/health/'
+
 
 class SecurityMiddleware(MiddlewareMixin):
     """
@@ -140,7 +145,10 @@ class SecurityMiddleware(MiddlewareMixin):
         # Skip security checks during tests
         if getattr(settings, 'TESTING', False):
             return None
-        
+
+        if request.path == HEALTH_CHECK_PATH:
+            return None
+
         ip = get_client_ip(request)
         
         # Skip localhost in development
@@ -224,9 +232,7 @@ class SecurityMiddleware(MiddlewareMixin):
             
             logger.info(f"[SECURITY] 404 attempt #{count} from {ip}: {path}")
             
-            if count >= MAX_SUSPICIOUS_ATTEMPTS:
-                # Ban the IP
-                cache.set(f'banned:{ip}', True, SCAN_BAN_DURATION)
+            if count >= MAX_SUSPICIOUS_ATTEMPTS and ban_ip(ip, SCAN_BAN_DURATION):
                 logger.warning(f"[SECURITY] IP {ip} banned after {count} 404s in {SCAN_WINDOW_SECONDS}s")
                 
                 # SEC-007: IP banned alert emails disabled (too noisy in production)
@@ -255,9 +261,7 @@ class SecurityMiddleware(MiddlewareMixin):
             
             logger.warning(f"[SECURITY] Attack path probe #{count} from {ip}: {path}")
             
-            if count >= MAX_SUSPICIOUS_ATTEMPTS:
-                # Ban the IP
-                cache.set(f'banned:{ip}', True, SCAN_BAN_DURATION)
+            if count >= MAX_SUSPICIOUS_ATTEMPTS and ban_ip(ip, SCAN_BAN_DURATION):
                 logger.error(f"[SECURITY] IP {ip} banned after {count} attack path probes")
                 
                 # SEC-007: IP banned alert emails disabled (too noisy in production)

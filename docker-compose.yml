@@ -28,6 +28,7 @@ services:
       - MAXMIND_LICENSE_KEY=${MAXMIND_LICENSE_KEY:-}
       - DATABASE_SSL=${DATABASE_SSL:-False}
       - SECURE_SSL=${SECURE_SSL:-False}
+      - TRUSTED_CLIENT_IP_HEADER=${TRUSTED_CLIENT_IP_HEADER:-}
       - ADMIN_REQUIRE_OTP=${ADMIN_REQUIRE_OTP:-False}
     depends_on:
       db:

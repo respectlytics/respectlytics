@@ -300,6 +300,7 @@ API endpoints are rate-limited using `django-ratelimit`. Default limits prevent 
 | `PORT` | Server listen port | `8080` | No |
 | `DATABASE_SSL` | Require SSL for PostgreSQL connection (enable for managed DB services) | `False` | No |
 | `SECURE_SSL` | Force HTTPS redirect and secure cookies (enable behind HTTPS reverse proxy) | `False` | No |
+| `TRUSTED_CLIENT_IP_HEADER` | Header that names the visitor's address, set only when a CDN that overwrites it sits in front, such as `CF-Connecting-IP` behind Cloudflare. Leave empty when the server is reached directly or through your own nginx or Caddy | _(empty)_ | No |
 | `ADMIN_REQUIRE_OTP` | Require TOTP 2FA for admin panel | `False` | No |
 | `MAXMIND_ACCOUNT_ID` | MaxMind GeoLite2 account ID | _(empty)_ | No |
 | `MAXMIND_LICENSE_KEY` | MaxMind GeoLite2 license key | _(empty)_ | No |
@@ -385,6 +386,10 @@ server {
     }
 }
 ```
+
+Respectlytics reads the visitor's address from the entry nginx appends to `X-Forwarded-For`, so keep `$proxy_add_x_forwarded_for` as shown. Rate limits, temporary blocks of scanners and the country lookup all use that address, and a client cannot change it by sending its own header.
+
+Behind Cloudflare, also set `TRUSTED_CLIENT_IP_HEADER=CF-Connecting-IP` and let only Cloudflare's addresses reach the server, because anyone who reaches it directly can send that header too.
 
 ### Systemd Service
 

@@ -389,6 +389,19 @@ GLOBE_STATS_SLOW_QUERY_THRESHOLD = 2
 RATELIMIT_ENABLE = True
 RATELIMIT_USE_CACHE = 'default'
 
+# Who a request came from, for every limit, ban, geolocation and log
+# (analytics/client_ip.py). A self-hosted server trusts no header naming the
+# visitor unless the edge in front of it sets and overwrites that header, so
+# TRUSTED_CLIENT_IP_HEADER is empty by default; behind Cloudflare it is
+# CF-Connecting-IP. Published directly, or behind your own nginx or Caddy,
+# leave it empty: the address your proxy appends is read without it.
+TRUSTED_CLIENT_IP_HEADERS = tuple(
+    'HTTP_' + header.strip().upper().replace('-', '_')
+    for header in env.list('TRUSTED_CLIENT_IP_HEADER', default=[])
+    if header.strip()
+)
+RATELIMIT_IP_META_KEY = 'analytics.client_ip.get_client_ip'
+
 
 # =============================================================================
 # Admin OTP (Two-Factor Authentication)

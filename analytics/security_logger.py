@@ -136,7 +136,7 @@ def get_client_info(request) -> dict:
     Returns:
         dict with ip, user_agent, and path
     """
-    from analytics.middleware import get_client_ip
+    from analytics.client_ip import get_client_ip
     
     return {
         'ip': get_client_ip(request),

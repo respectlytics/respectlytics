@@ -128,6 +128,7 @@ All configuration is via environment variables. See [.env.example](.env.example)
 | `PORT` | Server port | `8080` |
 | `DATABASE_SSL` | Require SSL for PostgreSQL connection | `False` |
 | `SECURE_SSL` | Force HTTPS redirect (enable behind reverse proxy) | `False` |
+| `TRUSTED_CLIENT_IP_HEADER` | Header naming the visitor's address, only behind a CDN that overwrites it (`CF-Connecting-IP` for Cloudflare) | _(empty)_ |
 | `ADMIN_REQUIRE_OTP` | Require 2FA for admin access | `False` |
 | `MAXMIND_ACCOUNT_ID` | MaxMind account for GeoIP | _(empty)_ |
 | `MAXMIND_LICENSE_KEY` | MaxMind license for GeoIP | _(empty)_ |

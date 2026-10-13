@@ -72,8 +72,9 @@ def get_banned_ips() -> List[Dict[str, Any]]:
             
             # Extract IPs from cache keys (format: :1:banned:192.168.1.100)
             for cache_key, expires in rows:
-                # Cache key format: :version:key
-                match = re.search(r'banned:([^:]+)$', cache_key)
+                # Cache key format: :version:key. Everything after "banned:"
+                # is the address, colons included, or an IPv6 ban is missed.
+                match = re.search(r'banned:(.+)$', cache_key)
                 if match:
                     ip = match.group(1)
                     # Check if already in list

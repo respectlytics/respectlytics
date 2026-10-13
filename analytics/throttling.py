@@ -3,7 +3,27 @@ from django.core.cache import cache
 from django.conf import settings
 import logging
 
+from .client_ip import get_client_ip
+
 logger = logging.getLogger(__name__)
+
+# Addresses that many unrelated clients share, so a ban on one shuts out all of
+# them. Cloudflare sends every Worker's request to another site from this one
+# address, whoever runs the Worker: a customer sending events from a Worker and
+# any scanner someone runs on Workers are the same visitor here. Its bad requests
+# are still refused one at a time, but it is never banned from the whole site:
+# on 2026-10-13 a WordPress scanner got it banned at loheden.com, and the uptime
+# watchdog with it.
+# https://developers.cloudflare.com/fundamentals/reference/http-headers/
+SHARED_ADDRESSES = frozenset({'2a06:98c0:3600::103'})
+
+
+def ban_ip(ip, seconds):
+    """Refuse every request from this address for a while. Returns whether it did."""
+    if ip in SHARED_ADDRESSES:
+        return False
+    cache.set(f'banned:{ip}', True, seconds)
+    return True
 
 
 class AnonRateThrottle(SimpleRateThrottle):
@@ -35,7 +55,7 @@ class AnonRateThrottle(SimpleRateThrottle):
         if hasattr(request, 'user') and request.user:
             return None  # Don't throttle authenticated requests
         
-        ident = self.get_ident(request)
+        ident = get_client_ip(request)
         return self.cache_format % {
             'scope': self.scope,
             'ident': ident
@@ -60,8 +80,7 @@ def track_failed_auth_attempt(request, app_key=None):
         
         if attempts >= 10:
             logger.warning(f"[SECURITY] Multiple failed auth attempts from IP: {ip}, app_key: {app_key}")
-            cache.set(f'banned:{ip}', True, 3600)  # Ban for 1 hour
-            return True
+            return ban_ip(ip, 3600)  # Ban for 1 hour
     except Exception:
         logger.warning(f"[SECURITY] Cache unavailable during auth tracking for IP: {ip} — failing open")
     
@@ -89,13 +108,3 @@ def is_ip_banned(request):
     except Exception:
         logger.warning(f"[SECURITY] Cache unavailable checking ban for IP: {ip} — failing open")
         return False
-
-
-def get_client_ip(request):
-    """Get client IP address, considering proxies"""
-    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-    if x_forwarded_for:
-        ip = x_forwarded_for.split(',')[0]
-    else:
-        ip = request.META.get('REMOTE_ADDR')
-    return ip

@@ -36,6 +36,7 @@ from .security_emails import (
 
 # SEC-010: Structured security event logger
 from analytics.security_logger import log_security_event, SecurityEvent, get_client_info
+from analytics.client_ip import get_client_ip
 
 # Security logger (for non-structured logs)
 logger = logging.getLogger('analytics')
@@ -129,7 +130,7 @@ def register_view(request):
             'registration_closed': True
         })
 
-    client_ip = _get_client_ip(request)
+    client_ip = get_client_ip(request)
     user_agent = request.META.get('HTTP_USER_AGENT', '')
 
     if request.method == 'POST':
@@ -215,7 +216,7 @@ The Respectlytics Team
 
 def verify_email(request, uidb64, token):
     """Email verification handler."""
-    client_ip = _get_client_ip(request)
+    client_ip = get_client_ip(request)
     user_agent = request.META.get('HTTP_USER_AGENT', '')
 
     try:
@@ -249,7 +250,7 @@ def login_view(request):
         return redirect('dashboard:main')
 
     username = request.POST.get('username', '').lower() if request.method == 'POST' else ''
-    client_ip = _get_client_ip(request)
+    client_ip = get_client_ip(request)
     user_agent = request.META.get('HTTP_USER_AGENT', '')
 
     if request.method == 'POST' and username and is_account_locked(username):
@@ -350,16 +351,6 @@ def login_view(request):
         form = LoginForm()
 
     return render(request, 'users/auth/login.html', {'form': form})
-
-
-def _get_client_ip(request):
-    """Get client IP address, considering proxies."""
-    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-    if x_forwarded_for:
-        ip = x_forwarded_for.split(',')[0]
-    else:
-        ip = request.META.get('REMOTE_ADDR')
-    return ip
 
 
 @login_required
@@ -635,11 +626,7 @@ class CustomPasswordResetView(auth_views.PasswordResetView):
             )
 
         if ip_limited or email_limited:
-            x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-            if x_forwarded_for:
-                client_ip = x_forwarded_for.split(',')[0]
-            else:
-                client_ip = request.META.get('REMOTE_ADDR')
+            client_ip = get_client_ip(request)
 
             logger.warning(f'[SECURITY] Password reset rate limited - IP: {client_ip}, email: {email}')
             messages.error(request, 'Too many password reset requests. Please try again in an hour.')
