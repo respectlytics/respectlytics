@@ -4,6 +4,10 @@ The server error page. Django renders it with no request and no context, so
 it extends nothing and uses no URL, translation or context tags; its look is
 inlined so it still renders when the stylesheet is what broke. Only the font
 file comes from this domain, and the system font takes over if it fails.
+
+The community edition's copy differs only in its lead: a self-hosted server
+sends its people to whoever runs it, never to a Loheden address. The a.text
+style is unused here, kept so the two copies stay easy to compare.
 {% endcomment %}
 <html lang="en">
 <head>
@@ -42,7 +46,7 @@ file comes from this domain, and the system font takes over if it fails.
 <body>
     <main>
         <h1>Something went wrong on our side</h1>
-        <p class="lead">The page could not be shown. Try again in a moment, and if it keeps happening, <a class="text" href="mailto:respectlytics@loheden.com">write to us</a>.</p>
+        <p class="lead">The page could not be shown. Try again in a moment. If it keeps happening, tell whoever runs this server: its log says what went wrong.</p>
         <div class="actions">
             <button type="button" class="btn btn-primary" onclick="location.reload()">Try again</button>
             <a href="/" class="btn btn-secondary">Go to the homepage</a>

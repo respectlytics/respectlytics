@@ -82,7 +82,9 @@
         </ul>
       </div>
       
-      <!-- What's Preserved (for transparency) -->
+      {% if stripe_customer_kept %}
+      <!-- What's Preserved (for transparency). Only where deletion keeps the
+           Stripe customer: the community edition has no billing to keep. -->
       <div class="mb-4 p-3 bg-slate-800/50 rounded-lg">
         <h2 class="text-slate-300 font-medium mb-1.5 text-xs">For your peace of mind:</h2>
         <ul class="space-y-1 text-slate-500 text-xs">
@@ -100,6 +102,7 @@
           </li>
         </ul>
       </div>
+      {% endif %}
       
       <!-- Confirmation Form -->
       <form method="post" class="space-y-3">
