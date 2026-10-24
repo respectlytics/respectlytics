@@ -315,6 +315,14 @@ All contributors must sign a Contributor License Agreement (CLA) via [cla-assist
 
 ---
 
+## Our other products
+
+- [RespectASO](https://respectaso.com/?ref=respectlytics-github): a free, open-source Mac app for App Store keyword research, with popularity, difficulty and estimated downloads for every keyword.
+- [Prokoll](https://prokoll.com/?ref=respectlytics-github): private meeting notes that stay on your Mac, with who said what, and no account, no cloud and no bot in the call.
+- [Therese AI](https://thereseai.com/?ref=respectlytics-github): daily content intelligence for a business's marketing, turning the news from the authorities and trade press in your field into post ideas, each with its source.
+
+---
+
 ## License
 
 Respectlytics Community Edition is licensed under the [GNU Affero General Public License v3.0](LICENSE) (AGPL-3.0).
