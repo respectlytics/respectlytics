@@ -99,7 +99,14 @@ class SharedScriptsTests(TestCase):
 
     def test_both_bases_load_them(self):
         root = Path(settings.BASE_DIR)
-        for base in ("templates/base.html", "_oss_overrides/templates/base.html"):
+        # In the edition itself, templates/base.html is its own (the override, applied)
+        bases = [
+            b
+            for b in ("templates/base.html", "_oss_overrides/templates/base.html")
+            if (root / b).exists()
+        ]
+        self.assertTrue(bases)
+        for base in bases:
             text = (root / base).read_text()
             for needed in self.SHARED:
                 self.assertIn(needed, text, f"{base} lacks {needed}")
