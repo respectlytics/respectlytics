@@ -23,6 +23,7 @@ from django.core.cache import cache
 from django.core.mail import EmailMultiAlternatives
 from django.shortcuts import redirect, render
 from django.template.loader import render_to_string
+from django.urls import reverse
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 
@@ -155,7 +156,7 @@ def register_view(request):
                 path="/register/",
                 severity="WARNING",
             )
-            messages.error(request, "Too many registration attempts. Please try again in an hour.")
+            messages.error(request, "Too many registration attempts. Please try again later.")
             return render(
                 request,
                 "users/auth/register.html",
@@ -266,8 +267,8 @@ def login_view(request):
         )
         messages.error(
             request,
-            "Account temporarily locked due to too many failed attempts. Please try again in 30 "
-            "minutes or reset your password.",
+            "Account temporarily locked due to too many failed attempts. Please try again later "
+            "or reset your password.",
         )
         return render(
             request, "users/auth/login.html", {"form": LoginForm(), "account_locked": True}
@@ -304,9 +305,7 @@ def login_view(request):
                 limit_type="ip" if ip_limited else "username",
                 severity="WARNING",
             )
-            messages.error(
-                request, "Too many login attempts. Please wait 10 minutes and try again."
-            )
+            messages.error(request, "Too many login attempts. Please try again later.")
             return render(
                 request, "users/auth/login.html", {"form": LoginForm(), "rate_limited": True}
             )
@@ -327,8 +326,7 @@ def login_view(request):
                     user_id=user.id,
                     user_agent=user_agent,
                 )
-                next_url = request.GET.get("next", "dashboard:main")
-                return redirect(next_url)
+                return redirect(_next_within_site(request))
         else:
             email = request.POST.get("username", "")
             if email:
@@ -344,8 +342,8 @@ def login_view(request):
                 if is_now_locked:
                     messages.error(
                         request,
-                        "Account locked due to too many failed attempts. Please try again in 30 "
-                        "minutes or reset your password.",
+                        "Account locked due to too many failed attempts. Please try again later "
+                        "or reset your password.",
                     )
                     return render(
                         request,
@@ -357,6 +355,18 @@ def login_view(request):
         form = LoginForm()
 
     return render(request, "users/auth/login.html", {"form": form})
+
+
+def _next_within_site(request) -> str:
+    """Where ?next= asks to go after signing in, when that is a page of this site."""
+    from django.utils.http import url_has_allowed_host_and_scheme
+
+    target = request.GET.get("next", "")
+    if url_has_allowed_host_and_scheme(
+        target, allowed_hosts={request.get_host()}, require_https=request.is_secure()
+    ):
+        return target
+    return reverse("dashboard:main")
 
 
 @login_required
@@ -510,17 +520,10 @@ def account_security_view(request):
 # DATA-001: Data Management tab
 @login_required
 def account_data_management_view(request):
-    """Account data management tab."""
-    from django.db.models import Sum
-
+    """Account data management tab: the deletion history, the latest 50."""
     from analytics.models import DeletionLog
 
     logs = DeletionLog.objects.filter(deleted_by=request.user).order_by("-deleted_at")[:50]
-
-    total_deleted = (
-        DeletionLog.objects.filter(deleted_by=request.user).aggregate(total=Sum("events_deleted"))
-    )["total"] or 0
-
     deletion_count = DeletionLog.objects.filter(deleted_by=request.user).count()
 
     return render(
@@ -529,7 +532,6 @@ def account_data_management_view(request):
         {
             "active_tab": "data_management",
             "logs": logs,
-            "total_deleted": total_deleted,
             "deletion_count": deletion_count,
         },
     )
@@ -645,9 +647,7 @@ class CustomPasswordResetView(auth_views.PasswordResetView):
             logger.warning(
                 f"[SECURITY] Password reset rate limited - IP: {client_ip}, email: {email}"
             )
-            messages.error(
-                request, "Too many password reset requests. Please try again in an hour."
-            )
+            messages.error(request, "Too many password reset requests. Please try again later.")
             return render(
                 request,
                 "users/auth/password_reset.html",

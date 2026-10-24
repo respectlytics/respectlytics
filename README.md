@@ -70,8 +70,7 @@ Open [http://localhost:8080](http://localhost:8080) — you're ready to go.
 ### Prerequisites
 
 - Python 3.12+
-- PostgreSQL 14+ (required — SQLite is not supported)
-- Node.js 18+ (only for Tailwind CSS development)
+- PostgreSQL 15+ (required: SQLite is not supported, and Django 6.1 needs 15 or later)
 
 ### Setup
 
@@ -130,8 +129,8 @@ All configuration is via environment variables. See [.env.example](.env.example)
 | `SECURE_SSL` | Force HTTPS redirect (enable behind reverse proxy) | `False` |
 | `TRUSTED_CLIENT_IP_HEADER` | Header naming the visitor's address, only behind a CDN that overwrites it (`CF-Connecting-IP` for Cloudflare) | _(empty)_ |
 | `ADMIN_REQUIRE_OTP` | Require 2FA for admin access | `False` |
-| `MAXMIND_ACCOUNT_ID` | MaxMind account for GeoIP | _(empty)_ |
-| `MAXMIND_LICENSE_KEY` | MaxMind license for GeoIP | _(empty)_ |
+| `MAXMIND_ACCOUNT_ID` | MaxMind account for GeoIP (DB-IP's free database is used without it) | _(empty)_ |
+| `MAXMIND_LICENSE_KEY` | MaxMind license for GeoIP (DB-IP's free database is used without it) | _(empty)_ |
 | `EMAIL_BACKEND` | Django email backend | `console` (prints to stdout) |
 | `EMAIL_HOST` | SMTP server host | `localhost` |
 | `EMAIL_PORT` | SMTP server port | `587` |
@@ -150,23 +149,22 @@ All configuration is via environment variables. See [.env.example](.env.example)
 
 ## GeoIP Setup
 
-Country detection is optional but recommended. It uses the free MaxMind GeoLite2 database.
+Country detection works out of the box. With Docker, the container downloads a GeoIP database when it starts and refreshes it when it is more than 30 days old; without Docker, run:
 
-1. Create a free account at [maxmind.com/en/geolite2/signup](https://www.maxmind.com/en/geolite2/signup)
-2. Generate a license key in your MaxMind account
-3. Set the environment variables:
-   ```bash
-   MAXMIND_ACCOUNT_ID=your_account_id
-   MAXMIND_LICENSE_KEY=your_license_key
-   ```
-4. Download the database:
-   ```bash
-   python manage.py update_geoip
-   ```
+```bash
+python manage.py update_geoip
+```
 
-With Docker, the GeoIP database is downloaded automatically on container startup when credentials are provided.
+Which database it downloads:
 
-Without GeoIP, events will have `country=null` — everything else works normally.
+- **Without MaxMind credentials:** DB-IP's free [IP to Country Lite](https://db-ip.com/db/download/ip-to-country-lite), which needs no account. It is licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), and the dashboard shows the link to DB-IP that the licence asks for.
+- **With MaxMind credentials:** MaxMind's GeoLite2 City, under MaxMind's [GeoLite EULA](https://www.maxmind.com/en/geolite2/eula). Create a free account at [maxmind.com/en/geolite2/signup](https://www.maxmind.com/en/geolite2/signup), generate a license key, and set:
+  ```bash
+  MAXMIND_ACCOUNT_ID=your_account_id
+  MAXMIND_LICENSE_KEY=your_license_key
+  ```
+
+Lookups happen on your server; no address is sent to DB-IP or MaxMind. Without a database, events have `country=null` and everything else works normally.
 
 ---
 

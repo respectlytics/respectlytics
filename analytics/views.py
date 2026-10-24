@@ -10,7 +10,9 @@ Organized into sections:
 5. Export/Activity Views (ExportEventsView, RecentActivityView)
 
 Community Edition differences:
-- EventCreateView.post() has no billing/quota checks (unlimited events)
+- EventCreateView.post() has no billing/quota checks (unlimited events) and keeps no declared
+  properties
+- AppListCreateView creates apps without a plan's limit
 - api_root() references /api/v1/reference/ only (no staff-only swagger/redoc)
 """
 
@@ -33,12 +35,14 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .authentication import AppKeyAuthentication
+from . import event_groups
+from .authentication import APP_OWNER, AppKeyAuthentication
 from .client_ip import get_client_ip
-from .date_utils import get_cache_key_with_timezone, parse_date_range
+from .date_utils import freshness_mark, get_cache_key_with_timezone, parse_date_range
+from .event_groups import with_groups
 from .geolocation import get_location_from_ip
 from .models import App, DeletionLog, Event
-from .permissions import HasValidAppKey
+from .permissions import HasValidAppKey, IsAppOwner
 from .security_logger import SecurityEvent, log_security_event
 from .serializers import AppSerializer, EventCreateSerializer
 
@@ -110,7 +114,7 @@ def api_root(request):
     """
     return Response(
         {
-            "message": "Welcome to Respectlytics API — Community Edition",
+            "message": "Welcome to Respectlytics API, Community Edition",
             "version": "1.0",
             "edition": "community",
             "endpoints": {
@@ -168,6 +172,8 @@ class AppListCreateView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         """Return only apps belonging to the authenticated user"""
+        # request.user should be a User object when using session auth
+        # Check if user exists and has is_authenticated attribute
         user = getattr(self.request, "user", None)
         if user and hasattr(user, "is_authenticated") and user.is_authenticated:
             return App.objects.filter(user=user)
@@ -381,15 +387,16 @@ This prevents cross-session tracking while enabling same-day funnel analysis."""
         },
     )
     def post(self, request):
-        """
-        Community Edition: create event without quota checks.
-
-        Steps:
-        1. Get authenticated app
-        2. Auto-detect country from IP if not provided
-        3. Validate and save via serializer
-        4. Return created event
-        """
+        # One event per request, as a JSON object: an array (how the Kotlin SDK before 3.1.0
+        # sent its queue), a string or a number is refused with what to send, never a 500
+        if not isinstance(request.data, dict):
+            return Response(
+                {
+                    "detail": "Send one event per request, as a JSON object.",
+                    "code": "not_an_object",
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         # Get the authenticated app
         app = request.user
 
@@ -398,19 +405,24 @@ This prevents cross-session tracking while enabling same-day funnel analysis."""
         event_data["app_key"] = str(app.id)
 
         # Auto-detect country from IP if not provided
+        # User-provided values always take precedence
+        # NOTE: Region is no longer auto-populated (schema reduction for privacy compliance)
         if not event_data.get("country"):
             client_ip = get_client_ip(request)
             detected_country, _ = get_location_from_ip(client_ip)
 
+            # Log for debugging geolocation issues (no IP logged — privacy by design)
             if not detected_country:
                 logger.info("Geolocation failed: no country detected for incoming request")
             else:
                 logger.debug(f"Geolocation success: detected {detected_country}")
 
+            # Use detected country only if user didn't provide it
             if detected_country:
                 event_data["country"] = detected_country
 
-        # Validate and save
+        # Pass request context for session processing
+        # The serializer uses request.META for additional context if needed
         serializer = EventCreateSerializer(data=event_data, context={"request": request})
         if serializer.is_valid():
             event = serializer.save()
@@ -434,10 +446,12 @@ class EventSummaryView(APIView):
         - from: Start date (YYYY-MM-DD)
         - to: End date (YYYY-MM-DD)
 
-    Returns data for the authenticated app.
+    Returns data for the authenticated app, with `event_groups`: events of one kind counted
+    together and split (analytics/event_groups.py).
     """
 
-    authentication_classes = [AppKeyAuthentication]
+    share_links = True  # a share link's dashboard reads it (teams/)
+    authentication_classes = APP_OWNER
     permission_classes = [HasValidAppKey]
 
     def get(self, request):
@@ -448,14 +462,22 @@ class EventSummaryView(APIView):
         tz_name = request.query_params.get("tz", "UTC")
 
         # PERF-006: Cache summary data for 1 minute
+        # Summary data updates frequently but is expensive to compute
         from django.conf import settings
         from django.core.cache import cache
 
-        cache_key = get_cache_key_with_timezone("summary", app.id, from_date, to_date, tz_name)
+        cache_key = get_cache_key_with_timezone(
+            "summary",
+            app.id,
+            from_date,
+            to_date,
+            tz_name,
+            fresh=freshness_mark(app.id, to_date, getattr(settings, "CACHE_TTL_SUMMARY", 60)),
+        )
         cached_result = cache.get(cache_key)
 
         if cached_result is not None:
-            return Response(cached_result)
+            return Response(with_groups(cached_result, app))
 
         # Start with events for this app
         events = Event.objects.filter(app=app)
@@ -521,7 +543,7 @@ class EventSummaryView(APIView):
         cache_ttl = getattr(settings, "CACHE_TTL_SUMMARY", 60)
         cache.set(cache_key, response_data, timeout=cache_ttl)
 
-        return Response(response_data)
+        return Response(with_groups(response_data, app))
 
 
 class EventCountView(APIView):
@@ -535,7 +557,8 @@ class EventCountView(APIView):
     Optimized for showing processing banners with accurate event counts.
     """
 
-    authentication_classes = [AppKeyAuthentication]
+    share_links = True  # a share link's dashboard reads it (teams/)
+    authentication_classes = APP_OWNER
     permission_classes = [HasValidAppKey]
 
     def get(self, request):
@@ -544,6 +567,7 @@ class EventCountView(APIView):
         to_date = request.query_params.get("to")
         tz_name = request.query_params.get("tz", "UTC")
 
+        # PERF-022: Cache event count for 1 minute
         from django.core.cache import cache
 
         cache_key = get_cache_key_with_timezone("event_count", app.id, from_date, to_date, tz_name)
@@ -552,8 +576,10 @@ class EventCountView(APIView):
         if cached_result is not None:
             return Response(cached_result)
 
+        # Start with events for this app
         events = Event.objects.filter(app=app)
 
+        # Apply date filters if provided (timezone-aware)
         try:
             from_datetime, to_datetime = parse_date_range(from_date, to_date, tz_name)
             if from_datetime:
@@ -565,6 +591,7 @@ class EventCountView(APIView):
                 {"error": "Invalid date format. Use YYYY-MM-DD"}, status=status.HTTP_400_BAD_REQUEST
             )
 
+        # Single fast COUNT(*) query
         total_events = events.count()
 
         response_data = {
@@ -572,6 +599,7 @@ class EventCountView(APIView):
             "date_range": {"from": from_date, "to": to_date},
         }
 
+        # Cache for 1 minute
         cache.set(cache_key, response_data, timeout=60)
 
         return Response(response_data)
@@ -594,7 +622,8 @@ class GeoSummaryView(APIView):
     Returns aggregated data by country for map visualizations.
     """
 
-    authentication_classes = [AppKeyAuthentication]
+    share_links = True  # a share link's dashboard reads it (teams/)
+    authentication_classes = APP_OWNER
     permission_classes = [HasValidAppKey]
 
     @swagger_auto_schema(
@@ -724,7 +753,8 @@ class FunnelAnalysisView(APIView):
     A session reaches step N only if it completed step N-1 earlier in time.
     """
 
-    authentication_classes = [AppKeyAuthentication]
+    share_links = True  # a share link's dashboard reads it (teams/)
+    authentication_classes = APP_OWNER
     permission_classes = [HasValidAppKey]
 
     @swagger_auto_schema(
@@ -860,30 +890,38 @@ class FunnelAnalysisView(APIView):
         to_date = request.query_params.get("to")
         tz_name = request.query_params.get("tz", "UTC")
 
-        # Get additional filters
+        # Get additional filters (support multiple values comma-separated)
+        # Note: region, device_type, os_version, app_version, locale, screen removed
+        # (schema reduction)
         country = request.query_params.get("country")
         platform = request.query_params.get("platform")
 
-        # Get step timeout (in minutes)
+        # Get step timeout (in minutes) - max time between consecutive steps
+        # Sessions are max 2 hours, so this controls how strict the funnel timing is
         window_minutes = request.query_params.get("window_minutes")
         window_seconds = None
         if window_minutes:
             try:
-                window_seconds = int(window_minutes) * 60
+                window_seconds = int(window_minutes) * 60  # Convert minutes to seconds
             except ValueError:
                 return Response(
                     {"error": "Invalid window_minutes value. Must be a positive integer."},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
-        # PERF-006: Check cache
+        # PERF-006: Check cache before running expensive funnel analysis
         import hashlib
 
         from django.conf import settings
         from django.core.cache import cache
 
+        # Cache key only includes stored fields (schema reduction)
+        # A step may be a group's name (`group_events=true`), standing for any of its events
+        grouping = event_groups.from_request(request, app)
+        step_names = [grouping.expand([step]) for step in steps]
         cache_params = (
             f"{steps_param}:{from_date}:{to_date}:{tz_name}:{country}:{platform}:{window_minutes}"
+            f":{grouping.key()}"
         )
         cache_hash = hashlib.md5(cache_params.encode()).hexdigest()[:16]
         cache_key = f"funnel:{app.id}:{cache_hash}"
@@ -895,6 +933,8 @@ class FunnelAnalysisView(APIView):
         # Build base queryset with filters
         events = Event.objects.filter(app=app)
 
+        # Apply filters with support for multiple values
+        # Note: Only country and platform remain after schema reduction
         if country:
             country_list = [c.strip() for c in country.split(",") if c.strip()]
             if country_list:
@@ -918,16 +958,37 @@ class FunnelAnalysisView(APIView):
             )
 
         # Only consider events that match the funnel steps
-        events = events.filter(event_name__in=steps)
+        events = events.filter(event_name__in=[name for names in step_names for name in names])
 
         # Only consider sessions that have a session_id
         events = events.exclude(session_id__isnull=True).exclude(session_id="")
 
         # Get the SQL and params from the Django queryset
+        # We'll use this as a subquery for our funnel analysis
         base_sql, base_params = events.query.sql_with_params()
 
         # Create step index mapping for SQL CASE statement
-        step_cases = " ".join([f"WHEN event_name = %s THEN {i}" for i in range(len(steps))])
+        # A name in two steps belongs to the first, as before
+        step_cases = " ".join(
+            f"WHEN event_name IN ({', '.join(['%s'] * len(names))}) THEN {i}"
+            for i, names in enumerate(step_names)
+        )
+        step_params = [name for names in step_names for name in names]
+
+        # Build the funnel analysis SQL using PostgreSQL recursive CTE
+        #
+        # Strategy: Use a recursive CTE to properly track funnel progression.
+        # For each session, we find the earliest occurrence of each step that
+        # happens AFTER the previous step was completed.
+        #
+        # This correctly handles cases like:
+        #   step_0 at t1, step_2 at t2, step_1 at t3, step_2 at t4
+        # Where the valid progression is: step_0 → step_1 (t3) → step_2 (t4)
+        #
+        # The recursive CTE:
+        # 1. Base case: Find all sessions with step 0 (first funnel step)
+        # 2. Recursive case: For each session at step N, find the earliest
+        #    occurrence of step N+1 that happens after step N's timestamp
 
         num_steps = len(steps)
 
@@ -944,6 +1005,7 @@ class FunnelAnalysisView(APIView):
                     CASE {step_cases} END as step_index
                 FROM base_events
             ),
+            -- Get earliest occurrence of each step per session
             first_occurrences AS (
                 SELECT DISTINCT ON (session_id, step_index)
                     session_id,
@@ -953,7 +1015,9 @@ class FunnelAnalysisView(APIView):
                 WHERE step_index IS NOT NULL
                 ORDER BY session_id, step_index, timestamp
             ),
+            -- Recursive CTE to track valid funnel progression
             funnel_progress AS (
+                -- Base case: sessions that have step 0
                 SELECT
                     session_id,
                     step_index,
@@ -963,6 +1027,8 @@ class FunnelAnalysisView(APIView):
 
                 UNION ALL
 
+                -- Recursive case: find next step that occurs after current step
+                -- and within the conversion window
                 SELECT
                     f.session_id,
                     fo.step_index,
@@ -975,11 +1041,13 @@ class FunnelAnalysisView(APIView):
                     AND EXTRACT(EPOCH FROM (fo.timestamp - f.step_timestamp)) <= %s
                 WHERE f.step_index < %s
             ),
+            -- Get max step reached per session
             session_max_step AS (
                 SELECT session_id, MAX(step_index) as max_step
                 FROM funnel_progress
                 GROUP BY session_id
             ),
+            -- Expand to count sessions at each step level
             step_counts AS (
                 SELECT s.step_index, COUNT(*) as session_count
                 FROM session_max_step sms
@@ -990,7 +1058,7 @@ class FunnelAnalysisView(APIView):
             FROM step_counts
             ORDER BY step_index
             """
-            params = list(base_params) + list(steps) + [window_seconds, num_steps - 1]
+            params = list(base_params) + step_params + [window_seconds, num_steps - 1]
         else:
             funnel_sql = f"""
             WITH RECURSIVE base_events AS (
@@ -1004,6 +1072,7 @@ class FunnelAnalysisView(APIView):
                     CASE {step_cases} END as step_index
                 FROM base_events
             ),
+            -- Get earliest occurrence of each step per session
             first_occurrences AS (
                 SELECT DISTINCT ON (session_id, step_index)
                     session_id,
@@ -1013,7 +1082,9 @@ class FunnelAnalysisView(APIView):
                 WHERE step_index IS NOT NULL
                 ORDER BY session_id, step_index, timestamp
             ),
+            -- Recursive CTE to track valid funnel progression
             funnel_progress AS (
+                -- Base case: sessions that have step 0
                 SELECT
                     session_id,
                     step_index,
@@ -1023,6 +1094,7 @@ class FunnelAnalysisView(APIView):
 
                 UNION ALL
 
+                -- Recursive case: find next step that occurs after current step
                 SELECT
                     f.session_id,
                     fo.step_index,
@@ -1034,11 +1106,13 @@ class FunnelAnalysisView(APIView):
                     AND fo.timestamp > f.step_timestamp
                 WHERE f.step_index < %s
             ),
+            -- Get max step reached per session
             session_max_step AS (
                 SELECT session_id, MAX(step_index) as max_step
                 FROM funnel_progress
                 GROUP BY session_id
             ),
+            -- Expand to count sessions at each step level
             step_counts AS (
                 SELECT s.step_index, COUNT(*) as session_count
                 FROM session_max_step sms
@@ -1049,7 +1123,7 @@ class FunnelAnalysisView(APIView):
             FROM step_counts
             ORDER BY step_index
             """
-            params = list(base_params) + list(steps) + [num_steps - 1]
+            params = list(base_params) + step_params + [num_steps - 1]
 
         # Execute the funnel query
         with connection.cursor() as cursor:
@@ -1063,10 +1137,10 @@ class FunnelAnalysisView(APIView):
             if step_index is not None and step_index in step_counts:
                 step_counts[step_index] = count
 
-        # Get total sessions analyzed
+        # Get total sessions analyzed (sessions that have at least one funnel event)
         total_sessions = events.values("session_id").distinct().count()
 
-        # Format response
+        # Format response (same API contract as before)
         funnel_data = [{"step": steps[i], "count": step_counts[i]} for i in range(len(steps))]
 
         response_data = {
@@ -1075,10 +1149,11 @@ class FunnelAnalysisView(APIView):
             "total_sessions_analyzed": total_sessions,
         }
 
+        # Include step timeout info if specified
         if window_minutes:
             response_data["step_timeout_minutes"] = int(window_minutes)
 
-        # Cache funnel results for 2 minutes
+        # PERF-006: Cache funnel results for 2 minutes, under the key read above
         cache_ttl = getattr(settings, "CACHE_TTL_FUNNEL", 120)
         cache.set(cache_key, response_data, timeout=cache_ttl)
 
@@ -1092,7 +1167,8 @@ class EventTypesView(APIView):
     Convenience endpoint to discover what events are being tracked.
     """
 
-    authentication_classes = [AppKeyAuthentication]
+    share_links = True  # a share link's dashboard reads it (teams/)
+    authentication_classes = APP_OWNER
     permission_classes = [HasValidAppKey]
 
     @swagger_auto_schema(
@@ -1128,8 +1204,12 @@ class EventTypesView(APIView):
         },
     )
     def get(self, request):
+        # Get the authenticated app
         app = request.user
 
+        # Get distinct event names from the last 90 days
+        # Using a 90-day lookback for performance (avoids scanning entire event history)
+        # while still capturing all relevant event types
         from datetime import timedelta
 
         from django.utils import timezone
@@ -1156,9 +1236,11 @@ class FilterOptionsView(APIView):
     Internal endpoint - used by web dashboard only.
     """
 
-    authentication_classes = [AppKeyAuthentication]
+    share_links = True  # a share link's dashboard reads it (teams/)
+    authentication_classes = APP_OWNER
     permission_classes = [HasValidAppKey]
 
+    # Exclude from public API documentation
     swagger_schema = None
 
     @swagger_auto_schema(
@@ -1190,8 +1272,11 @@ class FilterOptionsView(APIView):
         },
     )
     def get(self, request):
+        # Get the authenticated app
         app = request.user
 
+        # PERF-006: Cache filter options for 5 minutes
+        # Filter options change rarely, so caching reduces database load significantly
         from django.conf import settings
         from django.core.cache import cache
 
@@ -1201,6 +1286,9 @@ class FilterOptionsView(APIView):
         if cached_result is not None:
             return Response(cached_result)
 
+        # PERF-002: Single query using PostgreSQL ArrayAgg
+        # Returns 1 row with array columns instead of iterating through thousands of rows.
+        # ArrayAgg with distinct=True and filter for non-null/non-empty values.
         result = Event.objects.filter(app=app).aggregate(
             countries=ArrayAgg(
                 Trim("country"),
@@ -1222,6 +1310,7 @@ class FilterOptionsView(APIView):
             ),
         )
 
+        # Filter out empty strings that might slip through and sort
         def clean_and_sort(arr):
             return sorted([v for v in (arr or []) if v and v.strip()])
 
@@ -1234,6 +1323,7 @@ class FilterOptionsView(APIView):
             },
         }
 
+        # Cache the result for 5 minutes
         cache_ttl = getattr(settings, "CACHE_TTL_FILTER_OPTIONS", 300)
         cache.set(cache_key, response_data, timeout=cache_ttl)
 
@@ -1241,7 +1331,8 @@ class FilterOptionsView(APIView):
 
 
 # API endpoint for listing all apps (requires user authentication)
-@swagger_auto_schema(method="get", auto_schema=None)
+# Internal endpoint - excluded from public API documentation
+@swagger_auto_schema(method="get", auto_schema=None)  # Exclude from Swagger/ReDoc
 @api_view(["GET"])
 @authentication_classes([])
 @permission_classes([AllowAny])
@@ -1272,13 +1363,11 @@ class ExportEventsView(APIView):
         - platform: Filter by platform
 
     Returns file download with all event data matching the filters.
-    Internal endpoint - used by web dashboard only.
+    Read with the account's secret key (core/api_schema.py publishes it).
     """
 
-    authentication_classes = [AppKeyAuthentication]
+    authentication_classes = APP_OWNER
     permission_classes = [HasValidAppKey]
-
-    swagger_schema = None
 
     @swagger_auto_schema(
         operation_description="Export event data in CSV or JSON format with optional filters",
@@ -1366,8 +1455,11 @@ class ExportEventsView(APIView):
         },
     )
     def get(self, request):
+        # Get the authenticated app
         app = request.user
 
+        # Get query parameters
+        # Note: app_version filter removed (schema reduction)
         export_format = request.query_params.get("output", "csv").lower()
         from_date = request.query_params.get("from")
         to_date = request.query_params.get("to")
@@ -1375,19 +1467,25 @@ class ExportEventsView(APIView):
         country = request.query_params.get("country")
         platform = request.query_params.get("platform")
 
+        # Validate format
         if export_format not in ["csv", "json"]:
             return Response(
                 {"error": 'Invalid output format. Use "csv" or "json"'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        # Start with events for this app
         events = Event.objects.filter(app=app)
 
+        # Track applied filters for metadata
         filters_applied = {}
 
+        # Apply date filters with guardrails
+        # Defaults: if no dates provided, export last EXPORT_MAX_DAYS days.
         max_days = getattr(settings, "EXPORT_MAX_DAYS", 90)
         now = datetime.utcnow()
         if not from_date and not to_date:
+            # Default rolling window
             default_from = (now - timedelta(days=max_days - 1)).strftime("%Y-%m-%d")
             default_to = now.strftime("%Y-%m-%d")
             from_date = default_from
@@ -1418,6 +1516,7 @@ class ExportEventsView(APIView):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
+        # Enforce maximum date span when both ends are present
         if parsed_from and parsed_to:
             days_span = (parsed_to.date() - parsed_from.date()).days + 1
             if days_span > max_days:
@@ -1432,6 +1531,7 @@ class ExportEventsView(APIView):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
+        # Apply other filters
         if event_name:
             events = events.filter(event_name=event_name)
             filters_applied["event_name"] = event_name
@@ -1444,10 +1544,13 @@ class ExportEventsView(APIView):
             events = events.filter(platform__iexact=platform)
             filters_applied["platform"] = platform
 
+        # Order by timestamp
         events = events.order_by("-timestamp")
 
+        # Get total count before slicing (for large datasets, consider pagination)
         total_events = events.count()
 
+        # Limit to prevent memory issues (can be adjusted or made configurable)
         MAX_EXPORT_EVENTS = getattr(settings, "EXPORT_MAX_EVENTS", 100000)
         if total_events > MAX_EXPORT_EVENTS:
             return Response(
@@ -1462,6 +1565,7 @@ class ExportEventsView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        # Prepare metadata
         metadata = {
             "app_name": app.name,
             "app_slug": app.slug,
@@ -1477,12 +1581,14 @@ class ExportEventsView(APIView):
         }
 
         if export_format == "csv":
+            # Create CSV response
             response = HttpResponse(content_type="text/csv; charset=utf-8")
             filename = f"respectlytics_{app.slug}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
             response["Content-Disposition"] = f'attachment; filename="{filename}"'
 
             writer = csv.writer(response)
 
+            # Write metadata as comments
             writer.writerow(["# Respectlytics Analytics Export"])
             writer.writerow([f"# App: {metadata['app_name']}"])
             writer.writerow([f"# Export Date: {metadata['export_date']}"])
@@ -1497,13 +1603,15 @@ class ExportEventsView(APIView):
                 writer.writerow(
                     [f"# Filters: {', '.join([f'{k}={v}' for k, v in filters_applied.items()])}"]
                 )
-            writer.writerow([])
+            writer.writerow([])  # Empty line
 
+            # Write CSV header
             writer.writerow(
                 ["Event ID", "Event Name", "Timestamp", "Session ID", "Country", "Platform"]
             )
 
-            for event in events.iterator(chunk_size=1000):
+            # Write event data
+            for event in events.iterator(chunk_size=1000):  # Use iterator for memory efficiency
                 writer.writerow(
                     [
                         str(event.id),
@@ -1518,8 +1626,10 @@ class ExportEventsView(APIView):
             return response
 
         else:  # JSON format
-
+            # PERF-FIX: Use streaming response for JSON to avoid loading all events into memory
             def generate_json_stream():
+                """Generator for streaming JSON response - memory efficient for large exports."""
+                # Start with opening brace and metadata
                 yield '{\n  "metadata": '
                 yield json.dumps(metadata, indent=2).replace("\n", "\n  ")
                 yield ',\n  "events": [\n'
@@ -1541,8 +1651,10 @@ class ExportEventsView(APIView):
                     else:
                         yield ",\n    " + json.dumps(event_dict)
 
+                # Close the events array and root object
                 yield "\n  ]\n}"
 
+            # Create streaming JSON response
             response = StreamingHttpResponse(
                 generate_json_stream(), content_type="application/json; charset=utf-8"
             )
@@ -1557,12 +1669,27 @@ class RecentActivityView(APIView):
     Lightweight endpoint for polling recent activity.
     Returns summary of new events since a timestamp, optimized for real-time updates.
 
+    GET /api/v1/events/recent-activity/?since=<timestamp>&time_range=<minutes>
+
+    Query parameters:
+        - since: ISO timestamp of last update (optional)
+        - time_range: Time range in minutes (30, 60, 360, 1440 for 24h). Default: 1440
+
+    Returns:
+        - new_event_count: Number of new events since 'since' timestamp
+        - last_event_timestamp: Timestamp of most recent event
+        - total_in_range: Total events in the selected time range
+        - should_refresh: Boolean indicating if UI should fetch full data
+        - event_preview: Sample of latest 5 events
+
     Internal endpoint - used by web dashboard only.
     """
 
-    authentication_classes = [AppKeyAuthentication]
+    share_links = True  # a share link's dashboard reads it (teams/)
+    authentication_classes = APP_OWNER
     permission_classes = [HasValidAppKey]
 
+    # Exclude from public API documentation
     swagger_schema = None
 
     @swagger_auto_schema(
@@ -1621,9 +1748,11 @@ class RecentActivityView(APIView):
 
         app = request.user
 
+        # Get query parameters
         since_param = request.query_params.get("since")
         time_range_minutes = int(request.query_params.get("time_range", 1440))
 
+        # Validate time_range
         valid_ranges = [30, 60, 360, 1440]
         if time_range_minutes not in valid_ranges:
             return Response(
@@ -1631,9 +1760,11 @@ class RecentActivityView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        # Parse 'since' timestamp
         since_timestamp = None
         if since_param:
             try:
+                # Parse ISO format timestamp
                 since_timestamp = datetime.fromisoformat(since_param.replace("Z", "+00:00"))
             except (ValueError, AttributeError):
                 return Response(
@@ -1645,23 +1776,28 @@ class RecentActivityView(APIView):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
+        # Calculate time window
         now = django_timezone.now()
         time_window_start = now - timedelta(minutes=time_range_minutes)
 
+        # Get events in the time range
         events_in_range = Event.objects.filter(app=app, timestamp__gte=time_window_start).order_by(
             "-timestamp"
         )
 
         total_in_range = events_in_range.count()
 
+        # Count new events since last poll
         new_event_count = 0
         if since_timestamp:
             new_events = events_in_range.filter(timestamp__gt=since_timestamp)
             new_event_count = new_events.count()
 
+        # Get the most recent event timestamp
         last_event = events_in_range.first()
         last_event_timestamp = last_event.timestamp.isoformat() if last_event else None
 
+        # Get preview of latest events (max 5)
         event_preview = []
         for event in events_in_range[:5]:
             event_preview.append(
@@ -1673,8 +1809,11 @@ class RecentActivityView(APIView):
                 }
             )
 
+        # Determine if full refresh is needed
+        # Refresh if there are new events or significant changes
         should_refresh = new_event_count > 0
 
+        # Check for high traffic and add warnings
         warnings = []
         max_events_threshold = 10000
         if total_in_range > max_events_threshold:
@@ -1702,6 +1841,12 @@ class RecentActivityView(APIView):
             },
             status=status.HTTP_200_OK,
         )
+
+
+# NOTE: Conversion Intelligence views (DAUView, ConversionSummaryView,
+# TimeToConversionView, StepTimingView) have been moved to conversion/views.py
+# as part of the codebase restructuring (TASK-041).
+# TimeToConversionView, StepTimingView) have been moved to conversion/views.py
 
 
 # ============================================================================
@@ -1761,10 +1906,12 @@ def _build_event_filter(app, data):
 class DeleteEventsPreviewView(APIView):
     """
     Preview how many events match the given filters before deleting.
+    Returns the count without performing any deletion.
     """
 
-    authentication_classes = [AppKeyAuthentication]
-    permission_classes = [HasValidAppKey]
+    authentication_classes = APP_OWNER
+    # Deleting, and its history, are the owner's: never a team member's or a link's
+    permission_classes = [HasValidAppKey, IsAppOwner]
 
     @swagger_auto_schema(
         operation_description="""Preview the number of events that would be deleted by the given
@@ -1811,7 +1958,7 @@ Date range is required. Platform, country, and event_name are optional additiona
         },
     )
     def post(self, request):
-        app = request.auth
+        app = request.user
         filters, error = _build_event_filter(app, request.data)
         if error:
             return error
@@ -1826,8 +1973,9 @@ class DeleteEventsView(APIView):
     Creates an audit trail entry in the DeletionLog.
     """
 
-    authentication_classes = [AppKeyAuthentication]
-    permission_classes = [HasValidAppKey]
+    authentication_classes = APP_OWNER
+    # Deleting, and its history, are the owner's: never a team member's or a link's
+    permission_classes = [HasValidAppKey, IsAppOwner]
 
     @swagger_auto_schema(
         operation_description="""Permanently delete analytics events matching the given filters.
@@ -1880,16 +2028,19 @@ A DeletionLog entry is created for audit purposes.""",
         },
     )
     def post(self, request):
-        app = request.auth
+        app = request.user
         filters, error = _build_event_filter(app, request.data)
         if error:
             return error
 
+        # Perform deletion
         deleted_count, _ = Event.objects.filter(**filters).delete()
 
+        # Parse dates for the log entry
         parsed_from = datetime.strptime(request.data["date_from"], "%Y-%m-%d").date()
         parsed_to = datetime.strptime(request.data["date_to"], "%Y-%m-%d").date()
 
+        # Create audit trail
         deletion_log = DeletionLog.objects.create(
             app=app,
             app_name=app.name,
@@ -1902,6 +2053,7 @@ A DeletionLog entry is created for audit purposes.""",
             filter_event_name=request.data.get("event_name"),
         )
 
+        # Security log
         log_security_event(
             SecurityEvent.DATA_DELETION,
             user_id=app.user.id,
@@ -1928,10 +2080,12 @@ A DeletionLog entry is created for audit purposes.""",
 class DeletionHistoryView(APIView):
     """
     Retrieve the deletion history for the authenticated app.
+    Returns a list of past deletion log entries for audit purposes.
     """
 
-    authentication_classes = [AppKeyAuthentication]
-    permission_classes = [HasValidAppKey]
+    authentication_classes = APP_OWNER
+    # Deleting, and its history, are the owner's: never a team member's or a link's
+    permission_classes = [HasValidAppKey, IsAppOwner]
 
     @swagger_auto_schema(
         operation_description="""Retrieve the deletion history for this app.
@@ -1970,7 +2124,7 @@ Useful for audit trail and demonstrating deletion request fulfilment.""",
         },
     )
     def get(self, request):
-        app = request.auth
+        app = request.user
         logs = DeletionLog.objects.filter(app=app).order_by("-deleted_at")
 
         deletions = []

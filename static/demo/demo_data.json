@@ -5,33 +5,53 @@
   },
   "events": {
     "available": [
-      "app_opened", "onboarding_started", "onboarding_completed", "account_created",
-      "home_viewed", "profile_viewed", "settings_opened", "search_performed", "feature_tutorial_viewed",
-      "paywall_viewed", "free_trial_started", "purchase_completed", "purchase_failed",
-      "push_notification_enabled", "app_shared_with_friend", "app_rated"
+      "home_viewed",
+      "app_opened",
+      "onboarding_started",
+      "onboarding_completed",
+      "account_created",
+      "profile_viewed",
+      "workout_cardio",
+      "search_performed",
+      "paywall_viewed",
+      "settings_opened",
+      "workout_strength",
+      "feature_tutorial_viewed",
+      "workout_yoga",
+      "push_notification_enabled",
+      "free_trial_started",
+      "app_shared_with_friend",
+      "app_rated",
+      "purchase_monthly",
+      "purchase_annual",
+      "payment_failed"
     ],
     "counts": {
+      "home_viewed": 20000,
       "app_opened": 12500,
       "onboarding_started": 11250,
       "onboarding_completed": 8000,
       "account_created": 7500,
-      "home_viewed": 20000,
       "profile_viewed": 6250,
-      "settings_opened": 3000,
+      "workout_cardio": 4800,
       "search_performed": 4500,
-      "feature_tutorial_viewed": 2250,
       "paywall_viewed": 3750,
-      "free_trial_started": 1500,
-      "purchase_completed": 450,
-      "purchase_failed": 100,
+      "settings_opened": 3000,
+      "workout_strength": 2900,
+      "feature_tutorial_viewed": 2250,
+      "workout_yoga": 2100,
       "push_notification_enabled": 2000,
+      "free_trial_started": 1500,
       "app_shared_with_friend": 625,
-      "app_rated": 375
+      "app_rated": 375,
+      "purchase_monthly": 270,
+      "purchase_annual": 180,
+      "payment_failed": 100
     }
   },
   "summary": {
     "app_name": "Acme Fitness",
-    "total_events": 84055,
+    "total_events": 93850,
     "events_by_name": {
       "home_viewed": 20000,
       "app_opened": 12500,
@@ -39,72 +59,248 @@
       "onboarding_completed": 8000,
       "account_created": 7500,
       "profile_viewed": 6250,
+      "workout_cardio": 4800,
       "search_performed": 4500,
       "paywall_viewed": 3750,
       "settings_opened": 3000,
+      "workout_strength": 2900,
       "feature_tutorial_viewed": 2250,
+      "workout_yoga": 2100,
       "push_notification_enabled": 2000,
       "free_trial_started": 1500,
       "app_shared_with_friend": 625,
-      "purchase_completed": 450,
       "app_rated": 375,
-      "purchase_failed": 100
+      "purchase_monthly": 270,
+      "purchase_annual": 180,
+      "payment_failed": 100
     },
     "events_by_day": [
-      {"count": 2650, "unique_buckets": 385},
-      {"count": 2720, "unique_buckets": 392},
-      {"count": 2890, "unique_buckets": 410},
-      {"count": 2780, "unique_buckets": 398},
-      {"count": 2950, "unique_buckets": 420},
-      {"count": 3100, "unique_buckets": 445},
-      {"count": 2850, "unique_buckets": 408},
-      {"count": 2700, "unique_buckets": 390},
-      {"count": 2680, "unique_buckets": 385},
-      {"count": 2750, "unique_buckets": 395},
-      {"count": 2820, "unique_buckets": 405},
-      {"count": 2900, "unique_buckets": 415},
-      {"count": 3050, "unique_buckets": 438},
-      {"count": 2980, "unique_buckets": 425},
-      {"count": 2720, "unique_buckets": 390},
-      {"count": 2680, "unique_buckets": 385},
-      {"count": 2790, "unique_buckets": 400},
-      {"count": 2850, "unique_buckets": 408},
-      {"count": 2920, "unique_buckets": 418},
-      {"count": 3080, "unique_buckets": 442},
-      {"count": 2950, "unique_buckets": 422},
-      {"count": 2700, "unique_buckets": 388},
-      {"count": 2650, "unique_buckets": 380},
-      {"count": 2780, "unique_buckets": 398},
-      {"count": 2870, "unique_buckets": 412},
-      {"count": 2940, "unique_buckets": 420},
-      {"count": 3120, "unique_buckets": 448},
-      {"count": 2990, "unique_buckets": 428},
-      {"count": 2750, "unique_buckets": 395},
-      {"count": 2680, "unique_buckets": 385}
+      {
+        "count": 2751,
+        "unique_buckets": 363
+      },
+      {
+        "count": 2336,
+        "unique_buckets": 332
+      },
+      {
+        "count": 2218,
+        "unique_buckets": 319
+      },
+      {
+        "count": 2134,
+        "unique_buckets": 313
+      },
+      {
+        "count": 1930,
+        "unique_buckets": 271
+      },
+      {
+        "count": 2166,
+        "unique_buckets": 303
+      },
+      {
+        "count": 3331,
+        "unique_buckets": 422
+      },
+      {
+        "count": 3091,
+        "unique_buckets": 385
+      },
+      {
+        "count": 2567,
+        "unique_buckets": 363
+      },
+      {
+        "count": 2438,
+        "unique_buckets": 339
+      },
+      {
+        "count": 2442,
+        "unique_buckets": 330
+      },
+      {
+        "count": 2252,
+        "unique_buckets": 306
+      },
+      {
+        "count": 2479,
+        "unique_buckets": 327
+      },
+      {
+        "count": 3688,
+        "unique_buckets": 452
+      },
+      {
+        "count": 3335,
+        "unique_buckets": 418
+      },
+      {
+        "count": 2833,
+        "unique_buckets": 374
+      },
+      {
+        "count": 2802,
+        "unique_buckets": 370
+      },
+      {
+        "count": 2821,
+        "unique_buckets": 366
+      },
+      {
+        "count": 3953,
+        "unique_buckets": 568
+      },
+      {
+        "count": 3490,
+        "unique_buckets": 520
+      },
+      {
+        "count": 4328,
+        "unique_buckets": 578
+      },
+      {
+        "count": 4069,
+        "unique_buckets": 478
+      },
+      {
+        "count": 3576,
+        "unique_buckets": 458
+      },
+      {
+        "count": 3529,
+        "unique_buckets": 435
+      },
+      {
+        "count": 3468,
+        "unique_buckets": 434
+      },
+      {
+        "count": 3021,
+        "unique_buckets": 386
+      },
+      {
+        "count": 3224,
+        "unique_buckets": 401
+      },
+      {
+        "count": 4861,
+        "unique_buckets": 561
+      },
+      {
+        "count": 4640,
+        "unique_buckets": 522
+      },
+      {
+        "count": 4077,
+        "unique_buckets": 486
+      }
     ],
     "top_countries": [
-      {"country": "US", "count": 29420},
-      {"country": "GB", "count": 10087},
-      {"country": "DE", "count": 7565},
-      {"country": "CA", "count": 6725},
-      {"country": "AU", "count": 5044},
-      {"country": "FR", "count": 4203},
-      {"country": "NL", "count": 3363},
-      {"country": "SE", "count": 2522},
-      {"country": "JP", "count": 2102},
-      {"country": "BR", "count": 1682}
+      {
+        "country": "US",
+        "count": 29420
+      },
+      {
+        "country": "GB",
+        "count": 10087
+      },
+      {
+        "country": "DE",
+        "count": 7565
+      },
+      {
+        "country": "CA",
+        "count": 6725
+      },
+      {
+        "country": "AU",
+        "count": 5044
+      },
+      {
+        "country": "FR",
+        "count": 4203
+      },
+      {
+        "country": "NL",
+        "count": 3363
+      },
+      {
+        "country": "SE",
+        "count": 2522
+      },
+      {
+        "country": "JP",
+        "count": 2102
+      },
+      {
+        "country": "BR",
+        "count": 1682
+      }
     ],
-    "unique_countries": 42
+    "unique_countries": 42,
+    "event_groups": [
+      {
+        "name": "workout",
+        "total": 9800,
+        "automatic": true,
+        "events": [
+          {
+            "event_name": "workout_cardio",
+            "count": 4800
+          },
+          {
+            "event_name": "workout_strength",
+            "count": 2900
+          },
+          {
+            "event_name": "workout_yoga",
+            "count": 2100
+          }
+        ]
+      },
+      {
+        "name": "purchase",
+        "total": 450,
+        "automatic": true,
+        "events": [
+          {
+            "event_name": "purchase_monthly",
+            "count": 270
+          },
+          {
+            "event_name": "purchase_annual",
+            "count": 180
+          }
+        ]
+      }
+    ]
   },
   "event_types": {
     "app_name": "Acme Fitness",
     "event_types": [
-      "app_opened", "onboarding_started", "onboarding_completed", "account_created",
-      "home_viewed", "profile_viewed", "settings_opened", "search_performed", "feature_tutorial_viewed",
-      "paywall_viewed", "free_trial_started", "purchase_completed", "purchase_failed",
-      "push_notification_enabled", "app_shared_with_friend", "app_rated"
+      "account_created",
+      "app_opened",
+      "app_rated",
+      "app_shared_with_friend",
+      "feature_tutorial_viewed",
+      "free_trial_started",
+      "home_viewed",
+      "onboarding_completed",
+      "onboarding_started",
+      "payment_failed",
+      "paywall_viewed",
+      "profile_viewed",
+      "purchase_annual",
+      "purchase_monthly",
+      "push_notification_enabled",
+      "search_performed",
+      "settings_opened",
+      "workout_cardio",
+      "workout_strength",
+      "workout_yoga"
     ],
-    "count": 16
+    "count": 20
   },
   "recent_activity": {
     "new_event_count": 12,
@@ -113,11 +309,41 @@
     "should_refresh": false,
     "time_range_minutes": 30,
     "event_preview": [
-      {"event_name": "home_viewed", "timestamp": "2026-01-15T14:32:15Z", "session_id": "a1b2c3d4", "country": "US", "platform": "ios"},
-      {"event_name": "purchase_completed", "timestamp": "2026-01-15T14:31:42Z", "session_id": "e5f6g7h8", "country": "GB", "platform": "android"},
-      {"event_name": "onboarding_completed", "timestamp": "2026-01-15T14:30:58Z", "session_id": "i9j0k1l2", "country": "DE", "platform": "ios"},
-      {"event_name": "paywall_viewed", "timestamp": "2026-01-15T14:30:21Z", "session_id": "m3n4o5p6", "country": "US", "platform": "ios"},
-      {"event_name": "feature_tutorial_viewed", "timestamp": "2026-01-15T14:29:45Z", "session_id": "q7r8s9t0", "country": "CA", "platform": "android"}
+      {
+        "event_name": "home_viewed",
+        "timestamp": "2026-01-15T14:32:15Z",
+        "session_id": "a1b2c3d4",
+        "country": "US",
+        "platform": "ios"
+      },
+      {
+        "event_name": "purchase_annual",
+        "timestamp": "2026-01-15T14:31:42Z",
+        "session_id": "e5f6g7h8",
+        "country": "GB",
+        "platform": "android"
+      },
+      {
+        "event_name": "workout_cardio",
+        "timestamp": "2026-01-15T14:30:58Z",
+        "session_id": "i9j0k1l2",
+        "country": "DE",
+        "platform": "ios"
+      },
+      {
+        "event_name": "paywall_viewed",
+        "timestamp": "2026-01-15T14:30:21Z",
+        "session_id": "m3n4o5p6",
+        "country": "US",
+        "platform": "ios"
+      },
+      {
+        "event_name": "feature_tutorial_viewed",
+        "timestamp": "2026-01-15T14:29:45Z",
+        "session_id": "q7r8s9t0",
+        "country": "CA",
+        "platform": "android"
+      }
     ],
     "warnings": [],
     "server_time": "2026-01-15T14:32:30Z"
@@ -125,38 +351,161 @@
   "dau": {
     "app_name": "Acme Fitness",
     "granularity": "day",
-    "date_range": {"from": "2025-12-17", "to": "2026-01-15"},
+    "date_range": {
+      "from": "2025-12-17",
+      "to": "2026-01-15"
+    },
     "active_sessions": [
-      {"unique_sessions": 385, "total_events": 2650, "avg_session_length_seconds": 245},
-      {"unique_sessions": 392, "total_events": 2720, "avg_session_length_seconds": 252},
-      {"unique_sessions": 410, "total_events": 2890, "avg_session_length_seconds": 238},
-      {"unique_sessions": 398, "total_events": 2780, "avg_session_length_seconds": 261},
-      {"unique_sessions": 420, "total_events": 2950, "avg_session_length_seconds": 249},
-      {"unique_sessions": 445, "total_events": 3100, "avg_session_length_seconds": 235},
-      {"unique_sessions": 408, "total_events": 2850, "avg_session_length_seconds": 258},
-      {"unique_sessions": 390, "total_events": 2700, "avg_session_length_seconds": 242},
-      {"unique_sessions": 385, "total_events": 2680, "avg_session_length_seconds": 255},
-      {"unique_sessions": 395, "total_events": 2750, "avg_session_length_seconds": 248},
-      {"unique_sessions": 405, "total_events": 2820, "avg_session_length_seconds": 239},
-      {"unique_sessions": 415, "total_events": 2900, "avg_session_length_seconds": 263},
-      {"unique_sessions": 438, "total_events": 3050, "avg_session_length_seconds": 251},
-      {"unique_sessions": 425, "total_events": 2980, "avg_session_length_seconds": 244},
-      {"unique_sessions": 390, "total_events": 2720, "avg_session_length_seconds": 256},
-      {"unique_sessions": 385, "total_events": 2680, "avg_session_length_seconds": 241},
-      {"unique_sessions": 400, "total_events": 2790, "avg_session_length_seconds": 259},
-      {"unique_sessions": 408, "total_events": 2850, "avg_session_length_seconds": 246},
-      {"unique_sessions": 418, "total_events": 2920, "avg_session_length_seconds": 237},
-      {"unique_sessions": 442, "total_events": 3080, "avg_session_length_seconds": 264},
-      {"unique_sessions": 422, "total_events": 2950, "avg_session_length_seconds": 253},
-      {"unique_sessions": 388, "total_events": 2700, "avg_session_length_seconds": 240},
-      {"unique_sessions": 380, "total_events": 2650, "avg_session_length_seconds": 257},
-      {"unique_sessions": 398, "total_events": 2780, "avg_session_length_seconds": 249},
-      {"unique_sessions": 412, "total_events": 2870, "avg_session_length_seconds": 236},
-      {"unique_sessions": 420, "total_events": 2940, "avg_session_length_seconds": 262},
-      {"unique_sessions": 448, "total_events": 3120, "avg_session_length_seconds": 250},
-      {"unique_sessions": 428, "total_events": 2990, "avg_session_length_seconds": 243},
-      {"unique_sessions": 395, "total_events": 2750, "avg_session_length_seconds": 254},
-      {"unique_sessions": 385, "total_events": 2680, "avg_session_length_seconds": 247}
+      {
+        "unique_sessions": 363,
+        "total_events": 2751,
+        "avg_session_length_seconds": 258
+      },
+      {
+        "unique_sessions": 332,
+        "total_events": 2336,
+        "avg_session_length_seconds": 215
+      },
+      {
+        "unique_sessions": 319,
+        "total_events": 2218,
+        "avg_session_length_seconds": 214
+      },
+      {
+        "unique_sessions": 313,
+        "total_events": 2134,
+        "avg_session_length_seconds": 222
+      },
+      {
+        "unique_sessions": 271,
+        "total_events": 1930,
+        "avg_session_length_seconds": 222
+      },
+      {
+        "unique_sessions": 303,
+        "total_events": 2166,
+        "avg_session_length_seconds": 227
+      },
+      {
+        "unique_sessions": 422,
+        "total_events": 3331,
+        "avg_session_length_seconds": 265
+      },
+      {
+        "unique_sessions": 385,
+        "total_events": 3091,
+        "avg_session_length_seconds": 257
+      },
+      {
+        "unique_sessions": 363,
+        "total_events": 2567,
+        "avg_session_length_seconds": 227
+      },
+      {
+        "unique_sessions": 339,
+        "total_events": 2438,
+        "avg_session_length_seconds": 229
+      },
+      {
+        "unique_sessions": 330,
+        "total_events": 2442,
+        "avg_session_length_seconds": 231
+      },
+      {
+        "unique_sessions": 306,
+        "total_events": 2252,
+        "avg_session_length_seconds": 239
+      },
+      {
+        "unique_sessions": 327,
+        "total_events": 2479,
+        "avg_session_length_seconds": 232
+      },
+      {
+        "unique_sessions": 452,
+        "total_events": 3688,
+        "avg_session_length_seconds": 268
+      },
+      {
+        "unique_sessions": 418,
+        "total_events": 3335,
+        "avg_session_length_seconds": 275
+      },
+      {
+        "unique_sessions": 374,
+        "total_events": 2833,
+        "avg_session_length_seconds": 236
+      },
+      {
+        "unique_sessions": 370,
+        "total_events": 2802,
+        "avg_session_length_seconds": 245
+      },
+      {
+        "unique_sessions": 366,
+        "total_events": 2821,
+        "avg_session_length_seconds": 247
+      },
+      {
+        "unique_sessions": 568,
+        "total_events": 3953,
+        "avg_session_length_seconds": 211
+      },
+      {
+        "unique_sessions": 520,
+        "total_events": 3490,
+        "avg_session_length_seconds": 216
+      },
+      {
+        "unique_sessions": 578,
+        "total_events": 4328,
+        "avg_session_length_seconds": 252
+      },
+      {
+        "unique_sessions": 478,
+        "total_events": 4069,
+        "avg_session_length_seconds": 285
+      },
+      {
+        "unique_sessions": 458,
+        "total_events": 3576,
+        "avg_session_length_seconds": 257
+      },
+      {
+        "unique_sessions": 435,
+        "total_events": 3529,
+        "avg_session_length_seconds": 251
+      },
+      {
+        "unique_sessions": 434,
+        "total_events": 3468,
+        "avg_session_length_seconds": 251
+      },
+      {
+        "unique_sessions": 386,
+        "total_events": 3021,
+        "avg_session_length_seconds": 254
+      },
+      {
+        "unique_sessions": 401,
+        "total_events": 3224,
+        "avg_session_length_seconds": 252
+      },
+      {
+        "unique_sessions": 561,
+        "total_events": 4861,
+        "avg_session_length_seconds": 300
+      },
+      {
+        "unique_sessions": 522,
+        "total_events": 4640,
+        "avg_session_length_seconds": 302
+      },
+      {
+        "unique_sessions": 486,
+        "total_events": 4077,
+        "avg_session_length_seconds": 257
+      }
     ],
     "summary": {
       "total_sessions": 12180,
@@ -164,33 +513,135 @@
       "avg_session_length_seconds": 249
     },
     "top_events_current_period": [
-      {"event_name": "home_viewed", "count": 667},
-      {"event_name": "app_opened", "count": 417},
-      {"event_name": "onboarding_started", "count": 375},
-      {"event_name": "onboarding_completed", "count": 267},
-      {"event_name": "account_created", "count": 250}
+      {
+        "event_name": "home_viewed",
+        "count": 667
+      },
+      {
+        "event_name": "app_opened",
+        "count": 417
+      },
+      {
+        "event_name": "onboarding_started",
+        "count": 375
+      },
+      {
+        "event_name": "onboarding_completed",
+        "count": 267
+      },
+      {
+        "event_name": "account_created",
+        "count": 250
+      }
     ]
   },
   "dau_weekly": {
     "app_name": "Acme Fitness",
     "granularity": "week",
     "active_sessions": [
-      {"unique_sessions": 2858, "total_events": 19940, "avg_session_length_seconds": 248},
-      {"unique_sessions": 2853, "total_events": 19900, "avg_session_length_seconds": 251},
-      {"unique_sessions": 2908, "total_events": 20290, "avg_session_length_seconds": 246},
-      {"unique_sessions": 2866, "total_events": 19990, "avg_session_length_seconds": 252}
+      {
+        "unique_sessions": 695,
+        "total_events": 5087,
+        "avg_session_length_seconds": 237
+      },
+      {
+        "unique_sessions": 2376,
+        "total_events": 17437,
+        "avg_session_length_seconds": 236
+      },
+      {
+        "unique_sessions": 2546,
+        "total_events": 19467,
+        "avg_session_length_seconds": 246
+      },
+      {
+        "unique_sessions": 3338,
+        "total_events": 25039,
+        "avg_session_length_seconds": 244
+      },
+      {
+        "unique_sessions": 3225,
+        "total_events": 26820,
+        "avg_session_length_seconds": 269
+      }
+    ],
+    "summary": {
+      "total_sessions": 12180,
+      "sessions_with_duration": 11534,
+      "avg_session_length_seconds": 249
+    },
+    "top_events_current_period": [
+      {
+        "event_name": "home_viewed",
+        "count": 667
+      },
+      {
+        "event_name": "app_opened",
+        "count": 417
+      },
+      {
+        "event_name": "onboarding_started",
+        "count": 375
+      },
+      {
+        "event_name": "onboarding_completed",
+        "count": 267
+      },
+      {
+        "event_name": "account_created",
+        "count": 250
+      }
     ]
   },
   "dau_monthly": {
     "app_name": "Acme Fitness",
     "granularity": "month",
     "active_sessions": [
-      {"unique_sessions": 12180, "total_events": 84055, "avg_session_length_seconds": 249}
+      {
+        "unique_sessions": 12180,
+        "total_events": 93850,
+        "avg_session_length_seconds": 249
+      }
+    ],
+    "summary": {
+      "total_sessions": 12180,
+      "sessions_with_duration": 11534,
+      "avg_session_length_seconds": 249
+    },
+    "top_events_current_period": [
+      {
+        "event_name": "home_viewed",
+        "count": 667
+      },
+      {
+        "event_name": "app_opened",
+        "count": 417
+      },
+      {
+        "event_name": "onboarding_started",
+        "count": 375
+      },
+      {
+        "event_name": "onboarding_completed",
+        "count": 267
+      },
+      {
+        "event_name": "account_created",
+        "count": 250
+      }
     ]
   },
   "time_to_conversion": {
-    "app": {"name": "Acme Fitness", "slug": "acme-fitness"},
-    "filters": {"conversion_events": ["purchase_completed"]},
+    "app": {
+      "name": "Acme Fitness",
+      "slug": "acme-fitness"
+    },
+    "filters": {
+      "conversion_events": [
+        "purchase_monthly",
+        "purchase_annual"
+      ]
+    },
     "data_quality": {
       "sessions_with_conversions": 450,
       "total_sessions": 12180,
@@ -204,15 +655,37 @@
       "p90_minutes": 45.4
     },
     "time_distribution": {
-      "under_5_min": {"count": 68, "percent": 15.1},
-      "5_to_15_min": {"count": 180, "percent": 40.0},
-      "15_to_60_min": {"count": 158, "percent": 35.1},
-      "1_to_2_hours": {"count": 44, "percent": 9.8}
+      "under_5_min": {
+        "count": 68,
+        "percent": 15.1
+      },
+      "5_to_15_min": {
+        "count": 180,
+        "percent": 40.0
+      },
+      "15_to_60_min": {
+        "count": 158,
+        "percent": 35.1
+      },
+      "1_to_2_hours": {
+        "count": 44,
+        "percent": 9.8
+      }
     }
   },
   "conversion_paths": {
-    "app": {"name": "Acme Fitness", "slug": "acme-fitness"},
-    "filters": {"conversion_events": ["purchase_completed"], "limit": 5},
+    "app": {
+      "name": "Acme Fitness",
+      "slug": "acme-fitness"
+    },
+    "filters": {
+      "conversion_events": [
+        "purchase_monthly",
+        "purchase_annual"
+      ],
+      "limit": 5,
+      "group_events": true
+    },
     "data_quality": {
       "total_converting_sessions": 450,
       "paths_analyzed": 420,
@@ -221,35 +694,68 @@
     "top_conversion_paths": [
       {
         "rank": 1,
-        "path": ["app_opened", "onboarding_completed", "home_viewed", "paywall_viewed", "free_trial_started", "purchase_completed"],
+        "path": [
+          "app_opened",
+          "onboarding_completed",
+          "home_viewed",
+          "paywall_viewed",
+          "free_trial_started",
+          "purchase"
+        ],
         "sessions": 135,
-        "conversion_rate": 0.30,
+        "conversion_rate": 0.3,
         "avg_duration_minutes": 18.5
       },
       {
         "rank": 2,
-        "path": ["app_opened", "onboarding_completed", "feature_tutorial_viewed", "paywall_viewed", "purchase_completed"],
+        "path": [
+          "app_opened",
+          "onboarding_completed",
+          "feature_tutorial_viewed",
+          "paywall_viewed",
+          "purchase"
+        ],
         "sessions": 98,
         "conversion_rate": 0.22,
         "avg_duration_minutes": 14.2
       },
       {
         "rank": 3,
-        "path": ["app_opened", "home_viewed", "search_performed", "paywall_viewed", "free_trial_started", "purchase_completed"],
+        "path": [
+          "app_opened",
+          "home_viewed",
+          "workout",
+          "paywall_viewed",
+          "free_trial_started",
+          "purchase"
+        ],
         "sessions": 72,
         "conversion_rate": 0.16,
         "avg_duration_minutes": 22.8
       },
       {
         "rank": 4,
-        "path": ["app_opened", "push_notification_enabled", "home_viewed", "paywall_viewed", "purchase_completed"],
+        "path": [
+          "app_opened",
+          "push_notification_enabled",
+          "home_viewed",
+          "paywall_viewed",
+          "purchase"
+        ],
         "sessions": 58,
         "conversion_rate": 0.13,
         "avg_duration_minutes": 11.5
       },
       {
         "rank": 5,
-        "path": ["app_opened", "onboarding_completed", "home_viewed", "profile_viewed", "paywall_viewed", "purchase_completed"],
+        "path": [
+          "app_opened",
+          "onboarding_completed",
+          "home_viewed",
+          "profile_viewed",
+          "paywall_viewed",
+          "purchase"
+        ],
         "sessions": 42,
         "conversion_rate": 0.09,
         "avg_duration_minutes": 25.3
@@ -257,8 +763,17 @@
     ]
   },
   "drop_off": {
-    "app": {"name": "Acme Fitness", "slug": "acme-fitness"},
-    "filters": {"conversion_events": ["purchase_completed"]},
+    "app": {
+      "name": "Acme Fitness",
+      "slug": "acme-fitness"
+    },
+    "filters": {
+      "conversion_events": [
+        "purchase_monthly",
+        "purchase_annual"
+      ],
+      "group_events": true
+    },
     "data_quality": {
       "total_sessions": 12180,
       "converting_sessions": 450,
@@ -266,35 +781,172 @@
       "conversion_rate": 0.037
     },
     "drop_off_points": [
-      {"rank": 1, "event": "paywall_viewed", "sessions_dropped": 2250, "drop_off_rate": 0.60, "avg_time_before_exit_minutes": 2.8, "impact_score": 0.92},
-      {"rank": 2, "event": "onboarding_started", "sessions_dropped": 3250, "drop_off_rate": 0.29, "avg_time_before_exit_minutes": 1.2, "impact_score": 0.78},
-      {"rank": 3, "event": "home_viewed", "sessions_dropped": 1850, "drop_off_rate": 0.16, "avg_time_before_exit_minutes": 4.5, "impact_score": 0.65},
-      {"rank": 4, "event": "free_trial_started", "sessions_dropped": 1050, "drop_off_rate": 0.70, "avg_time_before_exit_minutes": 6.2, "impact_score": 0.58},
-      {"rank": 5, "event": "settings_opened", "sessions_dropped": 890, "drop_off_rate": 0.30, "avg_time_before_exit_minutes": 0.8, "impact_score": 0.45}
+      {
+        "rank": 1,
+        "event": "onboarding_started",
+        "sessions_dropped": 3250,
+        "drop_off_rate": 0.2771,
+        "avg_time_before_exit_minutes": 1.2,
+        "impact_score": 0.78
+      },
+      {
+        "rank": 2,
+        "event": "paywall_viewed",
+        "sessions_dropped": 2250,
+        "drop_off_rate": 0.1918,
+        "avg_time_before_exit_minutes": 2.8,
+        "impact_score": 0.92
+      },
+      {
+        "rank": 3,
+        "event": "home_viewed",
+        "sessions_dropped": 1850,
+        "drop_off_rate": 0.1577,
+        "avg_time_before_exit_minutes": 4.5,
+        "impact_score": 0.65
+      },
+      {
+        "rank": 4,
+        "event": "workout",
+        "sessions_dropped": 1640,
+        "drop_off_rate": 0.1398,
+        "avg_time_before_exit_minutes": 24.5,
+        "impact_score": 0.18
+      },
+      {
+        "rank": 5,
+        "event": "free_trial_started",
+        "sessions_dropped": 1050,
+        "drop_off_rate": 0.0895,
+        "avg_time_before_exit_minutes": 6.2,
+        "impact_score": 0.58
+      },
+      {
+        "rank": 6,
+        "event": "settings_opened",
+        "sessions_dropped": 890,
+        "drop_off_rate": 0.0759,
+        "avg_time_before_exit_minutes": 0.8,
+        "impact_score": 0.45
+      }
     ]
   },
   "event_correlation": {
-    "app": {"name": "Acme Fitness", "slug": "acme-fitness"},
-    "filters": {"conversion_events": ["purchase_completed"]},
+    "app": {
+      "name": "Acme Fitness",
+      "slug": "acme-fitness"
+    },
+    "filters": {
+      "conversion_events": [
+        "purchase_monthly",
+        "purchase_annual"
+      ],
+      "group_events": true
+    },
     "data_quality": {
       "total_sessions": 12180,
       "converting_sessions": 450,
       "non_converting_sessions": 11730,
       "baseline_conversion_rate": 0.037,
-      "events_analyzed": 16
+      "events_analyzed": 11
     },
     "positive_correlations": [
-      {"rank": 1, "event": "push_notification_enabled", "lift_percent": 240.5, "sessions_with_event": 2000, "conversion_rate_with": 0.126, "conversion_rate_without": 0.037},
-      {"rank": 2, "event": "app_shared_with_friend", "lift_percent": 310.8, "sessions_with_event": 625, "conversion_rate_with": 0.152, "conversion_rate_without": 0.037},
-      {"rank": 3, "event": "feature_tutorial_viewed", "lift_percent": 178.4, "sessions_with_event": 2250, "conversion_rate_with": 0.103, "conversion_rate_without": 0.037},
-      {"rank": 4, "event": "search_performed", "lift_percent": 145.9, "sessions_with_event": 4500, "conversion_rate_with": 0.091, "conversion_rate_without": 0.037},
-      {"rank": 5, "event": "app_rated", "lift_percent": 356.8, "sessions_with_event": 375, "conversion_rate_with": 0.169, "conversion_rate_without": 0.037}
+      {
+        "rank": 1,
+        "event": "workout",
+        "lift_percent": 181.0,
+        "sessions_with_event": 6230,
+        "conversion_rate_with": 0.059,
+        "conversion_rate_without": 0.021,
+        "sessions_without_event": 5950,
+        "converts_with": 368,
+        "converts_without": 125
+      },
+      {
+        "rank": 2,
+        "event": "push_notification_enabled",
+        "lift_percent": 240.5,
+        "sessions_with_event": 2000,
+        "conversion_rate_with": 0.126,
+        "conversion_rate_without": 0.037,
+        "sessions_without_event": 10180,
+        "converts_with": 252,
+        "converts_without": 377
+      },
+      {
+        "rank": 3,
+        "event": "app_shared_with_friend",
+        "lift_percent": 310.8,
+        "sessions_with_event": 625,
+        "conversion_rate_with": 0.152,
+        "conversion_rate_without": 0.037,
+        "sessions_without_event": 11555,
+        "converts_with": 95,
+        "converts_without": 428
+      },
+      {
+        "rank": 4,
+        "event": "feature_tutorial_viewed",
+        "lift_percent": 178.4,
+        "sessions_with_event": 2250,
+        "conversion_rate_with": 0.103,
+        "conversion_rate_without": 0.037,
+        "sessions_without_event": 9930,
+        "converts_with": 232,
+        "converts_without": 367
+      },
+      {
+        "rank": 5,
+        "event": "search_performed",
+        "lift_percent": 145.9,
+        "sessions_with_event": 4500,
+        "conversion_rate_with": 0.091,
+        "conversion_rate_without": 0.037,
+        "sessions_without_event": 7680,
+        "converts_with": 410,
+        "converts_without": 284
+      },
+      {
+        "rank": 6,
+        "event": "app_rated",
+        "lift_percent": 356.8,
+        "sessions_with_event": 375,
+        "conversion_rate_with": 0.169,
+        "conversion_rate_without": 0.037,
+        "sessions_without_event": 11805,
+        "converts_with": 63,
+        "converts_without": 437
+      }
     ],
     "negative_correlations": [
-      {"rank": 1, "event": "purchase_failed", "lift_percent": -78.4, "sessions_with_event": 100, "conversion_rate_with": 0.008, "conversion_rate_without": 0.037},
-      {"rank": 2, "event": "settings_opened", "lift_percent": -45.9, "sessions_with_event": 3000, "conversion_rate_with": 0.020, "conversion_rate_without": 0.037}
+      {
+        "rank": 1,
+        "event": "payment_failed",
+        "lift_percent": -78.4,
+        "sessions_with_event": 100,
+        "conversion_rate_with": 0.008,
+        "conversion_rate_without": 0.037,
+        "sessions_without_event": 12080,
+        "converts_with": 1,
+        "converts_without": 447
+      },
+      {
+        "rank": 2,
+        "event": "settings_opened",
+        "lift_percent": -45.9,
+        "sessions_with_event": 3000,
+        "conversion_rate_with": 0.02,
+        "conversion_rate_without": 0.037,
+        "sessions_without_event": 9180,
+        "converts_with": 60,
+        "converts_without": 340
+      }
     ],
-    "neutral_events": ["app_opened", "home_viewed", "profile_viewed"]
+    "neutral_events": [
+      "app_opened",
+      "home_viewed",
+      "profile_viewed"
+    ]
   },
   "segments_platform": {
     "app_name": "Acme Fitness",
@@ -309,74 +961,262 @@
     "segments": [
       {
         "segment": "iOS",
-        "summary": {"total_active_sessions": 7308, "total_conversions": 292, "conversion_rate": 0.040},
+        "summary": {
+          "total_active_sessions": 7310,
+          "total_conversions": 292,
+          "conversion_rate": 0.0399
+        },
         "periods": [
-          {"active_sessions": 231, "conversions": 9},
-          {"active_sessions": 235, "conversions": 10},
-          {"active_sessions": 246, "conversions": 10},
-          {"active_sessions": 239, "conversions": 9},
-          {"active_sessions": 252, "conversions": 10},
-          {"active_sessions": 267, "conversions": 11},
-          {"active_sessions": 245, "conversions": 10},
-          {"active_sessions": 234, "conversions": 9},
-          {"active_sessions": 231, "conversions": 9},
-          {"active_sessions": 237, "conversions": 9},
-          {"active_sessions": 243, "conversions": 10},
-          {"active_sessions": 249, "conversions": 10},
-          {"active_sessions": 263, "conversions": 11},
-          {"active_sessions": 255, "conversions": 10},
-          {"active_sessions": 234, "conversions": 9},
-          {"active_sessions": 231, "conversions": 9},
-          {"active_sessions": 240, "conversions": 10},
-          {"active_sessions": 245, "conversions": 10},
-          {"active_sessions": 251, "conversions": 10},
-          {"active_sessions": 265, "conversions": 11},
-          {"active_sessions": 253, "conversions": 10},
-          {"active_sessions": 233, "conversions": 9},
-          {"active_sessions": 228, "conversions": 9},
-          {"active_sessions": 239, "conversions": 10},
-          {"active_sessions": 247, "conversions": 10},
-          {"active_sessions": 252, "conversions": 10},
-          {"active_sessions": 269, "conversions": 11},
-          {"active_sessions": 257, "conversions": 10},
-          {"active_sessions": 237, "conversions": 9},
-          {"active_sessions": 231, "conversions": 9}
+          {
+            "active_sessions": 218,
+            "conversions": 6
+          },
+          {
+            "active_sessions": 199,
+            "conversions": 6
+          },
+          {
+            "active_sessions": 191,
+            "conversions": 6
+          },
+          {
+            "active_sessions": 188,
+            "conversions": 6
+          },
+          {
+            "active_sessions": 163,
+            "conversions": 5
+          },
+          {
+            "active_sessions": 182,
+            "conversions": 6
+          },
+          {
+            "active_sessions": 253,
+            "conversions": 8
+          },
+          {
+            "active_sessions": 231,
+            "conversions": 8
+          },
+          {
+            "active_sessions": 218,
+            "conversions": 7
+          },
+          {
+            "active_sessions": 203,
+            "conversions": 7
+          },
+          {
+            "active_sessions": 198,
+            "conversions": 7
+          },
+          {
+            "active_sessions": 184,
+            "conversions": 7
+          },
+          {
+            "active_sessions": 196,
+            "conversions": 7
+          },
+          {
+            "active_sessions": 271,
+            "conversions": 10
+          },
+          {
+            "active_sessions": 251,
+            "conversions": 10
+          },
+          {
+            "active_sessions": 224,
+            "conversions": 9
+          },
+          {
+            "active_sessions": 222,
+            "conversions": 9
+          },
+          {
+            "active_sessions": 220,
+            "conversions": 9
+          },
+          {
+            "active_sessions": 341,
+            "conversions": 14
+          },
+          {
+            "active_sessions": 312,
+            "conversions": 13
+          },
+          {
+            "active_sessions": 347,
+            "conversions": 15
+          },
+          {
+            "active_sessions": 287,
+            "conversions": 13
+          },
+          {
+            "active_sessions": 275,
+            "conversions": 12
+          },
+          {
+            "active_sessions": 261,
+            "conversions": 12
+          },
+          {
+            "active_sessions": 260,
+            "conversions": 12
+          },
+          {
+            "active_sessions": 232,
+            "conversions": 11
+          },
+          {
+            "active_sessions": 241,
+            "conversions": 12
+          },
+          {
+            "active_sessions": 337,
+            "conversions": 16
+          },
+          {
+            "active_sessions": 313,
+            "conversions": 15
+          },
+          {
+            "active_sessions": 292,
+            "conversions": 14
+          }
         ]
       },
       {
         "segment": "Android",
-        "summary": {"total_active_sessions": 4872, "total_conversions": 158, "conversion_rate": 0.032},
+        "summary": {
+          "total_active_sessions": 4870,
+          "total_conversions": 158,
+          "conversion_rate": 0.0324
+        },
         "periods": [
-          {"active_sessions": 154, "conversions": 5},
-          {"active_sessions": 157, "conversions": 5},
-          {"active_sessions": 164, "conversions": 5},
-          {"active_sessions": 159, "conversions": 5},
-          {"active_sessions": 168, "conversions": 5},
-          {"active_sessions": 178, "conversions": 6},
-          {"active_sessions": 163, "conversions": 5},
-          {"active_sessions": 156, "conversions": 5},
-          {"active_sessions": 154, "conversions": 5},
-          {"active_sessions": 158, "conversions": 5},
-          {"active_sessions": 162, "conversions": 5},
-          {"active_sessions": 166, "conversions": 5},
-          {"active_sessions": 175, "conversions": 6},
-          {"active_sessions": 170, "conversions": 5},
-          {"active_sessions": 156, "conversions": 5},
-          {"active_sessions": 154, "conversions": 5},
-          {"active_sessions": 160, "conversions": 5},
-          {"active_sessions": 163, "conversions": 5},
-          {"active_sessions": 167, "conversions": 5},
-          {"active_sessions": 177, "conversions": 6},
-          {"active_sessions": 169, "conversions": 5},
-          {"active_sessions": 155, "conversions": 5},
-          {"active_sessions": 152, "conversions": 5},
-          {"active_sessions": 159, "conversions": 5},
-          {"active_sessions": 165, "conversions": 5},
-          {"active_sessions": 168, "conversions": 5},
-          {"active_sessions": 179, "conversions": 6},
-          {"active_sessions": 171, "conversions": 5},
-          {"active_sessions": 158, "conversions": 5},
-          {"active_sessions": 154, "conversions": 5}
+          {
+            "active_sessions": 145,
+            "conversions": 3
+          },
+          {
+            "active_sessions": 133,
+            "conversions": 3
+          },
+          {
+            "active_sessions": 128,
+            "conversions": 3
+          },
+          {
+            "active_sessions": 125,
+            "conversions": 3
+          },
+          {
+            "active_sessions": 108,
+            "conversions": 3
+          },
+          {
+            "active_sessions": 121,
+            "conversions": 3
+          },
+          {
+            "active_sessions": 169,
+            "conversions": 4
+          },
+          {
+            "active_sessions": 154,
+            "conversions": 4
+          },
+          {
+            "active_sessions": 145,
+            "conversions": 4
+          },
+          {
+            "active_sessions": 136,
+            "conversions": 4
+          },
+          {
+            "active_sessions": 132,
+            "conversions": 4
+          },
+          {
+            "active_sessions": 122,
+            "conversions": 4
+          },
+          {
+            "active_sessions": 131,
+            "conversions": 4
+          },
+          {
+            "active_sessions": 181,
+            "conversions": 6
+          },
+          {
+            "active_sessions": 167,
+            "conversions": 5
+          },
+          {
+            "active_sessions": 150,
+            "conversions": 5
+          },
+          {
+            "active_sessions": 148,
+            "conversions": 5
+          },
+          {
+            "active_sessions": 146,
+            "conversions": 5
+          },
+          {
+            "active_sessions": 227,
+            "conversions": 8
+          },
+          {
+            "active_sessions": 208,
+            "conversions": 7
+          },
+          {
+            "active_sessions": 231,
+            "conversions": 8
+          },
+          {
+            "active_sessions": 191,
+            "conversions": 7
+          },
+          {
+            "active_sessions": 183,
+            "conversions": 7
+          },
+          {
+            "active_sessions": 174,
+            "conversions": 7
+          },
+          {
+            "active_sessions": 174,
+            "conversions": 7
+          },
+          {
+            "active_sessions": 154,
+            "conversions": 6
+          },
+          {
+            "active_sessions": 160,
+            "conversions": 6
+          },
+          {
+            "active_sessions": 224,
+            "conversions": 9
+          },
+          {
+            "active_sessions": 209,
+            "conversions": 9
+          },
+          {
+            "active_sessions": 194,
+            "conversions": 5
+          }
         ]
       }
     ]
@@ -392,80 +1232,498 @@
       "overall_conversion_rate": 0.037
     },
     "segments": [
-      {"segment": "US", "summary": {"total_active_sessions": 4263, "total_conversions": 171, "conversion_rate": 0.040}},
-      {"segment": "GB", "summary": {"total_active_sessions": 1463, "total_conversions": 54, "conversion_rate": 0.037}},
-      {"segment": "DE", "summary": {"total_active_sessions": 1097, "total_conversions": 38, "conversion_rate": 0.035}},
-      {"segment": "CA", "summary": {"total_active_sessions": 975, "total_conversions": 37, "conversion_rate": 0.038}},
-      {"segment": "AU", "summary": {"total_active_sessions": 731, "total_conversions": 29, "conversion_rate": 0.040}},
-      {"segment": "FR", "summary": {"total_active_sessions": 609, "total_conversions": 21, "conversion_rate": 0.034}},
-      {"segment": "NL", "summary": {"total_active_sessions": 488, "total_conversions": 19, "conversion_rate": 0.039}},
-      {"segment": "SE", "summary": {"total_active_sessions": 366, "total_conversions": 15, "conversion_rate": 0.041}},
-      {"segment": "JP", "summary": {"total_active_sessions": 305, "total_conversions": 10, "conversion_rate": 0.033}},
-      {"segment": "BR", "summary": {"total_active_sessions": 244, "total_conversions": 8, "conversion_rate": 0.033}}
+      {
+        "segment": "US",
+        "summary": {
+          "total_active_sessions": 4263,
+          "total_conversions": 171,
+          "conversion_rate": 0.04
+        }
+      },
+      {
+        "segment": "GB",
+        "summary": {
+          "total_active_sessions": 1463,
+          "total_conversions": 54,
+          "conversion_rate": 0.037
+        }
+      },
+      {
+        "segment": "DE",
+        "summary": {
+          "total_active_sessions": 1097,
+          "total_conversions": 38,
+          "conversion_rate": 0.035
+        }
+      },
+      {
+        "segment": "CA",
+        "summary": {
+          "total_active_sessions": 975,
+          "total_conversions": 37,
+          "conversion_rate": 0.038
+        }
+      },
+      {
+        "segment": "AU",
+        "summary": {
+          "total_active_sessions": 731,
+          "total_conversions": 29,
+          "conversion_rate": 0.04
+        }
+      },
+      {
+        "segment": "FR",
+        "summary": {
+          "total_active_sessions": 609,
+          "total_conversions": 21,
+          "conversion_rate": 0.034
+        }
+      },
+      {
+        "segment": "NL",
+        "summary": {
+          "total_active_sessions": 488,
+          "total_conversions": 19,
+          "conversion_rate": 0.039
+        }
+      },
+      {
+        "segment": "SE",
+        "summary": {
+          "total_active_sessions": 366,
+          "total_conversions": 15,
+          "conversion_rate": 0.041
+        }
+      },
+      {
+        "segment": "JP",
+        "summary": {
+          "total_active_sessions": 305,
+          "total_conversions": 10,
+          "conversion_rate": 0.033
+        }
+      },
+      {
+        "segment": "BR",
+        "summary": {
+          "total_active_sessions": 244,
+          "total_conversions": 8,
+          "conversion_rate": 0.033
+        }
+      }
     ]
   },
   "segments_events_per_session": {
     "app_name": "Acme Fitness",
-    "segment_by": "events_per_session",
+    "segment_by": "depth",
     "segments": [
-      {"segment": "1-2", "summary": {"total_active_sessions": 3045, "total_conversions": 15, "conversion_rate": 0.005}},
-      {"segment": "3-5", "summary": {"total_active_sessions": 4872, "total_conversions": 97, "conversion_rate": 0.020}},
-      {"segment": "6-10", "summary": {"total_active_sessions": 3045, "total_conversions": 183, "conversion_rate": 0.060}},
-      {"segment": "11+", "summary": {"total_active_sessions": 1218, "total_conversions": 155, "conversion_rate": 0.127}}
+      {
+        "segment": "1",
+        "summary": {
+          "total_active_sessions": 1520,
+          "total_conversions": 4,
+          "conversion_rate": 0.0026
+        }
+      },
+      {
+        "segment": "2",
+        "summary": {
+          "total_active_sessions": 1525,
+          "total_conversions": 11,
+          "conversion_rate": 0.0072
+        }
+      },
+      {
+        "segment": "3",
+        "summary": {
+          "total_active_sessions": 1640,
+          "total_conversions": 24,
+          "conversion_rate": 0.0146
+        }
+      },
+      {
+        "segment": "4",
+        "summary": {
+          "total_active_sessions": 1610,
+          "total_conversions": 33,
+          "conversion_rate": 0.0205
+        }
+      },
+      {
+        "segment": "5",
+        "summary": {
+          "total_active_sessions": 1622,
+          "total_conversions": 40,
+          "conversion_rate": 0.0247
+        }
+      },
+      {
+        "segment": "6-10",
+        "summary": {
+          "total_active_sessions": 3045,
+          "total_conversions": 183,
+          "conversion_rate": 0.0601
+        }
+      },
+      {
+        "segment": "11-20",
+        "summary": {
+          "total_active_sessions": 930,
+          "total_conversions": 112,
+          "conversion_rate": 0.1204
+        }
+      },
+      {
+        "segment": "21+",
+        "summary": {
+          "total_active_sessions": 288,
+          "total_conversions": 43,
+          "conversion_rate": 0.1493
+        }
+      }
     ]
   },
   "segments_hour": {
     "app_name": "Acme Fitness",
     "segment_by": "hour",
     "segments": [
-      {"segment": "0", "summary": {"total_active_sessions": 183, "total_conversions": 3, "conversion_rate": 0.016}},
-      {"segment": "1", "summary": {"total_active_sessions": 122, "total_conversions": 2, "conversion_rate": 0.016}},
-      {"segment": "2", "summary": {"total_active_sessions": 85, "total_conversions": 2, "conversion_rate": 0.024}},
-      {"segment": "3", "summary": {"total_active_sessions": 61, "total_conversions": 1, "conversion_rate": 0.016}},
-      {"segment": "4", "summary": {"total_active_sessions": 73, "total_conversions": 1, "conversion_rate": 0.014}},
-      {"segment": "5", "summary": {"total_active_sessions": 122, "total_conversions": 2, "conversion_rate": 0.016}},
-      {"segment": "6", "summary": {"total_active_sessions": 305, "total_conversions": 8, "conversion_rate": 0.026}},
-      {"segment": "7", "summary": {"total_active_sessions": 548, "total_conversions": 19, "conversion_rate": 0.035}},
-      {"segment": "8", "summary": {"total_active_sessions": 731, "total_conversions": 29, "conversion_rate": 0.040}},
-      {"segment": "9", "summary": {"total_active_sessions": 609, "total_conversions": 27, "conversion_rate": 0.044}},
-      {"segment": "10", "summary": {"total_active_sessions": 548, "total_conversions": 22, "conversion_rate": 0.040}},
-      {"segment": "11", "summary": {"total_active_sessions": 487, "total_conversions": 17, "conversion_rate": 0.035}},
-      {"segment": "12", "summary": {"total_active_sessions": 731, "total_conversions": 26, "conversion_rate": 0.036}},
-      {"segment": "13", "summary": {"total_active_sessions": 609, "total_conversions": 21, "conversion_rate": 0.034}},
-      {"segment": "14", "summary": {"total_active_sessions": 548, "total_conversions": 18, "conversion_rate": 0.033}},
-      {"segment": "15", "summary": {"total_active_sessions": 487, "total_conversions": 17, "conversion_rate": 0.035}},
-      {"segment": "16", "summary": {"total_active_sessions": 548, "total_conversions": 19, "conversion_rate": 0.035}},
-      {"segment": "17", "summary": {"total_active_sessions": 609, "total_conversions": 24, "conversion_rate": 0.039}},
-      {"segment": "18", "summary": {"total_active_sessions": 731, "total_conversions": 33, "conversion_rate": 0.045}},
-      {"segment": "19", "summary": {"total_active_sessions": 853, "total_conversions": 43, "conversion_rate": 0.050}},
-      {"segment": "20", "summary": {"total_active_sessions": 975, "total_conversions": 53, "conversion_rate": 0.054}},
-      {"segment": "21", "summary": {"total_active_sessions": 853, "total_conversions": 43, "conversion_rate": 0.050}},
-      {"segment": "22", "summary": {"total_active_sessions": 609, "total_conversions": 27, "conversion_rate": 0.044}},
-      {"segment": "23", "summary": {"total_active_sessions": 365, "total_conversions": 13, "conversion_rate": 0.036}}
+      {
+        "segment": "0",
+        "summary": {
+          "total_active_sessions": 183,
+          "total_conversions": 3,
+          "conversion_rate": 0.016
+        }
+      },
+      {
+        "segment": "1",
+        "summary": {
+          "total_active_sessions": 122,
+          "total_conversions": 2,
+          "conversion_rate": 0.016
+        }
+      },
+      {
+        "segment": "2",
+        "summary": {
+          "total_active_sessions": 85,
+          "total_conversions": 2,
+          "conversion_rate": 0.024
+        }
+      },
+      {
+        "segment": "3",
+        "summary": {
+          "total_active_sessions": 61,
+          "total_conversions": 1,
+          "conversion_rate": 0.016
+        }
+      },
+      {
+        "segment": "4",
+        "summary": {
+          "total_active_sessions": 73,
+          "total_conversions": 1,
+          "conversion_rate": 0.014
+        }
+      },
+      {
+        "segment": "5",
+        "summary": {
+          "total_active_sessions": 122,
+          "total_conversions": 2,
+          "conversion_rate": 0.016
+        }
+      },
+      {
+        "segment": "6",
+        "summary": {
+          "total_active_sessions": 305,
+          "total_conversions": 8,
+          "conversion_rate": 0.026
+        }
+      },
+      {
+        "segment": "7",
+        "summary": {
+          "total_active_sessions": 548,
+          "total_conversions": 19,
+          "conversion_rate": 0.035
+        }
+      },
+      {
+        "segment": "8",
+        "summary": {
+          "total_active_sessions": 731,
+          "total_conversions": 29,
+          "conversion_rate": 0.04
+        }
+      },
+      {
+        "segment": "9",
+        "summary": {
+          "total_active_sessions": 609,
+          "total_conversions": 27,
+          "conversion_rate": 0.044
+        }
+      },
+      {
+        "segment": "10",
+        "summary": {
+          "total_active_sessions": 548,
+          "total_conversions": 22,
+          "conversion_rate": 0.04
+        }
+      },
+      {
+        "segment": "11",
+        "summary": {
+          "total_active_sessions": 487,
+          "total_conversions": 17,
+          "conversion_rate": 0.035
+        }
+      },
+      {
+        "segment": "12",
+        "summary": {
+          "total_active_sessions": 731,
+          "total_conversions": 26,
+          "conversion_rate": 0.036
+        }
+      },
+      {
+        "segment": "13",
+        "summary": {
+          "total_active_sessions": 609,
+          "total_conversions": 21,
+          "conversion_rate": 0.034
+        }
+      },
+      {
+        "segment": "14",
+        "summary": {
+          "total_active_sessions": 548,
+          "total_conversions": 18,
+          "conversion_rate": 0.033
+        }
+      },
+      {
+        "segment": "15",
+        "summary": {
+          "total_active_sessions": 487,
+          "total_conversions": 17,
+          "conversion_rate": 0.035
+        }
+      },
+      {
+        "segment": "16",
+        "summary": {
+          "total_active_sessions": 548,
+          "total_conversions": 19,
+          "conversion_rate": 0.035
+        }
+      },
+      {
+        "segment": "17",
+        "summary": {
+          "total_active_sessions": 609,
+          "total_conversions": 24,
+          "conversion_rate": 0.039
+        }
+      },
+      {
+        "segment": "18",
+        "summary": {
+          "total_active_sessions": 731,
+          "total_conversions": 33,
+          "conversion_rate": 0.045
+        }
+      },
+      {
+        "segment": "19",
+        "summary": {
+          "total_active_sessions": 853,
+          "total_conversions": 43,
+          "conversion_rate": 0.05
+        }
+      },
+      {
+        "segment": "20",
+        "summary": {
+          "total_active_sessions": 975,
+          "total_conversions": 53,
+          "conversion_rate": 0.054
+        }
+      },
+      {
+        "segment": "21",
+        "summary": {
+          "total_active_sessions": 853,
+          "total_conversions": 43,
+          "conversion_rate": 0.05
+        }
+      },
+      {
+        "segment": "22",
+        "summary": {
+          "total_active_sessions": 609,
+          "total_conversions": 27,
+          "conversion_rate": 0.044
+        }
+      },
+      {
+        "segment": "23",
+        "summary": {
+          "total_active_sessions": 365,
+          "total_conversions": 13,
+          "conversion_rate": 0.036
+        }
+      }
     ]
   },
   "globe_stats": {
     "data": [
-      {"country": "US", "count": 29420, "sessions": 4263, "conversions": 171, "conversion_rate": 4.0},
-      {"country": "GB", "count": 10087, "sessions": 1463, "conversions": 54, "conversion_rate": 3.7},
-      {"country": "DE", "count": 7565, "sessions": 1097, "conversions": 38, "conversion_rate": 3.5},
-      {"country": "CA", "count": 6725, "sessions": 975, "conversions": 37, "conversion_rate": 3.8},
-      {"country": "AU", "count": 5044, "sessions": 731, "conversions": 29, "conversion_rate": 4.0},
-      {"country": "FR", "count": 4203, "sessions": 609, "conversions": 21, "conversion_rate": 3.4},
-      {"country": "NL", "count": 3363, "sessions": 488, "conversions": 19, "conversion_rate": 3.9},
-      {"country": "SE", "count": 2522, "sessions": 366, "conversions": 15, "conversion_rate": 4.1},
-      {"country": "JP", "count": 2102, "sessions": 305, "conversions": 10, "conversion_rate": 3.3},
-      {"country": "BR", "count": 1682, "sessions": 244, "conversions": 8, "conversion_rate": 3.3},
-      {"country": "ES", "count": 1261, "sessions": 183, "conversions": 7, "conversion_rate": 3.8},
-      {"country": "IT", "count": 1177, "sessions": 171, "conversions": 6, "conversion_rate": 3.5},
-      {"country": "MX", "count": 1009, "sessions": 146, "conversions": 5, "conversion_rate": 3.4},
-      {"country": "IN", "count": 925, "sessions": 134, "conversions": 4, "conversion_rate": 3.0},
-      {"country": "PL", "count": 841, "sessions": 122, "conversions": 5, "conversion_rate": 4.1},
-      {"country": "BE", "count": 757, "sessions": 110, "conversions": 4, "conversion_rate": 3.6},
-      {"country": "CH", "count": 673, "sessions": 98, "conversions": 4, "conversion_rate": 4.1},
-      {"country": "AT", "count": 589, "sessions": 85, "conversions": 3, "conversion_rate": 3.5},
-      {"country": "DK", "count": 505, "sessions": 73, "conversions": 3, "conversion_rate": 4.1},
-      {"country": "NO", "count": 421, "sessions": 61, "conversions": 2, "conversion_rate": 3.3}
+      {
+        "country": "US",
+        "sessions": 4263,
+        "conversions": 171,
+        "conversion_rate": 4.01,
+        "events": 29420
+      },
+      {
+        "country": "GB",
+        "sessions": 1463,
+        "conversions": 54,
+        "conversion_rate": 3.69,
+        "events": 10087
+      },
+      {
+        "country": "DE",
+        "sessions": 1097,
+        "conversions": 38,
+        "conversion_rate": 3.46,
+        "events": 7565
+      },
+      {
+        "country": "CA",
+        "sessions": 975,
+        "conversions": 37,
+        "conversion_rate": 3.79,
+        "events": 6725
+      },
+      {
+        "country": "AU",
+        "sessions": 731,
+        "conversions": 29,
+        "conversion_rate": 3.97,
+        "events": 5044
+      },
+      {
+        "country": "FR",
+        "sessions": 609,
+        "conversions": 21,
+        "conversion_rate": 3.45,
+        "events": 4203
+      },
+      {
+        "country": "NL",
+        "sessions": 488,
+        "conversions": 19,
+        "conversion_rate": 3.89,
+        "events": 3363
+      },
+      {
+        "country": "SE",
+        "sessions": 366,
+        "conversions": 15,
+        "conversion_rate": 4.1,
+        "events": 2522
+      },
+      {
+        "country": "JP",
+        "sessions": 305,
+        "conversions": 10,
+        "conversion_rate": 3.28,
+        "events": 2102
+      },
+      {
+        "country": "BR",
+        "sessions": 244,
+        "conversions": 8,
+        "conversion_rate": 3.28,
+        "events": 1682
+      },
+      {
+        "country": "ES",
+        "sessions": 183,
+        "conversions": 7,
+        "conversion_rate": 3.83,
+        "events": 1261
+      },
+      {
+        "country": "IT",
+        "sessions": 171,
+        "conversions": 6,
+        "conversion_rate": 3.51,
+        "events": 1177
+      },
+      {
+        "country": "MX",
+        "sessions": 146,
+        "conversions": 5,
+        "conversion_rate": 3.42,
+        "events": 1009
+      },
+      {
+        "country": "IN",
+        "sessions": 134,
+        "conversions": 4,
+        "conversion_rate": 2.99,
+        "events": 925
+      },
+      {
+        "country": "PL",
+        "sessions": 122,
+        "conversions": 5,
+        "conversion_rate": 4.1,
+        "events": 841
+      },
+      {
+        "country": "BE",
+        "sessions": 110,
+        "conversions": 4,
+        "conversion_rate": 3.64,
+        "events": 757
+      },
+      {
+        "country": "CH",
+        "sessions": 98,
+        "conversions": 4,
+        "conversion_rate": 4.08,
+        "events": 673
+      },
+      {
+        "country": "AT",
+        "sessions": 85,
+        "conversions": 3,
+        "conversion_rate": 3.53,
+        "events": 589
+      },
+      {
+        "country": "DK",
+        "sessions": 73,
+        "conversions": 3,
+        "conversion_rate": 4.11,
+        "events": 505
+      },
+      {
+        "country": "NO",
+        "sessions": 61,
+        "conversions": 2,
+        "conversion_rate": 3.28,
+        "events": 421
+      }
     ],
     "cached": false
   },
@@ -473,37 +1731,134 @@
     "app_name": "Acme Fitness",
     "total_events": 84055,
     "countries": [
-      {"country": "US", "count": 29420, "percentage": 35.0},
-      {"country": "GB", "count": 10087, "percentage": 12.0},
-      {"country": "DE", "count": 7565, "percentage": 9.0},
-      {"country": "CA", "count": 6725, "percentage": 8.0},
-      {"country": "AU", "count": 5044, "percentage": 6.0},
-      {"country": "FR", "count": 4203, "percentage": 5.0},
-      {"country": "NL", "count": 3363, "percentage": 4.0},
-      {"country": "SE", "count": 2522, "percentage": 3.0},
-      {"country": "JP", "count": 2102, "percentage": 2.5},
-      {"country": "BR", "count": 1682, "percentage": 2.0},
-      {"country": "ES", "count": 1261, "percentage": 1.5},
-      {"country": "IT", "count": 1177, "percentage": 1.4},
-      {"country": "MX", "count": 1009, "percentage": 1.2},
-      {"country": "IN", "count": 925, "percentage": 1.1},
-      {"country": "PL", "count": 841, "percentage": 1.0},
-      {"country": "BE", "count": 757, "percentage": 0.9},
-      {"country": "CH", "count": 673, "percentage": 0.8},
-      {"country": "AT", "count": 589, "percentage": 0.7},
-      {"country": "DK", "count": 505, "percentage": 0.6},
-      {"country": "NO", "count": 421, "percentage": 0.5}
+      {
+        "country": "US",
+        "count": 29420,
+        "percentage": 35.0
+      },
+      {
+        "country": "GB",
+        "count": 10087,
+        "percentage": 12.0
+      },
+      {
+        "country": "DE",
+        "count": 7565,
+        "percentage": 9.0
+      },
+      {
+        "country": "CA",
+        "count": 6725,
+        "percentage": 8.0
+      },
+      {
+        "country": "AU",
+        "count": 5044,
+        "percentage": 6.0
+      },
+      {
+        "country": "FR",
+        "count": 4203,
+        "percentage": 5.0
+      },
+      {
+        "country": "NL",
+        "count": 3363,
+        "percentage": 4.0
+      },
+      {
+        "country": "SE",
+        "count": 2522,
+        "percentage": 3.0
+      },
+      {
+        "country": "JP",
+        "count": 2102,
+        "percentage": 2.5
+      },
+      {
+        "country": "BR",
+        "count": 1682,
+        "percentage": 2.0
+      },
+      {
+        "country": "ES",
+        "count": 1261,
+        "percentage": 1.5
+      },
+      {
+        "country": "IT",
+        "count": 1177,
+        "percentage": 1.4
+      },
+      {
+        "country": "MX",
+        "count": 1009,
+        "percentage": 1.2
+      },
+      {
+        "country": "IN",
+        "count": 925,
+        "percentage": 1.1
+      },
+      {
+        "country": "PL",
+        "count": 841,
+        "percentage": 1.0
+      },
+      {
+        "country": "BE",
+        "count": 757,
+        "percentage": 0.9
+      },
+      {
+        "country": "CH",
+        "count": 673,
+        "percentage": 0.8
+      },
+      {
+        "country": "AT",
+        "count": 589,
+        "percentage": 0.7
+      },
+      {
+        "country": "DK",
+        "count": 505,
+        "percentage": 0.6
+      },
+      {
+        "country": "NO",
+        "count": 421,
+        "percentage": 0.5
+      }
     ]
   },
   "funnel": {
     "funnel": [
-      {"step": "app_opened", "count": 12500},
-      {"step": "onboarding_completed", "count": 8000},
-      {"step": "paywall_viewed", "count": 3750},
-      {"step": "purchase_completed", "count": 450}
+      {
+        "step": "app_opened",
+        "count": 12500
+      },
+      {
+        "step": "onboarding_completed",
+        "count": 8000
+      },
+      {
+        "step": "paywall_viewed",
+        "count": 3750
+      },
+      {
+        "step": "purchase",
+        "count": 450
+      }
     ],
     "total_sessions_analyzed": 12500,
-    "steps_analyzed": ["app_opened", "onboarding_completed", "paywall_viewed", "purchase_completed"]
+    "steps_analyzed": [
+      "app_opened",
+      "onboarding_completed",
+      "paywall_viewed",
+      "purchase"
+    ]
   },
   "step_timing": {
     "transitions": [
@@ -527,7 +1882,7 @@
       },
       {
         "from": "paywall_viewed",
-        "to": "purchase_completed",
+        "to": "purchase",
         "median_seconds": 35,
         "mean_seconds": 52,
         "p25_seconds": 18,
@@ -539,6 +1894,1299 @@
       "median_total_seconds": 260,
       "mean_total_seconds": 369,
       "completion_rate": 0.036
+    },
+    "steps": [
+      "app_opened",
+      "onboarding_completed",
+      "paywall_viewed",
+      "purchase"
+    ]
+  },
+  "event_groups_state": {
+    "groups": [
+      {
+        "name": "purchase",
+        "automatic": true,
+        "events": [
+          "purchase_annual",
+          "purchase_monthly"
+        ]
+      },
+      {
+        "name": "workout",
+        "automatic": true,
+        "events": [
+          "workout_cardio",
+          "workout_strength",
+          "workout_yoga"
+        ]
+      }
+    ],
+    "separate": [],
+    "events": [
+      "account_created",
+      "app_opened",
+      "app_rated",
+      "app_shared_with_friend",
+      "feature_tutorial_viewed",
+      "free_trial_started",
+      "home_viewed",
+      "onboarding_completed",
+      "onboarding_started",
+      "payment_failed",
+      "paywall_viewed",
+      "profile_viewed",
+      "purchase_annual",
+      "purchase_monthly",
+      "push_notification_enabled",
+      "search_performed",
+      "settings_opened",
+      "workout_cardio",
+      "workout_strength",
+      "workout_yoga"
+    ]
+  },
+  "insights": {
+    "insights": [
+      {
+        "kind": "volume",
+        "html": "<code>workout_cardio</code> arrived 1,412 times, against 960 to 1,050 a week in the three weeks before.",
+        "view": "/demo/#overview"
+      },
+      {
+        "kind": "drop_off",
+        "html": "Fewer of the sessions that did not convert ended at <code>paywall_viewed</code>: 16.2%, down from 21.4% the week before.",
+        "view": "/demo/#conversion"
+      },
+      {
+        "kind": "gap",
+        "html": "Sessions on Android convert at 2.9%, against 4.6% on iOS.",
+        "view": "/demo/#segments"
+      },
+      {
+        "kind": "time",
+        "html": "Sessions reach a conversion faster: a median of 11 minutes, down from 14 minutes the week before.",
+        "view": "/demo/#conversion"
+      }
+    ],
+    "sessions": 3225,
+    "events": 26820
+  },
+  "properties": {
+    "paid": true,
+    "properties": [
+      {
+        "name": "onboarding",
+        "kind": "choice",
+        "labels": [
+          "five_steps",
+          "three_steps"
+        ]
+      },
+      {
+        "name": "paywall",
+        "kind": "choice",
+        "labels": [
+          "monthly_first",
+          "annual_first"
+        ]
+      },
+      {
+        "name": "workouts_per_week",
+        "kind": "number",
+        "labels": [
+          "under 2",
+          "2 to 4",
+          "4 to 6",
+          "6 and over"
+        ]
+      }
+    ]
+  },
+  "experiments": {
+    "paid": true,
+    "can_edit": false,
+    "is_owner": false,
+    "experiments": [
+      {
+        "id": 2,
+        "name": "Annual plan first",
+        "property": "paywall",
+        "control": "monthly_first",
+        "goal_events": [
+          "purchase"
+        ],
+        "started_days_ago": 18,
+        "ended_days_ago": null,
+        "running": true,
+        "results": {
+          "variants": [
+            {
+              "variant": "monthly_first",
+              "control": true,
+              "sessions": 1690,
+              "conversions": 176,
+              "rate": 0.1041,
+              "lift": null,
+              "confidence": null
+            },
+            {
+              "variant": "annual_first",
+              "control": false,
+              "sessions": 1710,
+              "conversions": 224,
+              "rate": 0.131,
+              "lift": 0.2578,
+              "confidence": 0.9849
+            }
+          ],
+          "mixed": 14,
+          "enough": true,
+          "verdict": {
+            "kind": "ahead",
+            "text": "annual_first converts 25.8% more often than the control, at 98% confidence."
+          }
+        }
+      },
+      {
+        "id": 1,
+        "name": "Three-step onboarding",
+        "property": "onboarding",
+        "control": "five_steps",
+        "goal_events": [
+          "account_created"
+        ],
+        "started_days_ago": 30,
+        "ended_days_ago": 19,
+        "running": false,
+        "results": {
+          "variants": [
+            {
+              "variant": "five_steps",
+              "control": true,
+              "sessions": 2410,
+              "conversions": 1490,
+              "rate": 0.6183,
+              "lift": null,
+              "confidence": null
+            },
+            {
+              "variant": "three_steps",
+              "control": false,
+              "sessions": 2385,
+              "conversions": 1502,
+              "rate": 0.6298,
+              "lift": 0.0186,
+              "confidence": 0.5894
+            }
+          ],
+          "mixed": 3,
+          "enough": true,
+          "verdict": {
+            "kind": "even",
+            "text": "No clear difference from the control."
+          }
+        }
+      }
+    ],
+    "properties": [
+      {
+        "name": "onboarding",
+        "kind": "choice",
+        "labels": [
+          "five_steps",
+          "three_steps"
+        ]
+      },
+      {
+        "name": "paywall",
+        "kind": "choice",
+        "labels": [
+          "monthly_first",
+          "annual_first"
+        ]
+      }
+    ]
+  },
+  "segments_property": {
+    "paywall": {
+      "app_name": "Acme Fitness",
+      "granularity": "day",
+      "segment_by": "property:paywall",
+      "summary": {
+        "total_segments": 2,
+        "total_conversions": 400,
+        "total_sessions": 3400,
+        "overall_conversion_rate": 0.1176
+      },
+      "segments": [
+        {
+          "segment": "monthly_first",
+          "summary": {
+            "total_active_sessions": 1690,
+            "total_conversions": 176,
+            "conversion_rate": 0.1041
+          },
+          "periods": [
+            {
+              "active_sessions": 50,
+              "conversions": 5
+            },
+            {
+              "active_sessions": 46,
+              "conversions": 5
+            },
+            {
+              "active_sessions": 44,
+              "conversions": 5
+            },
+            {
+              "active_sessions": 43,
+              "conversions": 5
+            },
+            {
+              "active_sessions": 38,
+              "conversions": 4
+            },
+            {
+              "active_sessions": 42,
+              "conversions": 4
+            },
+            {
+              "active_sessions": 59,
+              "conversions": 6
+            },
+            {
+              "active_sessions": 53,
+              "conversions": 6
+            },
+            {
+              "active_sessions": 50,
+              "conversions": 5
+            },
+            {
+              "active_sessions": 47,
+              "conversions": 5
+            },
+            {
+              "active_sessions": 46,
+              "conversions": 5
+            },
+            {
+              "active_sessions": 43,
+              "conversions": 4
+            },
+            {
+              "active_sessions": 45,
+              "conversions": 5
+            },
+            {
+              "active_sessions": 63,
+              "conversions": 7
+            },
+            {
+              "active_sessions": 58,
+              "conversions": 6
+            },
+            {
+              "active_sessions": 52,
+              "conversions": 5
+            },
+            {
+              "active_sessions": 51,
+              "conversions": 5
+            },
+            {
+              "active_sessions": 51,
+              "conversions": 5
+            },
+            {
+              "active_sessions": 79,
+              "conversions": 8
+            },
+            {
+              "active_sessions": 72,
+              "conversions": 7
+            },
+            {
+              "active_sessions": 80,
+              "conversions": 8
+            },
+            {
+              "active_sessions": 66,
+              "conversions": 7
+            },
+            {
+              "active_sessions": 64,
+              "conversions": 7
+            },
+            {
+              "active_sessions": 60,
+              "conversions": 6
+            },
+            {
+              "active_sessions": 60,
+              "conversions": 6
+            },
+            {
+              "active_sessions": 54,
+              "conversions": 6
+            },
+            {
+              "active_sessions": 56,
+              "conversions": 6
+            },
+            {
+              "active_sessions": 78,
+              "conversions": 8
+            },
+            {
+              "active_sessions": 72,
+              "conversions": 8
+            },
+            {
+              "active_sessions": 68,
+              "conversions": 7
+            }
+          ]
+        },
+        {
+          "segment": "annual_first",
+          "summary": {
+            "total_active_sessions": 1710,
+            "total_conversions": 224,
+            "conversion_rate": 0.131
+          },
+          "periods": [
+            {
+              "active_sessions": 51,
+              "conversions": 7
+            },
+            {
+              "active_sessions": 47,
+              "conversions": 6
+            },
+            {
+              "active_sessions": 45,
+              "conversions": 6
+            },
+            {
+              "active_sessions": 44,
+              "conversions": 6
+            },
+            {
+              "active_sessions": 38,
+              "conversions": 5
+            },
+            {
+              "active_sessions": 43,
+              "conversions": 5
+            },
+            {
+              "active_sessions": 59,
+              "conversions": 8
+            },
+            {
+              "active_sessions": 54,
+              "conversions": 7
+            },
+            {
+              "active_sessions": 51,
+              "conversions": 7
+            },
+            {
+              "active_sessions": 48,
+              "conversions": 6
+            },
+            {
+              "active_sessions": 46,
+              "conversions": 6
+            },
+            {
+              "active_sessions": 43,
+              "conversions": 6
+            },
+            {
+              "active_sessions": 46,
+              "conversions": 6
+            },
+            {
+              "active_sessions": 63,
+              "conversions": 8
+            },
+            {
+              "active_sessions": 59,
+              "conversions": 8
+            },
+            {
+              "active_sessions": 53,
+              "conversions": 7
+            },
+            {
+              "active_sessions": 52,
+              "conversions": 7
+            },
+            {
+              "active_sessions": 51,
+              "conversions": 7
+            },
+            {
+              "active_sessions": 80,
+              "conversions": 10
+            },
+            {
+              "active_sessions": 73,
+              "conversions": 9
+            },
+            {
+              "active_sessions": 81,
+              "conversions": 11
+            },
+            {
+              "active_sessions": 67,
+              "conversions": 9
+            },
+            {
+              "active_sessions": 64,
+              "conversions": 8
+            },
+            {
+              "active_sessions": 61,
+              "conversions": 8
+            },
+            {
+              "active_sessions": 61,
+              "conversions": 8
+            },
+            {
+              "active_sessions": 54,
+              "conversions": 7
+            },
+            {
+              "active_sessions": 56,
+              "conversions": 7
+            },
+            {
+              "active_sessions": 79,
+              "conversions": 10
+            },
+            {
+              "active_sessions": 73,
+              "conversions": 10
+            },
+            {
+              "active_sessions": 68,
+              "conversions": 9
+            }
+          ]
+        }
+      ]
+    },
+    "onboarding": {
+      "app_name": "Acme Fitness",
+      "granularity": "day",
+      "segment_by": "property:onboarding",
+      "summary": {
+        "total_segments": 2,
+        "total_conversions": 239,
+        "total_sessions": 4795,
+        "overall_conversion_rate": 0.0498
+      },
+      "segments": [
+        {
+          "segment": "five_steps",
+          "summary": {
+            "total_active_sessions": 2410,
+            "total_conversions": 118,
+            "conversion_rate": 0.049
+          },
+          "periods": [
+            {
+              "active_sessions": 72,
+              "conversions": 4
+            },
+            {
+              "active_sessions": 66,
+              "conversions": 3
+            },
+            {
+              "active_sessions": 63,
+              "conversions": 3
+            },
+            {
+              "active_sessions": 62,
+              "conversions": 3
+            },
+            {
+              "active_sessions": 54,
+              "conversions": 3
+            },
+            {
+              "active_sessions": 60,
+              "conversions": 3
+            },
+            {
+              "active_sessions": 84,
+              "conversions": 4
+            },
+            {
+              "active_sessions": 76,
+              "conversions": 4
+            },
+            {
+              "active_sessions": 72,
+              "conversions": 3
+            },
+            {
+              "active_sessions": 67,
+              "conversions": 3
+            },
+            {
+              "active_sessions": 65,
+              "conversions": 3
+            },
+            {
+              "active_sessions": 61,
+              "conversions": 3
+            },
+            {
+              "active_sessions": 65,
+              "conversions": 3
+            },
+            {
+              "active_sessions": 89,
+              "conversions": 4
+            },
+            {
+              "active_sessions": 83,
+              "conversions": 4
+            },
+            {
+              "active_sessions": 74,
+              "conversions": 4
+            },
+            {
+              "active_sessions": 73,
+              "conversions": 4
+            },
+            {
+              "active_sessions": 72,
+              "conversions": 4
+            },
+            {
+              "active_sessions": 112,
+              "conversions": 5
+            },
+            {
+              "active_sessions": 103,
+              "conversions": 5
+            },
+            {
+              "active_sessions": 114,
+              "conversions": 6
+            },
+            {
+              "active_sessions": 95,
+              "conversions": 5
+            },
+            {
+              "active_sessions": 91,
+              "conversions": 4
+            },
+            {
+              "active_sessions": 86,
+              "conversions": 4
+            },
+            {
+              "active_sessions": 86,
+              "conversions": 4
+            },
+            {
+              "active_sessions": 76,
+              "conversions": 4
+            },
+            {
+              "active_sessions": 79,
+              "conversions": 4
+            },
+            {
+              "active_sessions": 111,
+              "conversions": 5
+            },
+            {
+              "active_sessions": 103,
+              "conversions": 5
+            },
+            {
+              "active_sessions": 96,
+              "conversions": 5
+            }
+          ]
+        },
+        {
+          "segment": "three_steps",
+          "summary": {
+            "total_active_sessions": 2385,
+            "total_conversions": 121,
+            "conversion_rate": 0.0507
+          },
+          "periods": [
+            {
+              "active_sessions": 71,
+              "conversions": 4
+            },
+            {
+              "active_sessions": 65,
+              "conversions": 3
+            },
+            {
+              "active_sessions": 62,
+              "conversions": 3
+            },
+            {
+              "active_sessions": 61,
+              "conversions": 3
+            },
+            {
+              "active_sessions": 53,
+              "conversions": 3
+            },
+            {
+              "active_sessions": 59,
+              "conversions": 3
+            },
+            {
+              "active_sessions": 83,
+              "conversions": 4
+            },
+            {
+              "active_sessions": 75,
+              "conversions": 4
+            },
+            {
+              "active_sessions": 71,
+              "conversions": 4
+            },
+            {
+              "active_sessions": 66,
+              "conversions": 3
+            },
+            {
+              "active_sessions": 65,
+              "conversions": 3
+            },
+            {
+              "active_sessions": 60,
+              "conversions": 3
+            },
+            {
+              "active_sessions": 64,
+              "conversions": 3
+            },
+            {
+              "active_sessions": 89,
+              "conversions": 4
+            },
+            {
+              "active_sessions": 82,
+              "conversions": 4
+            },
+            {
+              "active_sessions": 73,
+              "conversions": 4
+            },
+            {
+              "active_sessions": 72,
+              "conversions": 4
+            },
+            {
+              "active_sessions": 72,
+              "conversions": 4
+            },
+            {
+              "active_sessions": 111,
+              "conversions": 6
+            },
+            {
+              "active_sessions": 102,
+              "conversions": 5
+            },
+            {
+              "active_sessions": 113,
+              "conversions": 6
+            },
+            {
+              "active_sessions": 94,
+              "conversions": 5
+            },
+            {
+              "active_sessions": 90,
+              "conversions": 4
+            },
+            {
+              "active_sessions": 85,
+              "conversions": 4
+            },
+            {
+              "active_sessions": 85,
+              "conversions": 4
+            },
+            {
+              "active_sessions": 76,
+              "conversions": 4
+            },
+            {
+              "active_sessions": 79,
+              "conversions": 4
+            },
+            {
+              "active_sessions": 110,
+              "conversions": 6
+            },
+            {
+              "active_sessions": 102,
+              "conversions": 5
+            },
+            {
+              "active_sessions": 95,
+              "conversions": 5
+            }
+          ]
+        }
+      ]
+    },
+    "workouts_per_week": {
+      "app_name": "Acme Fitness",
+      "granularity": "day",
+      "segment_by": "property:workouts_per_week",
+      "summary": {
+        "total_segments": 4,
+        "total_conversions": 355,
+        "total_sessions": 9750,
+        "overall_conversion_rate": 0.0364
+      },
+      "segments": [
+        {
+          "segment": "under 2",
+          "summary": {
+            "total_active_sessions": 3120,
+            "total_conversions": 52,
+            "conversion_rate": 0.0167
+          },
+          "periods": [
+            {
+              "active_sessions": 93,
+              "conversions": 2
+            },
+            {
+              "active_sessions": 85,
+              "conversions": 1
+            },
+            {
+              "active_sessions": 82,
+              "conversions": 1
+            },
+            {
+              "active_sessions": 80,
+              "conversions": 1
+            },
+            {
+              "active_sessions": 69,
+              "conversions": 1
+            },
+            {
+              "active_sessions": 78,
+              "conversions": 1
+            },
+            {
+              "active_sessions": 108,
+              "conversions": 2
+            },
+            {
+              "active_sessions": 99,
+              "conversions": 2
+            },
+            {
+              "active_sessions": 93,
+              "conversions": 2
+            },
+            {
+              "active_sessions": 87,
+              "conversions": 1
+            },
+            {
+              "active_sessions": 85,
+              "conversions": 1
+            },
+            {
+              "active_sessions": 78,
+              "conversions": 1
+            },
+            {
+              "active_sessions": 84,
+              "conversions": 1
+            },
+            {
+              "active_sessions": 116,
+              "conversions": 2
+            },
+            {
+              "active_sessions": 107,
+              "conversions": 2
+            },
+            {
+              "active_sessions": 96,
+              "conversions": 2
+            },
+            {
+              "active_sessions": 95,
+              "conversions": 2
+            },
+            {
+              "active_sessions": 94,
+              "conversions": 2
+            },
+            {
+              "active_sessions": 145,
+              "conversions": 2
+            },
+            {
+              "active_sessions": 133,
+              "conversions": 2
+            },
+            {
+              "active_sessions": 148,
+              "conversions": 3
+            },
+            {
+              "active_sessions": 122,
+              "conversions": 2
+            },
+            {
+              "active_sessions": 117,
+              "conversions": 2
+            },
+            {
+              "active_sessions": 111,
+              "conversions": 2
+            },
+            {
+              "active_sessions": 111,
+              "conversions": 2
+            },
+            {
+              "active_sessions": 99,
+              "conversions": 2
+            },
+            {
+              "active_sessions": 103,
+              "conversions": 2
+            },
+            {
+              "active_sessions": 144,
+              "conversions": 2
+            },
+            {
+              "active_sessions": 134,
+              "conversions": 2
+            },
+            {
+              "active_sessions": 124,
+              "conversions": 2
+            }
+          ]
+        },
+        {
+          "segment": "2 to 4",
+          "summary": {
+            "total_active_sessions": 3480,
+            "total_conversions": 118,
+            "conversion_rate": 0.0339
+          },
+          "periods": [
+            {
+              "active_sessions": 104,
+              "conversions": 4
+            },
+            {
+              "active_sessions": 95,
+              "conversions": 3
+            },
+            {
+              "active_sessions": 91,
+              "conversions": 3
+            },
+            {
+              "active_sessions": 89,
+              "conversions": 3
+            },
+            {
+              "active_sessions": 77,
+              "conversions": 3
+            },
+            {
+              "active_sessions": 87,
+              "conversions": 3
+            },
+            {
+              "active_sessions": 121,
+              "conversions": 4
+            },
+            {
+              "active_sessions": 110,
+              "conversions": 4
+            },
+            {
+              "active_sessions": 104,
+              "conversions": 3
+            },
+            {
+              "active_sessions": 97,
+              "conversions": 3
+            },
+            {
+              "active_sessions": 94,
+              "conversions": 3
+            },
+            {
+              "active_sessions": 87,
+              "conversions": 3
+            },
+            {
+              "active_sessions": 93,
+              "conversions": 3
+            },
+            {
+              "active_sessions": 129,
+              "conversions": 4
+            },
+            {
+              "active_sessions": 119,
+              "conversions": 4
+            },
+            {
+              "active_sessions": 107,
+              "conversions": 4
+            },
+            {
+              "active_sessions": 106,
+              "conversions": 4
+            },
+            {
+              "active_sessions": 105,
+              "conversions": 4
+            },
+            {
+              "active_sessions": 162,
+              "conversions": 5
+            },
+            {
+              "active_sessions": 149,
+              "conversions": 5
+            },
+            {
+              "active_sessions": 165,
+              "conversions": 6
+            },
+            {
+              "active_sessions": 137,
+              "conversions": 5
+            },
+            {
+              "active_sessions": 131,
+              "conversions": 4
+            },
+            {
+              "active_sessions": 124,
+              "conversions": 4
+            },
+            {
+              "active_sessions": 124,
+              "conversions": 4
+            },
+            {
+              "active_sessions": 110,
+              "conversions": 4
+            },
+            {
+              "active_sessions": 115,
+              "conversions": 4
+            },
+            {
+              "active_sessions": 160,
+              "conversions": 5
+            },
+            {
+              "active_sessions": 149,
+              "conversions": 5
+            },
+            {
+              "active_sessions": 139,
+              "conversions": 5
+            }
+          ]
+        },
+        {
+          "segment": "4 to 6",
+          "summary": {
+            "total_active_sessions": 2210,
+            "total_conversions": 121,
+            "conversion_rate": 0.0548
+          },
+          "periods": [
+            {
+              "active_sessions": 66,
+              "conversions": 4
+            },
+            {
+              "active_sessions": 60,
+              "conversions": 3
+            },
+            {
+              "active_sessions": 58,
+              "conversions": 3
+            },
+            {
+              "active_sessions": 57,
+              "conversions": 3
+            },
+            {
+              "active_sessions": 49,
+              "conversions": 3
+            },
+            {
+              "active_sessions": 55,
+              "conversions": 3
+            },
+            {
+              "active_sessions": 77,
+              "conversions": 4
+            },
+            {
+              "active_sessions": 70,
+              "conversions": 4
+            },
+            {
+              "active_sessions": 66,
+              "conversions": 4
+            },
+            {
+              "active_sessions": 61,
+              "conversions": 3
+            },
+            {
+              "active_sessions": 60,
+              "conversions": 3
+            },
+            {
+              "active_sessions": 55,
+              "conversions": 3
+            },
+            {
+              "active_sessions": 59,
+              "conversions": 3
+            },
+            {
+              "active_sessions": 82,
+              "conversions": 4
+            },
+            {
+              "active_sessions": 76,
+              "conversions": 4
+            },
+            {
+              "active_sessions": 68,
+              "conversions": 4
+            },
+            {
+              "active_sessions": 67,
+              "conversions": 4
+            },
+            {
+              "active_sessions": 66,
+              "conversions": 4
+            },
+            {
+              "active_sessions": 103,
+              "conversions": 6
+            },
+            {
+              "active_sessions": 94,
+              "conversions": 5
+            },
+            {
+              "active_sessions": 105,
+              "conversions": 6
+            },
+            {
+              "active_sessions": 87,
+              "conversions": 5
+            },
+            {
+              "active_sessions": 83,
+              "conversions": 4
+            },
+            {
+              "active_sessions": 79,
+              "conversions": 4
+            },
+            {
+              "active_sessions": 79,
+              "conversions": 4
+            },
+            {
+              "active_sessions": 70,
+              "conversions": 4
+            },
+            {
+              "active_sessions": 73,
+              "conversions": 4
+            },
+            {
+              "active_sessions": 102,
+              "conversions": 6
+            },
+            {
+              "active_sessions": 95,
+              "conversions": 5
+            },
+            {
+              "active_sessions": 88,
+              "conversions": 5
+            }
+          ]
+        },
+        {
+          "segment": "6 and over",
+          "summary": {
+            "total_active_sessions": 940,
+            "total_conversions": 64,
+            "conversion_rate": 0.0681
+          },
+          "periods": [
+            {
+              "active_sessions": 28,
+              "conversions": 2
+            },
+            {
+              "active_sessions": 26,
+              "conversions": 2
+            },
+            {
+              "active_sessions": 25,
+              "conversions": 2
+            },
+            {
+              "active_sessions": 24,
+              "conversions": 2
+            },
+            {
+              "active_sessions": 21,
+              "conversions": 1
+            },
+            {
+              "active_sessions": 23,
+              "conversions": 2
+            },
+            {
+              "active_sessions": 33,
+              "conversions": 2
+            },
+            {
+              "active_sessions": 30,
+              "conversions": 2
+            },
+            {
+              "active_sessions": 28,
+              "conversions": 2
+            },
+            {
+              "active_sessions": 26,
+              "conversions": 2
+            },
+            {
+              "active_sessions": 25,
+              "conversions": 2
+            },
+            {
+              "active_sessions": 24,
+              "conversions": 2
+            },
+            {
+              "active_sessions": 25,
+              "conversions": 2
+            },
+            {
+              "active_sessions": 35,
+              "conversions": 2
+            },
+            {
+              "active_sessions": 32,
+              "conversions": 2
+            },
+            {
+              "active_sessions": 29,
+              "conversions": 2
+            },
+            {
+              "active_sessions": 29,
+              "conversions": 2
+            },
+            {
+              "active_sessions": 28,
+              "conversions": 2
+            },
+            {
+              "active_sessions": 44,
+              "conversions": 3
+            },
+            {
+              "active_sessions": 40,
+              "conversions": 3
+            },
+            {
+              "active_sessions": 45,
+              "conversions": 3
+            },
+            {
+              "active_sessions": 37,
+              "conversions": 2
+            },
+            {
+              "active_sessions": 35,
+              "conversions": 2
+            },
+            {
+              "active_sessions": 34,
+              "conversions": 2
+            },
+            {
+              "active_sessions": 33,
+              "conversions": 2
+            },
+            {
+              "active_sessions": 30,
+              "conversions": 2
+            },
+            {
+              "active_sessions": 31,
+              "conversions": 2
+            },
+            {
+              "active_sessions": 43,
+              "conversions": 3
+            },
+            {
+              "active_sessions": 40,
+              "conversions": 3
+            },
+            {
+              "active_sessions": 37,
+              "conversions": 2
+            }
+          ]
+        }
+      ]
     }
   }
 }

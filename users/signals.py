@@ -17,7 +17,7 @@ def create_user_preferences(sender, instance, created, **kwargs):
     Create UserPreferences when a new user is created.
 
     Default preferences:
-    - email_important_updates = True (user receives quota/trial warnings)
+    - email_important_updates = True (usage warnings and notices about the account)
     - email_product_news = False (user must opt-in during registration)
     """
     if created:

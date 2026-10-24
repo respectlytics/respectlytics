@@ -287,6 +287,8 @@ class EventSummaryAPITestCase(APITestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="testuser", password="testpass123")
         self.app = App.objects.create(name="Test App", user=self.user)
+        # Reading an app's data takes its signed-in owner, never the app key alone.
+        self.client.force_login(self.user)
         self.app_key = str(self.app.id)
 
         # Create test events
@@ -435,6 +437,8 @@ class FunnelAnalysisTestCase(APITestCase):
 
         self.user = User.objects.create_user(username="testuser", password="testpass123")
         self.app = App.objects.create(name="Test App", user=self.user)
+        # Reading an app's data takes its signed-in owner, never the app key alone.
+        self.client.force_login(self.user)
         self.app_key = str(self.app.id)
 
         # Create test events with sessions
@@ -608,6 +612,8 @@ class EventTypesTestCase(APITestCase):
 
         self.user = User.objects.create_user(username="testuser", password="testpass123")
         self.app = App.objects.create(name="Test App", user=self.user)
+        # Reading an app's data takes its signed-in owner, never the app key alone.
+        self.client.force_login(self.user)
         self.app_key = str(self.app.id)
 
         # Create events with different types
@@ -646,6 +652,8 @@ class ExportEventsTestCase(APITestCase):
 
         self.user = User.objects.create_user(username="testuser", password="testpass123")
         self.app = App.objects.create(name="Test App", user=self.user)
+        # Reading an app's data takes its signed-in owner, never the app key alone.
+        self.client.force_login(self.user)
         self.app_key = str(self.app.id)
 
         # Create test events
@@ -842,28 +850,25 @@ class AppRegenerateKeyTestCase(APITestCase):
         self.assertIn("error", response.data)
 
     def test_old_key_becomes_invalid(self):
-        """Test that old API key becomes invalid after regeneration"""
-        # First, verify old key works
+        """After regeneration the old key can no longer send events, and the new one can."""
+        event = {"event_name": "app_open", "session_id": "3f9c2a7e5b1d4c8fa06e9b2d7c4a1f53"}
         self.client.credentials(HTTP_X_APP_KEY=self.app_key)
-        response = self.client.get("/api/v1/events/event-types/")
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response = self.client.post("/api/v1/events/", event, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
-        # Regenerate the key
-        self.client.credentials()  # Clear credentials
+        self.client.credentials()
         self.client.force_authenticate(user=self.user)
         regen_response = self.client.post(f"/api/v1/apps/{self.app.slug}/regenerate-key/")
         new_key = regen_response.data["new_app_key"]
+        self.client.force_authenticate(user=None)
 
-        # Verify old key no longer works
-        self.client.force_authenticate(user=None)  # Clear user auth
         self.client.credentials(HTTP_X_APP_KEY=self.app_key)
-        response = self.client.get("/api/v1/events/event-types/")
+        response = self.client.post("/api/v1/events/", event, format="json")
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
-        # Verify new key works
         self.client.credentials(HTTP_X_APP_KEY=new_key)
-        response = self.client.get("/api/v1/events/event-types/")
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response = self.client.post("/api/v1/events/", event, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
 
 class PrivacyGuardsTestCase(APITestCase):
@@ -920,10 +925,10 @@ class PrivacyGuardsTestCase(APITestCase):
         self.assertEqual(self.get_error_field(response.data, "code"), "FORBIDDEN_FIELDS")
 
     def test_metadata_field_rejected(self):
-        """Test that 'metadata' or 'properties' fields are rejected"""
+        """Test that 'metadata' and other free-form fields are rejected"""
         self.client.credentials(HTTP_X_APP_KEY=self.app_key)
 
-        for field_name in ["metadata", "properties", "data", "extra", "custom"]:
+        for field_name in ["metadata", "data", "extra", "custom", "params"]:
             data = {"event_name": "test_event", field_name: {"key": "value"}}
             response = self.client.post("/api/v1/events/", data, format="json")
 
@@ -932,6 +937,15 @@ class PrivacyGuardsTestCase(APITestCase):
                 status.HTTP_400_BAD_REQUEST,
                 f"Field '{field_name}' should be rejected",
             )
+
+    def test_undeclared_properties_are_dropped(self):
+        """A `properties` object keeps only what the app declared (respectlytics.com's
+        properties/, paid plans): an undeclared one is dropped and the event kept."""
+        self.client.credentials(HTTP_X_APP_KEY=self.app_key)
+        data = {"event_name": "test_event", "properties": {"email": "someone@example.com"}}
+        response = self.client.post("/api/v1/events/", data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertFalse(Event.objects.filter(properties__isnull=False).exists())
 
     # =========================================================================
     # TRACKING IDENTIFIER TESTS - Device IDs must be rejected
@@ -1138,6 +1152,30 @@ class PrivacyGuardsTestCase(APITestCase):
                 status.HTTP_201_CREATED,
                 f"Valid session ID '{session_id}' should be accepted",
             )
+
+    def test_refusal_advice_names_a_format_the_check_accepts(self):
+        """The example every INVALID_SESSION_ID refusal gives is itself accepted.
+
+        Until 2026-10-22 the refusal said "lowercase UUID v4" while every UUID with
+        dashes is refused, so a developer who followed the advice was refused again.
+        """
+        from .privacy_guards import SESSION_ID_ADVICE, SESSION_ID_EXAMPLE
+
+        self.client.credentials(HTTP_X_APP_KEY=self.app_key)
+        refused = self.client.post(
+            "/api/v1/events/",
+            {"event_name": "test_event", "session_id": "f47ac10b-58cc-4372-a567-0e02b2c3d479"},
+            format="json",
+        )
+        self.assertEqual(refused.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn(SESSION_ID_ADVICE, self.get_error_field(refused.data, "reason"))
+
+        accepted = self.client.post(
+            "/api/v1/events/",
+            {"event_name": "test_event", "session_id": SESSION_ID_EXAMPLE},
+            format="json",
+        )
+        self.assertEqual(accepted.status_code, status.HTTP_201_CREATED)
 
     def test_empty_session_id_accepted(self):
         """Test that empty/null session_id is accepted (field is optional)"""
@@ -1430,6 +1468,7 @@ class SessionIdAnonymizationTestCase(APITestCase):
     def test_funnel_analysis_works_with_anonymized_sessions(self):
         """Test that funnel analysis still works correctly with hashed session IDs"""
         self.client.credentials(HTTP_X_APP_KEY=self.app_key)
+        self.client.force_login(self.user)
         now = timezone.now()
 
         # Create a complete funnel with same session_id

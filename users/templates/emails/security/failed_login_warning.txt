@@ -1,4 +1,4 @@
-Suspicious Login Activity Detected
+{% autoescape off %}Suspicious Login Activity Detected
 ===================================
 
 Hi{% if user.first_name %} {{ user.first_name }}{% endif %},
@@ -15,9 +15,9 @@ If you're trying to log in and forgot your password, you can reset it here:
 {{ password_reset_url }}
 
 If this wasn't you, someone may be trying to access your account.
-Your account will be temporarily locked after 5 failed attempts for your protection.
+If the attempts go on, sign-ins from there are paused for your protection.
 
 For your security, we recommend using a strong, unique password and never sharing it with anyone.
 
 ---
-Respectlytics. Privacy-first mobile analytics.
+Respectlytics. Privacy-first mobile analytics.{% endautoescape %}

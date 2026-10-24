@@ -174,3 +174,26 @@ def format_date_for_response(dt: datetime | None) -> str | None:
     if dt is None:
         return None
     return dt.strftime("%Y-%m-%d")
+
+
+def freshness_mark(app_id, to_date, ttl_seconds):
+    """What a cache key adds so a range that ends now never hides the app's newest event for
+    long: the newest event's time, in steps of the cache's own lifetime. The first event an
+    app ever sends changes the key at once ('none' becomes a time), so a new developer sees it
+    straight away; a busy app moves to a new key at most once per lifetime, so it keeps its
+    cache. A range that ended before today needs no mark (docs/development/ONBOARDING.md)."""
+    from django.utils import timezone
+
+    from .models import Event
+
+    if to_date and to_date < timezone.now().date().isoformat():
+        return "past"
+    newest = (
+        Event.objects.filter(app_id=app_id)
+        .order_by("-timestamp")
+        .values_list("timestamp", flat=True)
+        .first()
+    )
+    if newest is None:
+        return "none"
+    return str(int(newest.timestamp()) // max(1, int(ttl_seconds)))

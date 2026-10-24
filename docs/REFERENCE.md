@@ -302,8 +302,8 @@ API endpoints are rate-limited using `django-ratelimit`. Default limits prevent 
 | `SECURE_SSL` | Force HTTPS redirect and secure cookies (enable behind HTTPS reverse proxy) | `False` | No |
 | `TRUSTED_CLIENT_IP_HEADER` | Header that names the visitor's address, set only when a CDN that overwrites it sits in front, such as `CF-Connecting-IP` behind Cloudflare. Leave empty when the server is reached directly or through your own nginx or Caddy | _(empty)_ | No |
 | `ADMIN_REQUIRE_OTP` | Require TOTP 2FA for admin panel | `False` | No |
-| `MAXMIND_ACCOUNT_ID` | MaxMind GeoLite2 account ID | _(empty)_ | No |
-| `MAXMIND_LICENSE_KEY` | MaxMind GeoLite2 license key | _(empty)_ | No |
+| `MAXMIND_ACCOUNT_ID` | MaxMind GeoLite2 account ID; without it, DB-IP's free IP to Country Lite is used | _(empty)_ | No |
+| `MAXMIND_LICENSE_KEY` | MaxMind GeoLite2 license key; without it, DB-IP's free IP to Country Lite is used | _(empty)_ | No |
 | `EMAIL_BACKEND` | Django email backend class | `django.core.mail.backends.console.EmailBackend` | No |
 | `EMAIL_HOST` | SMTP server hostname | `localhost` | No |
 | `EMAIL_PORT` | SMTP server port | `587` | No |
@@ -538,7 +538,7 @@ Check your `DATABASE_URL` credentials.
 ### GeoIP not working
 
 **Country field is empty**
-GeoIP database not installed. Run `python manage.py update_geoip` with valid MaxMind credentials.
+GeoIP database not installed. Run `python manage.py update_geoip` (it needs no credentials; with MaxMind credentials it downloads GeoLite2 City instead of DB-IP's database). The server must be able to reach `download.db-ip.com`, or `download.maxmind.com` with credentials.
 
 **"Unable to open database"**
 The `.mmdb` file is missing or corrupted. Re-download with `python manage.py update_geoip`.

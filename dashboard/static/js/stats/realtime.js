@@ -25,11 +25,6 @@ function initializeRealtimePolling(appKey) {
     StatsApp.realtimePoller = new RealTimePoller(appKey, {
         defaultRange: initialRange,
         onNewData: (data) => {
-            // Show warning if high traffic
-            if (data.warnings && data.warnings.length > 0) {
-                showWarning(data.warnings[0]);
-            }
-            
             // Reload stats silently (no loading overlay) to prevent page flicker
             if (typeof loadStats === 'function') {
                 loadStats(true);
@@ -89,7 +84,7 @@ function updateLiveIndicator() {
         if (globalIndicator) globalIndicator.classList.add('paused');
         if (globalStatusText) globalStatusText.textContent = 'Paused';
         if (globalPauseButton) {
-            globalPauseButton.innerHTML = '▶️ Resume';
+            globalPauseButton.innerHTML = `<span class="inline-flex items-center gap-1.5">${icon('play', 'h-3.5 w-3.5')}Resume</span>`;
         }
         return;
     }
@@ -98,13 +93,13 @@ function updateLiveIndicator() {
         if (globalIndicator) globalIndicator.classList.add('paused');
         if (globalStatusText) globalStatusText.textContent = 'Paused';
         if (globalPauseButton) {
-            globalPauseButton.innerHTML = '▶️ Resume';
+            globalPauseButton.innerHTML = `<span class="inline-flex items-center gap-1.5">${icon('play', 'h-3.5 w-3.5')}Resume</span>`;
         }
     } else {
         if (globalIndicator) globalIndicator.classList.remove('paused');
         if (globalStatusText) globalStatusText.textContent = 'Live';
         if (globalPauseButton) {
-            globalPauseButton.innerHTML = '⏸️ Pause';
+            globalPauseButton.innerHTML = `<span class="inline-flex items-center gap-1.5">${icon('pause', 'h-3.5 w-3.5')}Pause</span>`;
         }
     }
 }

@@ -204,13 +204,13 @@
             box-shadow: 0 8px 20px rgba(88, 86, 214, 0.4);
         }
         
-        .nav-btn-secondary {
+        .nav-cta-secondary {
             background: transparent !important;
             color: var(--slate-400) !important;
             border: 1px solid rgba(255, 255, 255, 0.1) !important;
         }
         
-        .nav-btn-secondary:hover {
+        .nav-cta-secondary:hover {
             background: var(--slate-800) !important;
             color: var(--slate-50) !important;
             border-color: rgba(255, 255, 255, 0.2) !important;
@@ -474,7 +474,7 @@
                         <li><a href="/api/v1/reference/" class="active">API Reference</a></li>
                     {% endif %}
                 </ul>
-                <a href="/login/" class="nav-btn-secondary">Sign In</a>
+                <a href="/login/" class="nav-cta-secondary">Sign In</a>
                 <a href="/register/" class="nav-btn">Get Started</a>
             </nav>
         </div>
@@ -498,16 +498,14 @@
 
             <h2>Authentication</h2>
             <p>
-                API requests use your App Key in the <code>X-App-Key</code> header.
-                Create and manage keys from your dashboard settings.
+                Sending an event takes your App Key in the <code>X-App-Key</code> header.
+                The key ships inside your app, so it can send events and nothing else.
+                You read your numbers in the dashboard.
             </p>
 
-            <h2>Primary Endpoints</h2>
+            <h2>Endpoint</h2>
             <ul>
-                <li><strong>POST /api/v1/events/</strong>: Ingest analytics events.</li>
-                <li><strong>POST /api/v1/events/batch/</strong>: Ingest events in batch.</li>
-                <li><strong>GET /api/v1/stats/</strong>: Retrieve aggregated analytics metrics.</li>
-                <li><strong>POST /api/v1/events/delete/</strong>: Delete events in a selected date range with optional filters.</li>
+                <li><strong>POST /api/v1/events/</strong>: send one event.</li>
             </ul>
         </div>
         <noscript>

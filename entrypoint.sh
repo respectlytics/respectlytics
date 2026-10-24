@@ -10,11 +10,10 @@ python manage.py createcachetable 2>/dev/null || true
 echo "Collecting static files..."
 python manage.py collectstatic --noinput 2>/dev/null || true
 
-# Download GeoIP database if MaxMind credentials are provided
-if [ -n "$MAXMIND_ACCOUNT_ID" ] && [ -n "$MAXMIND_LICENSE_KEY" ]; then
-    echo "Downloading GeoIP database..."
-    python manage.py update_geoip || echo "GeoIP download failed (non-fatal, geolocation will be disabled)"
-fi
+# GeoIP database: DB-IP's free one, or MaxMind's when MaxMind credentials are given. It is kept
+# in a volume and downloaded again only when it is more than 30 days old.
+echo "Checking the GeoIP database..."
+python manage.py update_geoip || echo "GeoIP download failed (non-fatal, geolocation will be disabled)"
 
 echo ""
 echo "============================================"

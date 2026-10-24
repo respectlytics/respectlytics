@@ -4,27 +4,10 @@ from django.conf import settings
 from django.core.cache import cache
 from rest_framework.throttling import SimpleRateThrottle
 
+from .blocks import AUTH, address_key, block, blockable
 from .client_ip import get_client_ip
 
 logger = logging.getLogger(__name__)
-
-# Addresses that many unrelated clients share, so a ban on one shuts out all of
-# them. Cloudflare sends every Worker's request to another site from this one
-# address, whoever runs the Worker: a customer sending events from a Worker and
-# any scanner someone runs on Workers are the same visitor here. Its bad requests
-# are still refused one at a time, but it is never banned from the whole site:
-# on 2026-10-13 a WordPress scanner got it banned at loheden.com, and the uptime
-# watchdog with it.
-# https://developers.cloudflare.com/fundamentals/reference/http-headers/
-SHARED_ADDRESSES = frozenset({"2a06:98c0:3600::103"})
-
-
-def ban_ip(ip, seconds):
-    """Refuse every request from this address for a while. Returns whether it did."""
-    if ip in SHARED_ADDRESSES:
-        return False
-    cache.set(f"banned:{ip}", True, seconds)
-    return True
 
 
 class AnonRateThrottle(SimpleRateThrottle):
@@ -63,51 +46,25 @@ class AnonRateThrottle(SimpleRateThrottle):
 
 def track_failed_auth_attempt(request, app_key=None):
     """
-    Track failed authentication attempts to detect brute force attacks.
-    Blocks after 10 failed attempts in 15 minutes.
+    Count a refused API key from this address; 10 within 15 minutes block it for an hour
+    (analytics/blocks.py). The count is filed under the address's code, never the address.
+    Returns whether this attempt blocked it.
 
     Fails open: if the cache/DB is unreachable (e.g. during maintenance),
     logs a warning and returns False rather than crashing the request.
     """
     ip = get_client_ip(request)
-    cache_key = f"failed_auth:{ip}"
+    if not blockable(ip):
+        return False
+    cache_key = f"failed_auth:{address_key(ip)}"
 
     try:
-        attempts = cache.get(cache_key, 0)
-        attempts += 1
+        attempts = cache.get(cache_key, 0) + 1
         cache.set(cache_key, attempts, 900)  # 15 minutes
-
         if attempts >= 10:
-            logger.warning(
-                f"[SECURITY] Multiple failed auth attempts from IP: {ip}, app_key: {app_key}"
-            )
-            return ban_ip(ip, 3600)  # Ban for 1 hour
+            cache.delete(cache_key)
+            return block(ip, AUTH, f"{attempts} refused API keys within 15 minutes") is not None
     except Exception:
-        logger.warning(
-            f"[SECURITY] Cache unavailable during auth tracking for IP: {ip} — failing open"
-        )
+        logger.warning("[SECURITY] Cache unavailable during auth tracking, failing open")
 
     return False
-
-
-def is_ip_banned(request):
-    """
-    Check if IP is temporarily banned.
-
-    In DEBUG mode, localhost (127.0.0.1) is never banned to allow
-    SDK integration testing without getting locked out.
-
-    Fails open: if the cache/DB is unreachable (e.g. during maintenance),
-    logs a warning and returns False rather than crashing the request.
-    """
-    ip = get_client_ip(request)
-
-    # In development, never ban localhost - allows SDK testing
-    if settings.DEBUG and ip in ("127.0.0.1", "localhost", "::1"):
-        return False
-
-    try:
-        return cache.get(f"banned:{ip}", False)
-    except Exception:
-        logger.warning(f"[SECURITY] Cache unavailable checking ban for IP: {ip} — failing open")
-        return False

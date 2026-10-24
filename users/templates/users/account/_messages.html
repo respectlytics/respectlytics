@@ -1,0 +1,10 @@
+{% comment %}
+What a form on an account page did, after it sends the reader back here: one quiet line under
+the page's title, read out without moving focus (role="status"). Used by every account page.
+{% endcomment %}{% if messages %}
+<div role="status" class="space-y-1.5">
+  {% for message in messages %}
+  <p class="flex items-start gap-2 text-sm {% if message.level >= 40 %}text-rose-300{% elif message.level >= 30 %}text-amber-300{% else %}text-emerald-300{% endif %}"><span class="mt-0.5 flex-none">{% if message.level >= 30 %}{% include 'partials/icon.html' with name='alert' size='h-4 w-4' %}{% else %}{% include 'partials/icon.html' with name='check' size='h-4 w-4' %}{% endif %}</span><span>{{ message }}</span></p>
+  {% endfor %}
+</div>
+{% endif %}

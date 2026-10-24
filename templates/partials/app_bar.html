@@ -1,0 +1,36 @@
+{% load app_nav %}
+{% comment %}
+The signed-in top bar, the same on every signed-in page (templates/app_base.html): the logo,
+which leads to the app list; the app switcher while an app is open; Upgrade where a larger plan
+exists and the page is not the plan page or setup; and the account menu, which holds every
+account-wide page and Sign out. Its menus open on a click (static/js/app-shell.js).
+{% endcomment %}
+{% url 'teams:team' as team_url %}{% url 'billing:manage' as plan_url %}
+<header class="sticky top-0 z-50 border-b border-white/10 bg-[#0f172a]/95 backdrop-blur supports-[backdrop-filter]:bg-[#0f172a]/80">
+  <div class="flex h-14 items-center gap-2 px-4 lg:px-6">
+    <a href="{% url 'dashboard:main' %}" class="flex flex-none items-center gap-2.5 rounded-lg no-underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-400" aria-label="Respectlytics, your apps">
+      {% include "partials/brand_mark.html" with classes="h-8 w-8 rounded-lg object-contain" alt="" %}
+      <span class="hidden text-lg font-black tracking-tight sm:flex"><span class="text-slate-50">Respect</span><span class="text-brand-300">lytics</span></span>
+    </a>
+    {% app_switcher %}
+    <div class="ml-auto flex items-center gap-1 sm:gap-2">
+      {% if upgrade_url and request.resolver_match.url_name != 'manage' and request.resolver_match.namespace != 'onboarding' %}
+      <a href="{{ upgrade_url }}" class="btn-quiet hidden text-brand-300 hover:text-brand-200 sm:inline-flex">Upgrade</a>
+      {% endif %}
+      <div class="relative">
+        <button type="button" data-popover aria-expanded="false" aria-controls="accountMenu" aria-label="Account menu for {{ user.email }}"
+                class="flex h-9 w-9 items-center justify-center rounded-full bg-slate-700 text-sm font-semibold text-slate-50 hover:bg-slate-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400">{{ user.email|first|upper }}</button>
+        <div id="accountMenu" class="menu-panel right-0" hidden>
+          <p class="truncate border-b border-white/10 px-4 pb-2.5 pt-1.5 text-xs text-slate-400">{{ user.email }}</p>
+          <a href="{% url 'account_profile' %}" class="menu-item">Account settings</a>
+          {% if plan_url %}<a href="{{ plan_url }}" class="menu-item">Plan and billing</a>{% endif %}
+          {% if upgrade_url and request.resolver_match.url_name != 'manage' %}<a href="{{ upgrade_url }}" class="menu-item text-brand-300 sm:hidden">Upgrade</a>{% endif %}
+          {% if team_url %}<a href="{{ team_url }}" class="menu-item">Team</a>{% endif %}
+          <a href="{% url 'account_api_keys' %}" class="menu-item">Secret keys</a>
+          <div class="my-1.5 border-t border-white/10"></div>
+          <a href="{% url 'logout' %}" class="menu-item">Sign out</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>

@@ -128,7 +128,9 @@ def _send_security_email(to_email, subject, html_template, text_template, contex
 # =============================================================================
 
 
-def send_account_lockout_alert(user_email, ip_address, attempt_count):
+def send_account_lockout_alert(
+    user_email, ip_address, attempt_count, lockout_duration="30 minutes"
+):
     """
     Notify admin when an account is locked due to failed login attempts.
 
@@ -139,6 +141,7 @@ def send_account_lockout_alert(user_email, ip_address, attempt_count):
         user_email: Email of the locked account
         ip_address: IP address of the last failed attempt
         attempt_count: Number of failed attempts
+        lockout_duration: How long it lasts, in words (respectlytics.com's grows on repeat)
 
     Returns:
         bool: True if email sent, False if rate limited or failed
@@ -155,13 +158,13 @@ def send_account_lockout_alert(user_email, ip_address, attempt_count):
         )
         return False
 
-    subject = f"🚨 Account Locked: {user_email}"
+    subject = f"Account locked: {user_email}"
 
     context = {
         "email": user_email,
         "ip_address": ip_address,
         "attempt_count": attempt_count,
-        "lockout_duration": "30 minutes",
+        "lockout_duration": lockout_duration,
         "timestamp": timezone.now(),
         "admin_users_url": _admin_users_url(),
     }
@@ -190,7 +193,7 @@ def send_ip_banned_alert(ip_address, reason, details=None):
     if not settings.SECURITY_CONTACT_EMAIL:
         return False  # nobody is named to receive admin alerts
 
-    subject = f"🛡️ IP Banned: {ip_address}"
+    subject = f"Address blocked: {ip_address}"
 
     context = {
         "ip_address": ip_address,
@@ -267,7 +270,7 @@ def send_failed_login_warning(user, attempt_count, ip_address):
         )
         return False
 
-    subject = "⚠️ Suspicious login activity on your Respectlytics account"
+    subject = "Suspicious sign-in attempts on your Respectlytics account"
 
     context = {
         "user": user,

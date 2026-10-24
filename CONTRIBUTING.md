@@ -50,6 +50,7 @@ The CLA preserves our ability to offer dual licensing (AGPL-3.0 for open source,
 - **Tailwind CSS only** — do not create custom CSS rules
 - Use the dark theme design system (`bg-slate-900`, `bg-[#1e293b]`, etc.)
 - Follow existing template patterns in the repository
+- After adding Tailwind classes, run `scripts/tailwind.sh` and commit `static/css/tailwind.css` with the template (it downloads Tailwind's standalone CLI, checked against its pinned SHA-256; no Node needed)
 
 ### JavaScript
 

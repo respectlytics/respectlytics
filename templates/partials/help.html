@@ -1,0 +1,10 @@
+{% comment %}
+A question mark that opens a short explanation, beside a title (the loheden-design skill: a
+screen's own text is a title, labels and at most one line; anything longer sits here).
+{% include 'partials/help.html' with id="helpKpi" label="About these numbers" text="..." %}
+`text` may hold simple HTML from the template itself, never from a visitor.
+{% endcomment %}
+<span class="relative inline-flex align-middle">
+  <button type="button" class="help-button" data-popover aria-expanded="false" aria-controls="{{ id }}" aria-label="{{ label|default:'What this shows' }}">?</button>
+  <span id="{{ id }}" role="note" class="help-panel {{ align|default:'left-0' }} top-full" hidden>{{ text|safe }}</span>
+</span>

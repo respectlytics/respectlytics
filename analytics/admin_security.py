@@ -17,8 +17,8 @@ from .security_dashboard import (
     get_banned_ips,
     get_locked_accounts,
     get_security_stats,
+    lift_blocks,
     parse_security_log,
-    unban_ip,
     unlock_account,
 )
 
@@ -92,17 +92,24 @@ class SecurityAdminSite(_BaseAdminSite):
         return TemplateResponse(request, "admin/security_dashboard.html", context)
 
     def unban_ip_view(self, request):
-        """Handle IP unban action."""
+        """Lift a block: a row's Lift button sends its code, the form an address typed in."""
         if request.method == "POST":
-            ip = request.POST.get("ip")
-            if ip:
-                if unban_ip(ip):
-                    messages.success(request, f"Successfully unbanned IP: {ip}")
-                    logger.info(f"[SECURITY] Admin {request.user.username} unbanned IP: {ip}")
-                else:
-                    messages.error(request, f"Failed to unban IP: {ip}")
+            key, ip = request.POST.get("key", ""), request.POST.get("ip", "")
+            deleted, reached = lift_blocks(key=key, ip=ip)
+            if deleted:
+                messages.success(request, "Lifted the block.")
+                logger.info(f"[SECURITY] Admin {request.user.username} lifted a block")
+            elif ip or key:
+                messages.info(request, "There was no block to lift.")
             else:
-                messages.error(request, "No IP address provided")
+                messages.error(request, "Type an IP address, or use a row's Lift button.")
+            if not reached:
+                messages.warning(
+                    request,
+                    "Cloudflare could not be reached, so it may still refuse this "
+                    "address: remove it from the block list in the Cloudflare dashboard "
+                    "(Manage Account, Configurations, Lists).",
+                )
 
         return redirect("admin:security-dashboard")
 

@@ -1,0 +1,12 @@
+{% comment %}
+"Email us" (the loheden-design skill, Contact): every link to /email/ opens this menu when
+script runs (static/js/app-shell.js); without script the link opens the mail app. The address
+comes from the server only when Copy address is clicked, so it is in no page.
+{% endcomment %}
+{% url 'email_address' as address_url %}{% if address_url %}
+<div id="email-menu" class="menu-panel fixed w-72 p-1.5" data-address-url="{{ address_url }}" role="menu" hidden>
+  <a href="/email/" rel="nofollow" class="menu-item rounded-lg" role="menuitem">{% include 'partials/icon.html' with name='mail' size='h-4 w-4 flex-none' %}Open in Mail</a>
+  <button type="button" class="menu-item rounded-lg" role="menuitem" data-copy-address><svg aria-hidden="true" class="h-4 w-4 flex-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2.5"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>Copy address</button>
+  <p class="px-4 pb-2 pt-1 text-sm text-slate-300" data-copied aria-live="polite" hidden><span class="font-medium text-slate-50" data-copied-label></span> <span class="select-all break-all" data-address></span></p>
+</div>
+{% endif %}

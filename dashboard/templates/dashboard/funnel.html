@@ -1,735 +1,254 @@
 {% extends 'dashboard/dashboard_base.html' %}
-{% load static %}
+{% load static app_nav %}
 
-{% block title %}Funnel Analysis | Respectlytics{% endblock %}
+{% block title %}Funnels | Respectlytics{% endblock %}
 
 {# Full-width navbar on pages with sidebar #}
 {% block navbar_container_class %}{% endblock %}
 
-{% block app_icon %}{{ app_name|slice:":1"|upper|default:"F" }}{% endblock %}
-{% block app_name %}{{ app_name|default:"Select App" }}{% endblock %}
-
-{% block app_dropdown %}{% endblock %}
-
 {% block nav_items %}
-<!-- Back to Apps Link -->
-<a href="{% url 'dashboard:main' %}" class="sidebar-nav-item mb-2">
-    <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-    All Apps
-</a>
-<div class="sidebar-divider"></div>
-<!-- Analytics Navigation -->
-<a href="{% url 'dashboard:stats' app_slug %}" class="sidebar-nav-item">
-    <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-    Overview
-</a>
-<a href="{% url 'dashboard:stats' app_slug %}#conversion" class="sidebar-nav-item">
-    <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-    Conversion
-</a>
-<a href="{% url 'dashboard:stats' app_slug %}#behavior" class="sidebar-nav-item">
-    <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-    Behavior
-</a>
-<a href="{% url 'dashboard:stats' app_slug %}#segments" class="sidebar-nav-item">
-    <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-    Segments
-</a>
-<div class="sidebar-divider"></div>
-<button class="sidebar-nav-item active">
-    <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-    Funnel Analysis
-</button>
-<div class="sidebar-divider"></div>
-<!-- Danger Zone -->
-<a href="{% url 'dashboard:stats' app_slug %}?action=delete_events" class="sidebar-nav-item text-rose-400 hover:text-rose-300 hover:bg-rose-500/10">
-    <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
-    Delete Events
-</a>
+{% app_nav "funnel" %}
 {% endblock %}
 
 {% block topbar %}
-<div class="flex items-center gap-3 p-4 md:p-6 lg:py-4 lg:px-12 bg-[#1e293b] border-b border-white/10 lg:hidden">
-    <!-- Mobile Menu Toggle -->
-    <button onclick="toggleSidebar()"
-            class="p-2 -ml-2 text-slate-400 hover:text-slate-50 hover:bg-slate-700 rounded-lg transition-all"
-            aria-label="Toggle navigation">
-        <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="3" y1="12" x2="21" y2="12"></line>
-            <line x1="3" y1="6" x2="21" y2="6"></line>
-            <line x1="3" y1="18" x2="21" y2="18"></line>
-        </svg>
-    </button>
-    <h1 class="text-xl font-semibold text-slate-50">Funnel Analysis</h1>
-</div>
+{% block topbar_notice %}{% endblock %}
 {% endblock %}
 
 {% block extra_css %}
-<style>
-/* Sidebar Navigation Styles - Dark theme */
-.sidebar-nav-item {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    width: 100%;
-    padding: 0.625rem 1rem;
-    border-radius: 0.5rem;
-    font-size: 0.9375rem;
-    font-weight: 500;
-    color: #94a3b8;
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    transition: all 0.2s;
-    text-align: left;
-}
-.sidebar-nav-item:hover {
-    background: #334155;
-    color: #f8fafc;
-}
-.sidebar-nav-item.active {
-    background: rgba(139, 92, 246, 0.15);
-    color: #a78bfa;
-    font-weight: 600;
-}
-.sidebar-nav-icon {
-    width: 1.25rem;
-    height: 1.25rem;
-    flex-shrink: 0;
-}
-.sidebar-divider {
-    height: 1px;
-    background: rgba(255, 255, 255, 0.1);
-    margin: 1rem 0.75rem;
-}
-
-/* Funnel step styling (Results) - Proportional width design */
-#funnelVisualization {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0;
-    padding: 1rem 1.5rem;
-    width: 100%;
-    max-width: 100%;
-}
-.funnel-step-wrapper {
-    width: 100%;
-    display: flex;
-    justify-content: center;
-}
-.funnel-step {
-    position: relative;
-    background: linear-gradient(135deg, #4F46E5, #7C3AED);
-    color: white;
-    padding: 0.875rem 1.25rem 0.875rem 1.25rem;
-    border-radius: 0.625rem;
-    transition: all 0.3s ease;
-    box-shadow: 0 3px 12px rgba(79, 70, 229, 0.25);
-    min-width: 280px;
-    min-height: 88px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-}
-.funnel-step:hover {
-    transform: scale(1.01);
-    box-shadow: 0 5px 20px rgba(79, 70, 229, 0.35);
-}
-.funnel-step.funnel-step-dead {
-    background: linear-gradient(135deg, #6B7280, #9CA3AF);
-    box-shadow: 0 3px 12px rgba(107, 114, 128, 0.25);
-}
-.funnel-step.funnel-step-dead:hover {
-    box-shadow: 0 5px 20px rgba(107, 114, 128, 0.35);
-}
-.funnel-step.funnel-step-dead .funnel-step-number {
-    background: #EF4444;
-}
-.funnel-step-number {
-    position: absolute;
-    top: 50%;
-    left: 12px;
-    transform: translateY(-50%);
-    background: #10B981;
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 700;
-    font-size: 0.875rem;
-    box-shadow: 0 2px 6px rgba(16, 185, 129, 0.4);
-}
-.funnel-step-header {
-    display: flex;
-    align-items: baseline;
-    justify-content: center;
-    gap: 0.75rem;
-    flex-wrap: wrap;
-}
-.funnel-step-name {
-    font-size: 1.25rem;
-    font-weight: 700;
-    letter-spacing: -0.01em;
-}
-.funnel-step-count {
-    font-size: 1.125rem;
-    font-weight: 700;
-}
-.funnel-step-primary {
-    font-size: 1.0625rem;
-    opacity: 0.98;
-    line-height: 1.4;
-    margin-top: 0.25rem;
-}
-.funnel-step-primary strong {
-    font-weight: 600;
-}
-.funnel-step-secondary {
-    font-size: 0.9375rem;
-    opacity: 0.9;
-    line-height: 1.4;
-    margin-top: 0.125rem;
-}
-.funnel-step-secondary strong {
-    font-weight: 600;
-}
-.funnel-step-dropoff {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.35rem;
-    margin-top: 0.375rem;
-    padding: 0.25rem 0.625rem;
-    background: rgba(255, 255, 255, 0.15);
-    border-radius: 1rem;
-    font-size: 0.875rem;
-    font-weight: 500;
-    width: fit-content;
-}
-.funnel-step-dropoff svg {
-    width: 14px;
-    height: 14px;
-}
-.funnel-arrow {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0.375rem 0;
-    color: #6366F1;
-}
-.funnel-arrow svg {
-    width: 1.5rem;
-    height: 1.5rem;
-    stroke-width: 2.5;
-}
-
-/* Funnel Builder Step Cards */
-.funnel-step-card {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.875rem 1rem;
-    background: #1e293b;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 0.75rem;
-    transition: all 0.2s;
-    cursor: grab;
-}
-.funnel-step-card:hover {
-    border-color: rgba(255, 255, 255, 0.2);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-}
-.funnel-step-card.dragging {
-    opacity: 0.5;
-    cursor: grabbing;
-}
-.funnel-step-card .step-number {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 1.75rem;
-    height: 1.75rem;
-    background: linear-gradient(135deg, #4F46E5, #7C3AED);
-    color: white;
-    border-radius: 50%;
-    font-size: 0.875rem;
-    font-weight: 600;
-    flex-shrink: 0;
-}
-.funnel-step-card .step-name {
-    flex: 1;
-    font-weight: 500;
-    color: #f8fafc;
-}
-.funnel-step-card .step-actions {
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
-}
-.funnel-step-card .step-action-btn {
-    padding: 0.375rem;
-    border-radius: 0.375rem;
-    color: #94a3b8;
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    transition: all 0.15s;
-}
-.funnel-step-card .step-action-btn:hover {
-    background: #334155;
-    color: #f8fafc;
-}
-.funnel-step-card .step-action-btn.delete:hover {
-    background: rgba(239, 68, 68, 0.15);
-    color: #fb7185;
-}
-.funnel-step-card .drag-handle {
-    cursor: grab;
-    color: #94A3B8;
-    padding: 0.25rem;
-}
-
-/* Step connector arrow */
-.step-connector {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 0.5rem 0;
-}
-.step-connector svg {
-    width: 1.5rem;
-    height: 1.5rem;
-    color: #6366F1;
-    stroke-width: 2.5;
-    filter: drop-shadow(0 1px 2px rgba(99, 102, 241, 0.3));
-}
-
-/* Custom Event Dropdown */
-#eventDropdown .dropdown-item {
-    padding: 0.75rem 1rem;
-    cursor: pointer;
-    font-size: 0.9375rem;
-    color: #f8fafc;
-    transition: background-color 0.15s;
-}
-#eventDropdown .dropdown-item:hover,
-#eventDropdown .dropdown-item.highlighted {
-    background-color: rgba(139, 92, 246, 0.15);
-    color: #a78bfa;
-}
-#eventDropdown .dropdown-item:first-child {
-    border-radius: 0.75rem 0.75rem 0 0;
-}
-#eventDropdown .dropdown-item:last-child {
-    border-radius: 0 0 0.75rem 0.75rem;
-}
-#eventDropdown .no-results {
-    padding: 1rem;
-    text-align: center;
-    color: #64748b;
-    font-size: 0.875rem;
-}
-
-/* Loading spinner */
-/* Loading Overlay - Full screen modal */
-.loading-overlay {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(15, 23, 42, 0.75);
-    backdrop-filter: blur(4px);
-    z-index: 9999;
-    justify-content: center;
-    align-items: center;
-}
-.loading-overlay.active {
-    display: flex;
-}
-.loading-modal {
-    background: #1e293b;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 1rem;
-    padding: 2.5rem 3rem;
-    text-align: center;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-    animation: modalPop 0.3s ease-out;
-}
-@keyframes modalPop {
-    from { transform: scale(0.9); opacity: 0; }
-    to { transform: scale(1); opacity: 1; }
-}
-.loading-spinner-animation {
-    width: 56px;
-    height: 56px;
-    border: 4px solid #E2E8F0;
-    border-top-color: #4F46E5;
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-    margin: 0 auto 1.25rem;
-}
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-.loading-modal h3 {
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: #f8fafc;
-    margin-bottom: 0.5rem;
-}
-.loading-modal p {
-    color: #94a3b8;
-    font-size: 0.875rem;
-}
-</style>
+{# the stats page's bar list, skeleton and table, then the funnel's own rows #}
+<link rel="stylesheet" href="{% static 'css/stats.css' %}">
+<link rel="stylesheet" href="{% static 'css/funnel.css' %}">
 {% endblock %}
 
 {% block dashboard_content %}
 {% if error %}
-<div class="bg-rose-500/15 border-2 border-rose-400/20 rounded-xl p-6 mb-8 text-rose-400 font-medium">
-    <strong>Error:</strong> {{ error }}
+<div class="card">
+    <p class="text-sm text-slate-200">{{ error }}</p>
+    <a href="{% url 'dashboard:main' %}" class="btn-secondary mt-4">Back to your apps</a>
 </div>
 {% elif not app_key %}
-<div class="bg-blue-500/15 border-2 border-blue-400/20 rounded-xl p-6 mb-8 text-blue-400 font-medium">
-    <strong>No app selected.</strong> Please go to the <a href="{% url 'dashboard:main' %}" class="font-semibold underline">Dashboard</a> to select an app.
+<div class="card">
+    <p class="text-sm text-slate-200">Choose an app to build a funnel for it.</p>
+    <a href="{% url 'dashboard:main' %}" class="btn-primary mt-4">Your apps</a>
 </div>
 {% else %}
-
-<!-- Header -->
-<div class="mb-5 flex items-start justify-between">
+<div class="space-y-6">
     <div>
-        <h1 class="text-2xl font-bold text-slate-50 flex items-center gap-3 tracking-tight">
-            <span>Funnel Analysis</span>
-        </h1>
-        <p class="text-sm text-slate-400">Track session journeys and conversion paths</p>
-    </div>
-    <button onclick="resetFunnelPage()"
-            class="px-3 py-1.5 text-xs font-medium text-rose-400 bg-slate-800 hover:bg-rose-500/15 border border-rose-400/20 rounded-lg transition-all flex items-center gap-2">
-        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
-            <path d="M3 3v5h5"/>
-        </svg>
-        Reset
-    </button>
-</div>
-
-<!-- Session-Scope Info Banner -->
-<div class="bg-indigo-500/15 border border-indigo-400/20 rounded-xl p-3 mb-5 flex items-start gap-2">
-    <div class="w-6 h-6 rounded-lg bg-indigo-500/20 flex items-center justify-center flex-shrink-0">
-        <svg class="w-3.5 h-3.5 text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"/>
-            <path d="M12 16v-4"/>
-            <path d="M12 8h.01"/>
-        </svg>
-    </div>
-    <div class="text-xs text-indigo-300">
-        <strong class="text-indigo-200">Session-Based Analysis:</strong> Funnel tracks behavior within single sessions (max 2 hours). Each session is analyzed independently, so funnels don't span multiple app opens.
-    </div>
-</div>
-
-<!-- Step 1: Build Your Funnel -->
-<div class="bg-[#1e293b] rounded-xl p-5 shadow-lg border border-white/10 mb-5">
-    <h2 class="text-lg font-bold text-slate-50 mb-1">Step 1: Build Your Funnel</h2>
-    <p class="text-sm text-slate-400 mb-4">Add events in the order you want to track. Drag to reorder.</p>
-
-    <div id="loadingEvents" class="loading-spinner active text-center py-8 text-slate-400">
-        Loading available events...
+        <div class="flex items-center gap-2">
+            <h1 class="app-title">Funnels</h1>
+            {% include 'partials/help.html' with id="helpFunnel" label="About funnels" text="A funnel follows each session on its own, from one step to the next, within that session. A session lasts at most 2 hours, and nothing follows a person from one session to the next." %}
+        </div>
+        <p class="app-lead">How many sessions take each step, in order</p>
     </div>
 
-    <!-- Funnel Steps Builder -->
-    <div id="funnelBuilder" class="hidden">
-        <!-- Selected steps will appear here -->
-        <div id="funnelStepsContainer" class="space-y-3 mb-4">
-            <!-- Steps rendered dynamically -->
+    <section class="card" aria-labelledby="stepsTitle">
+        <div class="flex min-h-9 items-center justify-between gap-3">
+            <h2 id="stepsTitle" class="card-title">Steps</h2>
+            {% if not demo %}
+            <button type="button" id="resetButton" onclick="resetFunnelPage()" hidden class="btn-quiet -my-2 -mr-3">Start over</button>
+            {% endif %}
+        </div>
+        {% if not demo %}
+        <p class="card-lead">Add events in the order sessions take them.</p>
+        {% endif %}
+
+        <div id="loadingEvents" class="mt-5 space-y-2" aria-hidden="true">
+            <span class="skeleton h-12"></span><span class="skeleton h-12"></span>
         </div>
 
-        <!-- Add Event Dropdown -->
-        <div class="flex items-center gap-2">
-            <div class="relative flex-1 max-w-md" id="eventDropdownWrapper">
-                <input type="text"
-                       id="eventSearchInput"
-                       placeholder="Search and add event..."
-                       class="w-full px-3 py-2 pl-9 bg-slate-800 border border-white/20 text-slate-50 placeholder-slate-400 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all"
-                       autocomplete="off">
-                <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-                </svg>
-                <svg class="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M6 9l6 6 6-6"/>
-                </svg>
-                <!-- Custom Dropdown -->
-                <div id="eventDropdown" class="hidden absolute z-50 w-full mt-1 bg-slate-800 border border-white/10 rounded-xl shadow-lg max-h-64 overflow-y-auto">
-                    <!-- Options populated dynamically -->
+        <div id="funnelBuilder" class="hidden mt-5">
+            <ol id="funnelStepsContainer" class="row-list" hidden></ol>
+
+            {% if demo %}
+            <p class="mt-4 text-xs text-slate-400">Sample funnel. In your own dashboard you build funnels from any of your events and groups.</p>
+            {% else %}
+            <div class="mt-4 flex items-center gap-2">
+                <div class="relative min-w-0 flex-1 sm:max-w-md" id="eventDropdownWrapper">
+                    <label for="eventSearchInput" class="sr-only">An event to add as a step</label>
+                    <input type="text" id="eventSearchInput" placeholder="Search your events" autocomplete="off"
+                           role="combobox" aria-expanded="false" aria-controls="eventDropdown" aria-autocomplete="list"
+                           class="field pl-9">
+                    <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                    </svg>
+                    <div id="eventDropdown" role="listbox" aria-label="Your events and groups"
+                         class="hidden absolute z-50 mt-1 max-h-64 w-full overflow-y-auto rounded-xl border border-white/15 bg-[#1e293b] py-1 shadow-2xl"></div>
                 </div>
+                <button type="button" onclick="addEventFromInput()" class="btn-secondary">
+                    {% include 'partials/icon.html' with name='plus' size='h-4 w-4' %}Add step
+                </button>
             </div>
-            <button onclick="addEventFromInput()"
-                    class="px-4 py-2 text-sm font-semibold text-white bg-brand-600 hover:bg-brand-700 rounded-lg transition-all flex items-center gap-1.5 shadow-sm hover:shadow-md">
-                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-                Add Step
-            </button>
+            {% endif %}
         </div>
+    </section>
 
-        <!-- Help text -->
-        <p id="funnelHelpText" class="text-xs text-slate-400 mt-2">
-            <span id="stepCountText">Add at least 2 events to analyze your funnel.</span>
-        </p>
-    </div>
-</div>
-
-<!-- Step 2: Filters (Collapsible) -->
-<div class="bg-[#1e293b] rounded-xl shadow-lg border border-white/10 mb-5 overflow-hidden">
-    <button onclick="toggleFiltersSection()"
-            class="w-full flex items-center justify-between p-4 text-left hover:bg-slate-800/30 transition-colors"
-            id="filtersToggleBtn">
-        <div class="flex items-center gap-2">
-            <svg class="w-5 h-5 text-brand-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
-            </svg>
-            <div>
-                <h2 class="text-base font-bold text-slate-50">Filters</h2>
-                <p class="text-xs text-slate-400" id="activeFiltersCount">No filters applied</p>
-            </div>
-        </div>
-        <div class="flex items-center gap-3">
-            <span id="filterBadge" class="hidden px-2.5 py-1 text-sm font-medium text-brand-700 bg-brand-100 rounded-full"></span>
-            <svg id="filtersChevron" class="w-5 h-5 text-gray-400 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    {% if not demo %}
+    <section class="card" aria-labelledby="filtersTitle">
+        <button type="button" onclick="toggleFiltersSection()" id="filtersToggleBtn" aria-expanded="false" aria-controls="filtersContent"
+                class="-m-2 flex w-[calc(100%+1rem)] items-center justify-between gap-3 rounded-xl p-2 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-400">
+            <span class="min-w-0">
+                <span id="filtersTitle" class="card-title block">Filters</span>
+                <span id="activeFiltersCount" class="card-lead block">All sessions</span>
+            </span>
+            <svg id="filtersChevron" class="h-5 w-5 flex-none text-slate-400 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                 <path d="M6 9l6 6 6-6"/>
             </svg>
-        </div>
-    </button>
+        </button>
 
-    <div id="filtersContent" class="hidden border-t border-white/10">
-        <!-- Active Filter Chips -->
-        <div id="activeFiltersChips" class="hidden p-3 pb-0 flex flex-wrap gap-2">
-            <!-- Chips rendered dynamically -->
-        </div>
-
-        <!-- Add Filter Dropdown -->
-        <div class="p-4 pt-3">
-            <div class="flex flex-wrap items-center gap-2 mb-3">
-                <div class="relative">
-                    <select id="filterTypeSelect"
-                            class="appearance-none px-3 py-2 pr-8 border border-white/20 rounded-lg text-sm font-medium text-slate-50 bg-slate-800 hover:bg-slate-700 cursor-pointer focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all">
-                        <option value="">+ Add Filter</option>
+        <div id="filtersContent" class="hidden mt-5 space-y-4">
+            <div id="activeFiltersChips" class="hidden flex flex-wrap gap-2"></div>
+            <div class="flex flex-wrap items-end gap-3">
+                <div>
+                    <label for="filterTypeSelect" class="field-label">Add a filter</label>
+                    <select id="filterTypeSelect" class="field w-auto min-w-[11rem]">
+                        <option value="">Choose one</option>
                         <option value="country">Country</option>
                         <option value="platform">Platform</option>
-                        <option value="dateRange">Date Range</option>
+                        <option value="dateRange">Dates</option>
                     </select>
-                    <svg class="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M6 9l6 6 6-6"/>
-                    </svg>
                 </div>
 
-                <!-- Dynamic Filter Value Selector -->
-                <div id="filterValueContainer" class="hidden flex items-center gap-2">
-                    <select id="filterValueSelect"
-                            class="px-3 py-2 bg-slate-800 border border-white/20 text-slate-50 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500 min-w-[180px]">
-                        <!-- Options populated dynamically -->
-                    </select>
-                    <button onclick="applySelectedFilter()"
-                            class="px-3 py-2 text-sm font-medium text-white bg-brand-600 hover:bg-brand-700 rounded-lg transition-all">
-                        Apply
-                    </button>
-                    <button onclick="cancelFilterSelection()"
-                            class="px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 transition-all">
-                        Cancel
-                    </button>
+                <div id="filterValueContainer" class="hidden flex flex-wrap items-end gap-2">
+                    <div>
+                        <label for="filterValueSelect" class="field-label" id="filterValueLabel">Value</label>
+                        <select id="filterValueSelect" class="field w-auto min-w-[11rem]"></select>
+                    </div>
+                    <button type="button" onclick="applySelectedFilter()" class="btn-secondary">Apply</button>
+                    <button type="button" onclick="cancelFilterSelection()" class="btn-quiet">Cancel</button>
                 </div>
 
-                <!-- Date Range Inputs -->
-                <div id="dateRangeContainer" class="hidden flex items-center gap-2">
-                    <input type="date" id="filterFrom" class="px-2.5 py-2 bg-slate-800 border border-white/20 text-slate-50 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500">
-                    <span class="text-slate-400 text-sm">to</span>
-                    <input type="date" id="filterTo" class="px-2.5 py-2 bg-slate-800 border border-white/20 text-slate-50 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500">
-                    <button onclick="applyDateFilter()"
-                            class="px-3 py-2 text-sm font-medium text-white bg-brand-600 hover:bg-brand-700 rounded-lg transition-all">
-                        Apply
-                    </button>
-                    <button onclick="cancelFilterSelection()"
-                            class="px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 transition-all">
-                        Cancel
-                    </button>
+                <div id="dateRangeContainer" class="hidden flex flex-wrap items-end gap-2">
+                    <div>
+                        <label for="filterFrom" class="field-label">From</label>
+                        <input type="date" id="filterFrom" class="field w-auto">
+                    </div>
+                    <div>
+                        <label for="filterTo" class="field-label">To</label>
+                        <input type="date" id="filterTo" class="field w-auto">
+                    </div>
+                    <button type="button" onclick="applyDateFilter()" class="btn-secondary">Apply</button>
+                    <button type="button" onclick="cancelFilterSelection()" class="btn-quiet">Cancel</button>
                 </div>
             </div>
-
-            <!-- Clear All Filters -->
-            <button id="clearAllFiltersBtn"
-                    onclick="clearAllFilters()"
-                    class="hidden text-xs text-slate-400 hover:text-rose-400 transition-colors">
-                Clear all filters
-            </button>
+            <button type="button" id="clearAllFiltersBtn" onclick="clearAllFilters()" class="btn-quiet -ml-3 hidden">Clear all filters</button>
         </div>
-    </div>
-</div>
+    </section>
 
-<!-- Analyze Section -->
-<div class="bg-[#1e293b] rounded-xl p-4 shadow-lg border border-white/10 mb-5">
-    <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
-        <!-- Conversion Window -->
+    <section class="card flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between" aria-label="Analyze">
+        <div>
+            <label for="conversionWindow" class="field-label">Max time between steps</label>
+            <select id="conversionWindow" class="field w-auto min-w-[11rem]">
+                <option value="">No limit</option>
+                <option value="5">5 minutes</option>
+                <option value="15">15 minutes</option>
+                <option value="30" selected>30 minutes</option>
+                <option value="60">1 hour</option>
+                <option value="120">2 hours</option>
+            </select>
+        </div>
+        <div class="flex flex-wrap items-center gap-x-4 gap-y-2 sm:justify-end">
+            <p id="stepCountText" class="text-sm text-slate-400" role="status">Add 2 steps to analyze.</p>
+            <button type="button" id="analyzeButton" onclick="analyzeFunnel()" disabled aria-describedby="stepCountText" class="btn-primary">Analyze</button>
+        </div>
+    </section>
+    {% endif %}{# not demo #}
+
+    <section id="funnelResults" class="card hidden" aria-labelledby="resultsTitle">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+            <h2 id="resultsTitle" class="card-title">Results</h2>
+            <div class="-mr-3 flex gap-1">
+                <button type="button" onclick="exportFunnelData('csv')" class="btn-quiet">{% include 'partials/icon.html' with name='download' size='h-4 w-4' %}CSV</button>
+                <button type="button" onclick="exportFunnelData('json')" class="btn-quiet">{% include 'partials/icon.html' with name='download' size='h-4 w-4' %}JSON</button>
+            </div>
+        </div>
+        <div id="funnelLoading" hidden class="mt-5 space-y-5" aria-hidden="true">
+            <span class="skeleton h-12 w-64 max-w-full"></span><span class="skeleton h-10"></span><span class="skeleton h-10"></span><span class="skeleton h-10"></span>
+        </div>
+        <div id="funnelData" class="mt-5">
+            <div class="flex flex-wrap gap-x-10 gap-y-3">
+                <div>
+                    <p class="text-sm text-slate-400">Sessions</p>
+                    <p class="mt-1 text-[1.625rem] font-semibold leading-tight tracking-tight text-slate-50" id="totalSessions">-</p>
+                </div>
+                <div>
+                    <p class="text-sm text-slate-400">Reached the last step</p>
+                    <p class="mt-1 text-[1.625rem] font-semibold leading-tight tracking-tight text-slate-50" id="conversionRate">-</p>
+                </div>
+                <div>
+                    <p class="text-sm text-slate-400">Left along the way</p>
+                    <p class="mt-1 text-[1.625rem] font-semibold leading-tight tracking-tight text-slate-50" id="totalDropOff">-</p>
+                </div>
+            </div>
+            <ol id="funnelVisualization" class="mt-6"></ol>
+        </div>
+    </section>
+
+    <section id="timingSection" class="card hidden" aria-labelledby="timingTitle">
         <div class="flex items-center gap-2">
-            <label for="conversionWindow" class="text-sm font-medium text-slate-50 whitespace-nowrap">
-                Step Timeout:
-            </label>
-            <div class="relative">
-                <select id="conversionWindow"
-                        class="appearance-none px-3 py-2 pr-8 border border-white/20 rounded-lg text-sm font-medium text-slate-50 bg-slate-800 hover:bg-slate-700 cursor-pointer focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all">
-                    <option value="">No limit</option>
-                    <option value="5">5 minutes</option>
-                    <option value="15">15 minutes</option>
-                    <option value="30" selected>30 minutes</option>
-                    <option value="60">60 minutes</option>
-                    <option value="120">120 minutes (max session)</option>
-                </select>
-                <svg class="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M6 9l6 6 6-6"/>
-                </svg>
-            </div>
-            <span class="text-xs text-slate-400 hidden sm:inline">
-                (Max time between consecutive steps)
-            </span>
+            <h2 id="timingTitle" class="card-title">Time between steps</h2>
+            {% include 'partials/help.html' with id="helpTiming" label="About these times" text="Median: the middle session. Mean: the average, which slow sessions pull up. Quick: a quarter of the sessions took less. Slow: a quarter took longer." %}
         </div>
-
-        <!-- Analyze Button -->
-        <button onclick="analyzeFunnel()"
-                class="px-5 py-2 text-sm font-bold text-white bg-brand-600 hover:bg-brand-700 rounded-lg shadow-lg hover:shadow-xl transition-all flex items-center gap-1.5">
-            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
-            </svg>
-            Analyze Funnel
-        </button>
-    </div>
-</div>
-
-<!-- Results Section -->
-<div id="funnelResults" class="hidden">
-    <div class="bg-[#1e293b] rounded-xl p-4 shadow-lg border border-white/10">
-        <div class="flex justify-between items-center mb-3 flex-wrap gap-2">
-            <div class="flex items-center gap-4">
-                <h2 class="text-lg font-bold text-slate-50">Funnel Results</h2>
-                <div class="flex items-center gap-3 text-sm">
-                    <div class="flex items-center gap-1">
-                        <span class="text-slate-400">Sessions:</span>
-                        <span class="font-bold text-slate-50" id="totalSessions">-</span>
-                    </div>
-                    <div class="flex items-center gap-1">
-                        <span class="text-slate-400">Conversion:</span>
-                        <span class="font-bold text-emerald-400" id="conversionRate">-</span>
-                    </div>
-                    <div class="flex items-center gap-1">
-                        <span class="text-slate-400">Drop-off:</span>
-                        <span class="font-bold text-rose-400" id="totalDropOff">-</span>
-                    </div>
+        <div id="timingLoading" class="mt-5 space-y-3" aria-hidden="true">
+            <span class="skeleton h-12 w-64 max-w-full"></span><span class="skeleton h-8"></span><span class="skeleton h-8"></span>
+        </div>
+        <div id="timingError" class="hidden mt-4">
+            <p class="text-sm text-slate-200">The times could not be loaded.</p>
+            <button type="button" class="btn-secondary mt-4" onclick="loadTimingData(selectedEvents, buildFilterParams())">Try again</button>
+        </div>
+        <div id="timingData" class="hidden mt-5">
+            <div class="flex flex-wrap gap-x-10 gap-y-3">
+                <div>
+                    <p class="text-sm text-slate-400">Median, first to last step</p>
+                    <p class="mt-1 text-[1.625rem] font-semibold leading-tight tracking-tight text-slate-50" id="summaryMedianTime">-</p>
+                </div>
+                <div>
+                    <p class="text-sm text-slate-400">Mean</p>
+                    <p class="mt-1 text-[1.625rem] font-semibold leading-tight tracking-tight text-slate-50" id="summaryMeanTime">-</p>
+                </div>
+                <div>
+                    <p class="text-sm text-slate-400">Took every step</p>
+                    <p class="mt-1 text-[1.625rem] font-semibold leading-tight tracking-tight text-slate-50" id="summaryCompletionRate">-</p>
                 </div>
             </div>
-            <div class="flex gap-1.5">
-                <button onclick="exportFunnelData('csv')" class="px-2.5 py-1 text-xs font-medium text-slate-50 bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors">📥 CSV</button>
-                <button onclick="exportFunnelData('json')" class="px-2.5 py-1 text-xs font-medium text-slate-50 bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors">📥 JSON</button>
-            </div>
-        </div>
-
-        <div id="funnelVisualization">
-            <!-- Funnel steps will be rendered here -->
-        </div>
-    </div>
-
-    <!-- Transition Timing Section -->
-    <div id="timingSection" class="mt-5 bg-[#1e293b] rounded-xl p-5 shadow-lg border border-white/10">
-        <div class="mb-3">
-            <h3 class="text-base font-bold text-slate-50">Transition Timing</h3>
-            <p class="text-xs text-slate-400 mt-0.5">Time between consecutive steps within a session</p>
-        </div>
-
-        <!-- Timing Loading State -->
-        <div id="timingLoading" class="flex items-center justify-center py-6">
-            <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-brand-500"></div>
-            <span class="ml-2 text-sm text-slate-400">Loading timing data...</span>
-        </div>
-
-        <!-- Timing Error State -->
-        <div id="timingError" class="hidden py-4 text-center">
-            <p class="text-sm text-slate-400">Unable to load timing data</p>
-        </div>
-
-        <!-- Timing Data -->
-        <div id="timingData" class="hidden">
-            <div class="overflow-x-auto">
-                <table class="w-full">
+            <div class="relative mt-6 overflow-x-auto">
+                <table class="stats-table">
                     <thead>
-                        <tr class="text-sm text-slate-400 uppercase tracking-wider">
-                            <th class="px-4 py-3 text-left">Transition</th>
-                            <th class="px-4 py-3 text-right">Median</th>
-                            <th class="px-4 py-3 text-right">Mean</th>
-                            <th class="px-4 py-3 text-right">P25 (Fast)</th>
-                            <th class="px-4 py-3 text-right">P75 (Slow)</th>
-                            <th class="px-4 py-3 text-right">Sessions</th>
+                        <tr>
+                            <th scope="col" class="text-left">Steps</th>
+                            <th scope="col" class="text-right">Median</th>
+                            <th scope="col" class="text-right">Mean</th>
+                            <th scope="col" class="text-right">Quick</th>
+                            <th scope="col" class="text-right">Slow</th>
+                            <th scope="col" class="text-right">Sessions</th>
                         </tr>
                     </thead>
-                    <tbody id="timingTableBody">
-                        <!-- Timing rows will be rendered here -->
-                    </tbody>
+                    <tbody id="timingTableBody"></tbody>
                 </table>
             </div>
-
-            <!-- Insight Alert -->
-            <div id="timingInsight" class="hidden mt-4 p-4 bg-amber-900/20 border border-amber-500/30 rounded-xl">
-                <div class="flex items-start gap-3">
-                    <span class="text-xl">⚠️</span>
-                    <div>
-                        <p class="text-slate-300 text-sm" id="timingInsightText"></p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Summary Stats -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-                <div class="bg-slate-800/50 rounded-xl p-4 text-center border border-white/5">
-                    <div class="text-3xl font-black text-slate-50 mb-1" id="summaryMedianTime">-</div>
-                    <div class="text-sm text-slate-400">Median Total Time</div>
-                    <div class="text-xs text-slate-500 mt-1">From first to last step</div>
-                </div>
-                <div class="bg-slate-800/50 rounded-xl p-4 text-center border border-white/5">
-                    <div class="text-3xl font-black text-slate-50 mb-1" id="summaryMeanTime">-</div>
-                    <div class="text-sm text-slate-400">Mean Total Time</div>
-                    <div class="text-xs text-slate-500 mt-1">Pulled up by slow completers</div>
-                </div>
-                <div class="bg-slate-800/50 rounded-xl p-4 text-center border border-white/5">
-                    <div class="text-3xl font-black text-emerald-400 mb-1" id="summaryCompletionRate">-</div>
-                    <div class="text-sm text-slate-400">Completion Rate</div>
-                    <div class="text-xs text-slate-500 mt-1">Sessions completing all steps</div>
-                </div>
-            </div>
+            <p id="timingInsight" class="hidden mt-5 flex items-start gap-2 text-sm text-slate-300">
+                <span class="mt-0.5 flex-none text-amber-300">{% include 'partials/icon.html' with name='clock' size='h-4 w-4' %}</span>
+                <span id="timingInsightText"></span>
+            </p>
         </div>
-    </div>
+    </section>
 </div>
-
-<!-- Loading Overlay Modal -->
-<div id="loadingFunnel" class="loading-overlay">
-    <div class="loading-modal">
-        <div class="loading-spinner-animation"></div>
-        <h3>Analyzing Funnel</h3>
-        <p>Crunching the numbers, please wait...</p>
-    </div>
-</div>
-
-<div id="emptyState" class="hidden text-center py-12">
-    <div class="text-7xl mb-4">📊</div>
-    <h3 class="text-2xl font-bold text-slate-50 mb-2">No Data Available</h3>
-    <p class="text-slate-400">Select at least 2 events and click "Analyze Funnel" to see results.</p>
-</div>
-
 {% endif %}
 {% endblock %}
 {% block dashboard_scripts %}
+{% block data_shim %}
+{% if demo %}
+<script src="{% static 'demo/demo-fetch.js' %}"></script>
+{% endif %}
+{% endblock %}
+<script src="{% static 'js/event-groups.js' %}"></script>
 <script>
 const appKey = '{{ app_key }}';
+// The public demo (demo/funnel.html): its sample funnel, shown built and not changed
+const DEMO_STEPS = {% if demo %}{{ demo_steps|safe }}{% else %}null{% endif %};
 const appSlug = '{{ app_slug }}';
+const eventGroupsUrl = '{% url "dashboard:update_event_groups" app_slug %}';
+// Names are senders' text, and land in markup and attributes
+const esc = (text) => EventGroups.esc(text);
 let selectedEvents = [];
 const MAX_FUNNEL_STEPS = 10;
 let availableEvents = [];
@@ -753,45 +272,67 @@ async function loadEventTypes() {
         availableEvents = data.event_types;
 
         populateEventDatalist();
-        loadFilterOptions();
+        if (!DEMO_STEPS) loadFilterOptions();  // the demo has no filters
 
         document.getElementById('loadingEvents').style.display = 'none';
         document.getElementById('funnelBuilder').classList.remove('hidden');
     } catch (error) {
-        document.getElementById('loadingEvents').innerHTML =
-            `<div class="alert alert-warning">Error loading events: ${error.message}</div>`;
+        document.getElementById('loadingEvents').outerHTML =
+            '<p id="loadingEvents" class="mt-5 text-sm text-slate-200">Your events could not be loaded. Reload the page to try again.</p>';
     }
 }
 
-function populateEventDatalist() {
-    const dropdown = document.getElementById('eventDropdown');
-
-    // Only show events not already selected
-    const unselectedEvents = availableEvents.filter(e => !selectedEvents.includes(e));
-
-    renderDropdownOptions(unselectedEvents);
+/**
+ * What a step can be: each event group (any of its events counts as the step), each of its
+ * events on its own below it, then every other event. A group's bare word (purchase in the
+ * purchase group) is the group, so it is not offered again on its own.
+ */
+function stepOptions() {
+    const options = [];
+    const grouped = new Set();
+    EventGroups.state.groups.forEach(group => {
+        options.push({ value: group.name, group });
+        group.events.forEach(e => {
+            grouped.add(e);
+            if (e !== group.name) options.push({ value: e, member: true });
+        });
+    });
+    availableEvents.filter(e => !grouped.has(e)).forEach(e => options.push({ value: e }));
+    return options.filter(o => !selectedEvents.includes(o.value));
 }
 
-function renderDropdownOptions(events, filter = '') {
+function populateEventDatalist() {
+    renderDropdownOptions(stepOptions());
+}
+
+function renderDropdownOptions(options, filter = '') {
     const dropdown = document.getElementById('eventDropdown');
+    if (!dropdown) return;  // the demo has no picker
     dropdown.innerHTML = '';
 
-    const filteredEvents = filter
-        ? events.filter(e => e.toLowerCase().includes(filter.toLowerCase()))
-        : events;
+    const wanted = filter.toLowerCase();
+    const filtered = wanted
+        ? options.filter(o => o.value.toLowerCase().includes(wanted)
+            || (o.group && o.group.events.some(e => e.toLowerCase().includes(wanted))))
+        : options;
 
-    if (filteredEvents.length === 0) {
+    if (filtered.length === 0) {
         dropdown.innerHTML = '<div class="no-results">No matching events</div>';
         return;
     }
 
-    filteredEvents.forEach((event, index) => {
+    filtered.forEach((option, index) => {
         const item = document.createElement('div');
-        item.className = 'dropdown-item';
-        item.textContent = event;
-        item.dataset.value = event;
+        item.className = 'dropdown-item' + (option.member ? ' dropdown-item-member' : '');
+        item.setAttribute('role', 'option');
+        if (option.group) {
+            item.innerHTML = `${EventGroups.name(option.value, { plain: true })}<span class="ml-2 text-xs text-slate-400">any of ${option.group.events.length} events</span>`;
+        } else {
+            item.textContent = option.value;
+        }
+        item.dataset.value = option.value;
         item.dataset.index = index;
-        item.addEventListener('click', () => selectEventFromDropdown(event));
+        item.addEventListener('click', () => selectEventFromDropdown(option.value));
         dropdown.appendChild(item);
     });
 }
@@ -805,14 +346,17 @@ function selectEventFromDropdown(eventName) {
 
 function showEventDropdown() {
     const dropdown = document.getElementById('eventDropdown');
-    const unselectedEvents = availableEvents.filter(e => !selectedEvents.includes(e));
     const filter = document.getElementById('eventSearchInput').value;
-    renderDropdownOptions(unselectedEvents, filter);
+    renderDropdownOptions(stepOptions(), filter);
     dropdown.classList.remove('hidden');
+    document.getElementById('eventSearchInput').setAttribute('aria-expanded', 'true');
 }
 
 function hideEventDropdown() {
-    document.getElementById('eventDropdown').classList.add('hidden');
+    const dropdown = document.getElementById('eventDropdown');
+    if (!dropdown) return;
+    dropdown.classList.add('hidden');
+    document.getElementById('eventSearchInput').setAttribute('aria-expanded', 'false');
     highlightedIndex = -1;
 }
 
@@ -841,35 +385,36 @@ function addEventFromInput() {
 
     // Validation: max length 255 chars
     if (eventName.length > 255) {
-        showToast('Event name must be 255 characters or less.', 'error');
+        showToast('An event name has at most 255 characters.', 'error');
         return;
     }
     
-    // Validation: safe characters only (letters, numbers, underscores, hyphens, dots, spaces, colons, dollar signs)
+    // Validation: safe characters only (letters, numbers, underscores, hyphens, dots, spaces, colons, dollar signs);
+    // a group's name is whatever its owner called it
     const safePattern = /^[a-zA-Z0-9_\-\.\s:$]+$/;
-    if (!safePattern.test(eventName)) {
-        showToast('Event name can only contain letters, numbers, underscores, hyphens, dots, spaces, colons, and dollar signs.', 'warning');
+    if (!EventGroups.group(eventName) && !safePattern.test(eventName)) {
+        showToast('An event name can hold letters, numbers, spaces, underscores, hyphens, dots, colons and dollar signs.', 'warning');
         return;
     }
 
     // Check if already selected
     if (selectedEvents.includes(eventName)) {
-        showToast('Event already added to funnel.', 'warning');
+        showToast('That event is already a step.', 'warning');
         input.value = '';
         return;
     }
 
     // Check max steps limit
     if (selectedEvents.length >= MAX_FUNNEL_STEPS) {
-        showToast(`Maximum ${MAX_FUNNEL_STEPS} steps allowed in a funnel.`, 'warning');
+        showToast(`A funnel has at most ${MAX_FUNNEL_STEPS} steps.`, 'warning');
         input.value = '';
         return;
     }
 
     // Show hint if event doesn't exist yet
-    const isPending = !availableEvents.includes(eventName);
+    const isPending = !availableEvents.includes(eventName) && !EventGroups.group(eventName);
     if (isPending) {
-        showToast(`Added "${eventName}" - this event hasn't been tracked yet.`, 'info');
+        showToast(`Added ${eventName}. Your app has not sent it yet.`, 'info');
     }
 
     selectedEvents.push(eventName);
@@ -935,87 +480,92 @@ document.addEventListener('DOMContentLoaded', function() {
 function renderFunnelSteps() {
     const container = document.getElementById('funnelStepsContainer');
     container.innerHTML = '';
+    container.hidden = selectedEvents.length === 0;
+    const last = selectedEvents.length - 1;
 
     selectedEvents.forEach((event, index) => {
-        // Check if this event exists in tracked events
-        const isPending = !availableEvents.includes(event);
-        const pendingBadge = isPending ? '<span class="ml-2 px-2 py-0.5 text-xs font-medium text-amber-400 bg-amber-500/10 rounded-full border border-amber-500/30">pending</span>' : '';
-        const pendingClass = isPending ? 'border-l-2 border-dashed border-amber-500/50' : '';
-        
-        // Create step card
-        const stepDiv = document.createElement('div');
-        stepDiv.className = `funnel-step-card ${pendingClass}`;
-        stepDiv.draggable = true;
+        const isPending = !availableEvents.includes(event) && !EventGroups.group(event);
+        const pendingNote = isPending ? '<span class="ml-2 text-xs text-amber-300">Not sent yet</span>' : '';
+        const stepDiv = document.createElement('li');
+        stepDiv.className = 'funnel-step-card';
+        stepDiv.draggable = !DEMO_STEPS;
         stepDiv.dataset.index = index;
-
-        stepDiv.innerHTML = `
-            <div class="drag-handle" title="Drag to reorder">
-                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+        const arrow = (d) => `<svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="${d}"/></svg>`;
+        stepDiv.innerHTML = DEMO_STEPS ? `
+            <span class="step-number">${index + 1}</span>
+            <span class="step-name">${EventGroups.name(event, { plain: true })}</span>
+        ` : `
+            <span class="drag-handle" title="Drag to move" aria-hidden="true">
+                <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
                     <circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/>
                     <circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/>
                     <circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/>
                 </svg>
-            </div>
-            <div class="step-number">${index + 1}</div>
-            <div class="step-name">${event}${pendingBadge}</div>
-            <div class="step-actions">
-                <button class="step-action-btn delete" onclick="removeStep(${index})" title="Remove step">
-                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M18 6L6 18M6 6l12 12"/>
-                    </svg>
-                </button>
-            </div>
+            </span>
+            <span class="step-number">${index + 1}</span>
+            <span class="step-name">${EventGroups.name(event, { plain: true })}${pendingNote}</span>
+            <span class="step-actions">
+                <button type="button" class="step-action-btn" onclick="moveStep(${index}, -1)" ${index === 0 ? 'disabled' : ''} aria-label="Move ${esc(event)} up" title="Move up">${arrow('M18 15l-6-6-6 6')}</button>
+                <button type="button" class="step-action-btn" onclick="moveStep(${index}, 1)" ${index === last ? 'disabled' : ''} aria-label="Move ${esc(event)} down" title="Move down">${arrow('M6 9l6 6 6-6')}</button>
+                <button type="button" class="step-action-btn delete" onclick="removeStep(${index})" aria-label="Remove ${esc(event)}" title="Remove">${arrow('M18 6L6 18M6 6l12 12')}</button>
+            </span>
         `;
-
-        // Add drag events
-        stepDiv.addEventListener('dragstart', handleDragStart);
-        stepDiv.addEventListener('dragover', handleDragOver);
-        stepDiv.addEventListener('drop', handleDrop);
-        stepDiv.addEventListener('dragend', handleDragEnd);
-
-        container.appendChild(stepDiv);
-
-        // Add connector arrow (except for last step)
-        if (index < selectedEvents.length - 1) {
-            const connector = document.createElement('div');
-            connector.className = 'step-connector';
-            connector.innerHTML = `
-                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M12 5v14M5 12l7 7 7-7"/>
-                </svg>
-            `;
-            container.appendChild(connector);
+        if (!DEMO_STEPS) {
+            stepDiv.addEventListener('dragstart', handleDragStart);
+            stepDiv.addEventListener('dragover', handleDragOver);
+            stepDiv.addEventListener('drop', handleDrop);
+            stepDiv.addEventListener('dragend', handleDragEnd);
         }
+        container.appendChild(stepDiv);
     });
+    updateHelpText();
+}
+
+/** A step one place up or down: the way to reorder without dragging (WCAG 2.5.7). */
+function moveStep(index, by) {
+    const to = index + by;
+    if (to < 0 || to >= selectedEvents.length) return;
+    const [moved] = selectedEvents.splice(index, 1);
+    selectedEvents.splice(to, 0, moved);
+    renderFunnelSteps();
+    // the focus follows the step it moved
+    const row = document.querySelector(`#funnelStepsContainer [data-index="${to}"]`);
+    const button = row && row.querySelector(`button[onclick="moveStep(${to}, ${by})"]:not([disabled])`)
+        || row && row.querySelector('button:not([disabled])');
+    if (button) button.focus();
 }
 
 function removeStep(index) {
     selectedEvents.splice(index, 1);
     renderFunnelSteps();
     populateEventDatalist();
-    updateHelpText();
-
-    // Hide results if less than 2 steps
     if (selectedEvents.length < 2) {
-        document.getElementById('funnelResults').style.display = 'none';
+        document.getElementById('funnelResults').classList.add('hidden');
+        document.getElementById('timingSection').classList.add('hidden');
     }
+    const input = document.getElementById('eventSearchInput');
+    if (input) input.focus();
 }
 
+/**
+ * Analyze is on from two steps, and says until then how many are missing; Start over shows only
+ * when there is something to clear.
+ */
 function updateHelpText() {
     const text = document.getElementById('stepCountText');
+    const button = document.getElementById('analyzeButton');
+    const reset = document.getElementById('resetButton');
     const count = selectedEvents.length;
-
-    if (count === 0) {
-        text.textContent = 'Add at least 2 events to analyze your funnel.';
-    } else if (count === 1) {
-        text.textContent = 'Add 1 more event to analyze your funnel.';
-    } else {
-        text.textContent = `${count} steps selected. Ready to analyze!`;
-        text.parentElement.classList.add('text-green-600');
+    if (text) {
+        text.textContent = count === 0 ? 'Add 2 steps to analyze.'
+            : count === 1 ? 'Add 1 more step to analyze.'
+            : `${count} steps`;
     }
-
-    if (count < 2) {
-        text.parentElement.classList.remove('text-green-600');
+    if (button) button.disabled = count < 2;
+    if (reset) {
+        const filtered = Object.keys(activeFilters || {}).length > 0;
+        const window_ = document.getElementById('conversionWindow');
+        reset.hidden = count === 0 && !filtered && (!window_ || window_.value === '30');
     }
 }
 
@@ -1029,19 +579,12 @@ function handleDragStart(e) {
 function handleDragOver(e) {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
-
     const card = e.target.closest('.funnel-step-card');
     if (card && card !== draggedElement) {
         const rect = card.getBoundingClientRect();
-        const midY = rect.top + rect.height / 2;
-
-        if (e.clientY < midY) {
-            card.style.borderTop = '2px solid #4F46E5';
-            card.style.borderBottom = '';
-        } else {
-            card.style.borderBottom = '2px solid #4F46E5';
-            card.style.borderTop = '';
-        }
+        const before = e.clientY < rect.top + rect.height / 2;
+        card.classList.toggle('drop-before', before);
+        card.classList.toggle('drop-after', !before);
     }
 }
 
@@ -1065,32 +608,14 @@ function handleDrop(e) {
         renderFunnelSteps();
     }
 
-    // Clear all border indicators
-    document.querySelectorAll('.funnel-step-card').forEach(c => {
-        c.style.borderTop = '';
-        c.style.borderBottom = '';
-    });
+    document.querySelectorAll('.funnel-step-card').forEach(c => c.classList.remove('drop-before', 'drop-after'));
 }
 
 function handleDragEnd() {
     this.classList.remove('dragging');
     draggedElement = null;
 
-    document.querySelectorAll('.funnel-step-card').forEach(c => {
-        c.style.borderTop = '';
-        c.style.borderBottom = '';
-    });
-}
-
-// Note: Toast notification function is now global from staticfiles/js/toast.js
-
-function clearSelection() {
-    selectedEvents = [];
-    renderFunnelSteps();
-    populateEventDatalist();
-    updateHelpText();
-    document.getElementById('funnelResults').style.display = 'none';
-    document.getElementById('emptyState').style.display = 'block';
+    document.querySelectorAll('.funnel-step-card').forEach(c => c.classList.remove('drop-before', 'drop-after'));
 }
 
 // ============================================
@@ -1173,22 +698,23 @@ function showFilterValueSelect(filterType) {
     if (options.length === 0) {
         const opt = document.createElement('option');
         opt.value = '';
-        opt.textContent = 'No options available';
+        opt.textContent = 'None in your events yet';
         opt.disabled = true;
         select.appendChild(opt);
         return;
     }
 
-    // Add default option
+    document.getElementById('filterValueLabel').textContent = meta.label;
     const defaultOpt = document.createElement('option');
     defaultOpt.value = '';
-    defaultOpt.textContent = `Select ${meta.label}...`;
+    defaultOpt.textContent = 'Choose one';
     select.appendChild(defaultOpt);
 
     options.forEach(option => {
         const opt = document.createElement('option');
         opt.value = option;
-        opt.textContent = option;
+        // a country by its name, a platform as people write it (stats/utils.js has no place here)
+        opt.textContent = filterType === 'country' ? countryName(option) : platformName(option);
         select.appendChild(opt);
     });
 }
@@ -1269,133 +795,92 @@ function clearAllFilters() {
 }
 
 function resetFunnelPage() {
-    // Clear all selected events
     selectedEvents = [];
-    renderFunnelSteps();
-    updateHelpText();
-    populateEventDatalist();
-
-    // Clear the activeFilters object completely
     activeFilters = {};
-
-    // Clear date range inputs
-    const filterFrom = document.getElementById('filterFrom');
-    const filterTo = document.getElementById('filterTo');
-    if (filterFrom) filterFrom.value = '';
-    if (filterTo) filterTo.value = '';
-
-    // Reset filter type selector and hide value containers
+    currentFilterType = null;
+    ['filterFrom', 'filterTo', 'eventSearchInput'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
     const filterTypeSelect = document.getElementById('filterTypeSelect');
     if (filterTypeSelect) filterTypeSelect.value = '';
-
-    const filterValueContainer = document.getElementById('filterValueContainer');
-    const dateRangeContainer = document.getElementById('dateRangeContainer');
-    if (filterValueContainer) filterValueContainer.classList.add('hidden');
-    if (dateRangeContainer) dateRangeContainer.classList.add('hidden');
-    currentFilterType = null;
-
-    // Clear the chips container manually
-    const chipsContainer = document.getElementById('activeFiltersChips');
-    if (chipsContainer) {
-        chipsContainer.innerHTML = '';
-        chipsContainer.classList.add('hidden');
-    }
-
-    // Reset filter count text and badge
-    const countText = document.getElementById('activeFiltersCount');
-    const badge = document.getElementById('filterBadge');
-    const clearBtn = document.getElementById('clearAllFiltersBtn');
-    if (countText) countText.textContent = 'No filters applied';
-    if (badge) badge.classList.add('hidden');
-    if (clearBtn) clearBtn.classList.add('hidden');
-
-    // Reset conversion window to default
+    hideFilterValueSelectors();
     const conversionWindow = document.getElementById('conversionWindow');
-    if (conversionWindow) conversionWindow.value = '7';
+    if (conversionWindow) conversionWindow.value = '30';
+    renderActiveFilters();
+    renderFunnelSteps();
+    populateEventDatalist();
+    document.getElementById('funnelResults').classList.add('hidden');
+    document.getElementById('timingSection').classList.add('hidden');
+    const input = document.getElementById('eventSearchInput');
+    if (input) input.focus();
+}
 
-    // Clear the search input
-    const eventSearchInput = document.getElementById('eventSearchInput');
-    if (eventSearchInput) eventSearchInput.value = '';
+/** A country's English name from its code, as the stats page writes it. */
+function countryName(code) {
+    try {
+        return new Intl.DisplayNames(['en'], { type: 'region' }).of(String(code).toUpperCase()) || code;
+    } catch (e) {
+        return code;
+    }
+}
+
+function platformName(value) {
+    return { ios: 'iOS', android: 'Android', web: 'Web', macos: 'macOS' }[String(value).toLowerCase()] || value;
 }
 
 function renderActiveFilters() {
     const container = document.getElementById('activeFiltersChips');
     const countText = document.getElementById('activeFiltersCount');
-    const badge = document.getElementById('filterBadge');
     const clearBtn = document.getElementById('clearAllFiltersBtn');
-
+    if (!container) return;
     container.innerHTML = '';
-
     let chipCount = 0;
-
-    // Render chips for each filter type
     Object.entries(activeFilters).forEach(([filterType, values]) => {
         if (filterType === 'dateRange') {
             const { from, to } = values;
-            let label = 'Date: ';
-            if (from && to) label += `${from} to ${to}`;
-            else if (from) label += `from ${from}`;
-            else if (to) label += `until ${to}`;
-
+            const label = from && to ? `Dates: ${from} to ${to}` : from ? `Dates: from ${from}` : `Dates: until ${to}`;
             container.appendChild(createFilterChip(label, () => removeFilter('dateRange')));
             chipCount++;
         } else {
             const meta = filterTypeMeta[filterType];
             values.forEach(value => {
-                const label = `${meta.label}: ${value}`;
-                container.appendChild(createFilterChip(label, () => removeFilter(filterType, value)));
+                const shown = filterType === 'country' ? countryName(value) : platformName(value);
+                container.appendChild(createFilterChip(`${meta.label}: ${shown}`, () => removeFilter(filterType, value)));
                 chipCount++;
             });
         }
     });
-
-    // Update UI state
-    if (chipCount > 0) {
-        container.classList.remove('hidden');
-        clearBtn.classList.remove('hidden');
-        countText.textContent = `${chipCount} filter${chipCount > 1 ? 's' : ''} applied`;
-        badge.textContent = chipCount;
-        badge.classList.remove('hidden');
-    } else {
-        container.classList.add('hidden');
-        clearBtn.classList.add('hidden');
-        countText.textContent = 'No filters applied';
-        badge.classList.add('hidden');
-    }
+    container.classList.toggle('hidden', chipCount === 0);
+    clearBtn.classList.toggle('hidden', chipCount === 0);
+    countText.textContent = chipCount === 0 ? 'All sessions' : `${chipCount} ${chipCount === 1 ? 'filter' : 'filters'}`;
+    updateHelpText();
 }
 
 function createFilterChip(label, onRemove) {
     const chip = document.createElement('span');
-    chip.className = 'inline-flex items-center gap-1.5 px-3 py-1.5 bg-brand-50 text-brand-700 rounded-full text-sm font-medium';
-
+    chip.className = 'inline-flex min-h-8 items-center gap-1 rounded-full border border-white/15 pl-3 pr-1 text-sm text-slate-100';
     chip.innerHTML = `
-        <span>${label}</span>
-        <button class="hover:bg-brand-100 rounded-full p-0.5 transition-colors" title="Remove filter">
-            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M18 6L6 18M6 6l12 12"/>
-            </svg>
+        <span>${esc(label)}</span>
+        <button type="button" class="flex h-6 w-6 items-center justify-center rounded-full text-slate-400 hover:bg-white/10 hover:text-slate-50" aria-label="Remove ${esc(label)}">
+            <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
         </button>
     `;
-
     chip.querySelector('button').addEventListener('click', (e) => {
         e.stopPropagation();
         onRemove();
     });
-
     return chip;
 }
 
 function toggleFiltersSection() {
     const content = document.getElementById('filtersContent');
     const chevron = document.getElementById('filtersChevron');
-
-    if (content.classList.contains('hidden')) {
-        content.classList.remove('hidden');
-        chevron.style.transform = 'rotate(180deg)';
-    } else {
-        content.classList.add('hidden');
-        chevron.style.transform = '';
-    }
+    const button = document.getElementById('filtersToggleBtn');
+    const open = content.classList.contains('hidden');
+    content.classList.toggle('hidden', !open);
+    chevron.style.transform = open ? 'rotate(180deg)' : '';
+    button.setAttribute('aria-expanded', open ? 'true' : 'false');
 }
 
 // Build filter params from active filters for API call
@@ -1421,53 +906,53 @@ function buildFilterParams() {
 }
 
 async function analyzeFunnel() {
-    if (selectedEvents.length < 2) {
-        showToast('Please select at least 2 events for funnel analysis', 'warning');
-        return;
-    }
+    if (selectedEvents.length < 2) return;  // Analyze is off until there are two steps
 
-    document.getElementById('loadingFunnel').classList.add('active');
-    document.getElementById('funnelResults').style.display = 'none';
-    document.getElementById('emptyState').style.display = 'none';
+    const results = document.getElementById('funnelResults');
+    const button = document.getElementById('analyzeButton');
+    results.classList.remove('hidden');
+    results.setAttribute('aria-busy', 'true');
+    document.getElementById('funnelLoading').hidden = false;
+    document.getElementById('funnelData').hidden = true;
+    document.getElementById('timingSection').classList.add('hidden');
+    if (button) {
+        button.disabled = true;
+        button.textContent = 'Analyzing';
+    }
 
     const params = new URLSearchParams({
-        steps: selectedEvents.join(',')
+        steps: selectedEvents.join(','),
+        group_events: 'true'
     });
-
-    // Add step timeout if set
-    const stepTimeout = document.getElementById('conversionWindow').value;
-    if (stepTimeout) {
-        params.append('window_minutes', stepTimeout);
-    }
-
-    // Get filter params from active filters
+    const stepTimeout = (document.getElementById('conversionWindow') || {}).value;
+    if (stepTimeout) params.append('window_minutes', stepTimeout);
     const filterParams = buildFilterParams();
-    Object.entries(filterParams).forEach(([key, value]) => {
-        params.append(key, value);
-    });
+    Object.entries(filterParams).forEach(([key, value]) => params.append(key, value));
 
     try {
         const response = await fetch(`/api/v1/events/funnel/?${params}`, {
             headers: { 'X-App-Key': appKey }
         });
-
         if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || 'Failed to analyze funnel');
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.error || 'The funnel could not be analyzed. Try again.');
         }
-
         const data = await response.json();
         currentFunnelData = data;
         renderFunnel(data);
-
-        document.getElementById('loadingFunnel').classList.remove('active');
-        document.getElementById('funnelResults').style.display = 'block';
-
+        document.getElementById('funnelLoading').hidden = true;
+        document.getElementById('funnelData').hidden = false;
         // Load timing data in parallel (don't block the UI)
         loadTimingData(selectedEvents, filterParams);
     } catch (error) {
-        document.getElementById('loadingFunnel').classList.remove('active');
-        showToast('Error: ' + error.message, 'error');
+        results.classList.add('hidden');
+        showToast(error.message, 'error');
+    } finally {
+        results.removeAttribute('aria-busy');
+        if (button) {
+            button.textContent = 'Analyze';
+            button.disabled = selectedEvents.length < 2;
+        }
     }
 }
 
@@ -1476,13 +961,15 @@ async function analyzeFunnel() {
  */
 async function loadTimingData(steps, filterParams) {
     // Reset timing section state
+    document.getElementById('timingSection').classList.remove('hidden');
     document.getElementById('timingLoading').classList.remove('hidden');
     document.getElementById('timingError').classList.add('hidden');
     document.getElementById('timingData').classList.add('hidden');
     document.getElementById('timingInsight').classList.add('hidden');
 
     const params = new URLSearchParams({
-        steps: steps.join(',')
+        steps: steps.join(','),
+        group_events: 'true'
     });
 
     // Add timezone for proper date boundary calculation
@@ -1541,158 +1028,92 @@ function formatDuration(seconds) {
  */
 function renderTimingData(data) {
     const tbody = document.getElementById('timingTableBody');
-    tbody.innerHTML = '';
-
     const transitions = data.transitions || [];
     const summary = data.funnel_summary || {};
+    const chevron = '<svg class="mx-1 inline h-3.5 w-3.5 text-slate-450" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-label="to"><path d="M9 18l6-6-6-6"/></svg>';
 
-    // Find the slowest transition for insight
-    let slowestTransition = null;
-    let slowestP75 = 0;
+    let slowest = null;
+    tbody.innerHTML = transitions.map(transition => {
+        if (!slowest || (transition.p75_seconds || 0) > (slowest.p75_seconds || 0)) slowest = transition;
+        return `<tr>
+            <th scope="row" class="whitespace-normal">${EventGroups.name(transition.from, { plain: true })}${chevron}${EventGroups.name(transition.to, { plain: true })}</th>
+            <td class="text-right font-semibold text-slate-50">${formatDuration(transition.median_seconds)}</td>
+            <td class="text-right">${formatDuration(transition.mean_seconds)}</td>
+            <td class="text-right">${formatDuration(transition.p25_seconds)}</td>
+            <td class="text-right">${formatDuration(transition.p75_seconds)}</td>
+            <td class="text-right">${(transition.sessions_analyzed || 0).toLocaleString()}</td>
+        </tr>`;
+    }).join('');
 
-    transitions.forEach(transition => {
-        const row = document.createElement('tr');
-        row.className = 'border-t border-white/5 hover:bg-slate-800/30 transition-colors';
-
-        const p75 = transition.p75_seconds || 0;
-        if (p75 > slowestP75) {
-            slowestP75 = p75;
-            slowestTransition = transition;
-        }
-
-        row.innerHTML = `
-            <td class="px-4 py-3 text-slate-300">
-                <span class="font-mono text-sm">${transition.from}</span>
-                <span class="text-slate-500 mx-2">→</span>
-                <span class="font-mono text-sm">${transition.to}</span>
-            </td>
-            <td class="px-4 py-3 text-right font-bold text-slate-50">${formatDuration(transition.median_seconds)}</td>
-            <td class="px-4 py-3 text-right text-slate-400">${formatDuration(transition.mean_seconds)}</td>
-            <td class="px-4 py-3 text-right text-emerald-400">${formatDuration(transition.p25_seconds)}</td>
-            <td class="px-4 py-3 text-right text-amber-400">${formatDuration(transition.p75_seconds)}</td>
-            <td class="px-4 py-3 text-right text-slate-400">${(transition.sessions_analyzed || 0).toLocaleString()}</td>
-        `;
-
-        tbody.appendChild(row);
-    });
-
-    // Show insight if there's a notably slow transition (P75 > 60 seconds)
-    if (slowestTransition && slowestP75 > 60) {
-        const insightEl = document.getElementById('timingInsight');
-        const insightText = document.getElementById('timingInsightText');
-
-        const p75Formatted = formatDuration(slowestP75);
-        insightText.innerHTML = `<strong>Insight:</strong> The <span class="font-mono text-amber-400">${slowestTransition.from}</span> → <span class="font-mono text-amber-400">${slowestTransition.to}</span> transition has a P75 of ${p75Formatted}. This is where slower users are getting stuck. Consider simplifying this step.`;
-
-        insightEl.classList.remove('hidden');
+    // The slowest step, said once it holds a quarter of the sessions back for over a minute
+    const insight = document.getElementById('timingInsight');
+    if (slowest && (slowest.p75_seconds || 0) > 60) {
+        document.getElementById('timingInsightText').innerHTML =
+            `The slowest step is <span class="font-mono text-slate-100">${esc(slowest.from)}</span> to <span class="font-mono text-slate-100">${esc(slowest.to)}</span>: a quarter of the sessions took over ${formatDuration(slowest.p75_seconds)}.`;
+        insight.classList.remove('hidden');
+    } else {
+        insight.classList.add('hidden');
     }
 
-    // Update summary stats
-    const medianTotal = summary.median_total_seconds;
-    const meanTotal = summary.mean_total_seconds;
-    const completionRate = summary.completion_rate;
-
-    document.getElementById('summaryMedianTime').textContent = formatDuration(medianTotal);
-    document.getElementById('summaryMeanTime').textContent = formatDuration(meanTotal);
+    document.getElementById('summaryMedianTime').textContent = formatDuration(summary.median_total_seconds);
+    document.getElementById('summaryMeanTime').textContent = formatDuration(summary.mean_total_seconds);
     document.getElementById('summaryCompletionRate').textContent =
-        completionRate !== undefined ? `${(completionRate * 100).toFixed(1)}%` : '-';
+        summary.completion_rate !== undefined ? `${(summary.completion_rate * 100).toFixed(1)}%` : '-';
 }
 
 let currentTimingData = null;
 
+/**
+ * The funnel: each step as a bar of the sessions that reached it, against the first step, with
+ * how many left after the step before.
+ */
 function renderFunnel(data) {
     const container = document.getElementById('funnelVisualization');
-    container.innerHTML = '';
-
-    const funnel = data.funnel;
-    const totalSessions = data.total_sessions_analyzed;
-
-    document.getElementById('totalSessions').textContent = totalSessions.toLocaleString();
-
+    const funnel = data.funnel || [];
     const firstCount = funnel[0]?.count || 0;
     const lastCount = funnel[funnel.length - 1]?.count || 0;
-    const conversionRate = firstCount > 0 ? ((lastCount / firstCount) * 100).toFixed(1) : 0;
-    const dropOff = firstCount - lastCount;
 
-    document.getElementById('conversionRate').textContent = conversionRate + '%';
-    document.getElementById('totalDropOff').textContent = dropOff.toLocaleString();
+    document.getElementById('totalSessions').textContent = (data.total_sessions_analyzed || 0).toLocaleString();
+    document.getElementById('conversionRate').textContent = firstCount > 0 ? `${((lastCount / firstCount) * 100).toFixed(1)}%` : '0%';
+    document.getElementById('totalDropOff').textContent = (firstCount - lastCount).toLocaleString();
 
-    funnel.forEach((step, index) => {
+    container.innerHTML = funnel.map((step, index) => {
         const prevCount = index > 0 ? funnel[index - 1].count : firstCount;
-        const percentage = firstCount > 0 ? (step.count / firstCount) * 100 : 0;
-        const percentageDisplay = percentage.toFixed(1);
-        const stepPercentage = prevCount > 0 ? ((step.count / prevCount) * 100).toFixed(1) : 100;
-        const dropOffCount = prevCount - step.count;
-        const dropOffPercent = prevCount > 0 ? (((prevCount - step.count) / prevCount) * 100).toFixed(1) : 0;
-
-        // Calculate width: 100% - (percentage drop * 0.25)
-        // So 10% drop = 97.5% width, 50% drop = 87.5% width, etc.
-        const percentageDrop = 100 - percentage;
-        const widthPercent = Math.max(50, 100 - (percentageDrop * 0.25));
-
-        // Build clear messages - primary line (count) and secondary line (percentages)
-        let primaryMessage = '';
-        let secondaryMessage = '';
-
+        const ofFirst = firstCount > 0 ? (step.count / firstCount) * 100 : 0;
+        const ofPrevious = prevCount > 0 ? (step.count / prevCount) * 100 : 0;
+        const left = prevCount - step.count;
+        let line;
         if (index === 0) {
-            primaryMessage = `<strong>${step.count.toLocaleString()}</strong> sessions started here`;
-            secondaryMessage = `This is your full audience (100%)`;
+            line = 'Sessions that took the first step';
+        } else if (step.count === 0) {
+            line = 'No session reached this step';
         } else {
-            primaryMessage = `<strong>${step.count.toLocaleString()}</strong> sessions reached this step`;
-            secondaryMessage = `<strong>${percentageDisplay}%</strong> of all who started`;
-            if (parseFloat(stepPercentage) < 100) {
-                secondaryMessage += ` · <strong>${stepPercentage}%</strong> converted from previous step`;
-            }
+            line = `${ofPrevious.toFixed(1)}% of the step before`;
         }
-
-        // Wrapper for centering
-        const wrapper = document.createElement('div');
-        wrapper.className = 'funnel-step-wrapper';
-
-        const stepDiv = document.createElement('div');
-        stepDiv.className = 'funnel-step';
-        if (step.count === 0) {
-            stepDiv.classList.add('funnel-step-dead');
-        }
-        stepDiv.style.width = `${widthPercent}%`;
-
-        let dropOffHtml = '';
-        if (index > 0 && dropOffCount > 0) {
-            dropOffHtml = `
-                <div class="funnel-step-dropoff">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:12px;height:12px"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
-                    ${dropOffCount.toLocaleString()} dropped (${dropOffPercent}%)
-                </div>
-            `;
-        }
-
-        stepDiv.innerHTML = `
-            <div class="funnel-step-number">${index + 1}</div>
-            <div class="funnel-step-header">
-                <span class="funnel-step-name">${step.step}</span>
+        const leftLine = index > 0 && left > 0
+            ? `<span class="text-rose-300"><span aria-hidden="true">▼</span> ${left.toLocaleString()} left after the step before</span>`
+            : '';
+        return `<li class="border-t border-white/10 py-4 first:border-t-0 first:pt-0 last:pb-0">
+            <div class="flex items-baseline justify-between gap-4">
+                <span class="flex min-w-0 items-baseline gap-3">
+                    <span class="w-5 flex-none text-sm text-slate-400">${index + 1}</span>
+                    <span class="min-w-0 break-words font-medium text-slate-50">${EventGroups.name(step.step, { plain: true })}</span>
+                </span>
+                <span class="flex-none text-slate-50"><span class="font-semibold">${step.count.toLocaleString()}</span> <span class="ml-1 text-sm text-slate-400">${ofFirst.toFixed(1)}%</span></span>
             </div>
-            <div class="funnel-step-primary">${primaryMessage}</div>
-            <div class="funnel-step-secondary">${secondaryMessage}</div>
-            ${dropOffHtml}
-        `;
-
-        wrapper.appendChild(stepDiv);
-        container.appendChild(wrapper);
-
-        if (index < funnel.length - 1) {
-            const arrow = document.createElement('div');
-            arrow.className = 'funnel-arrow';
-            arrow.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 5v14M5 12l7 7 7-7"/></svg>';
-            container.appendChild(arrow);
-        }
-    });
+            <div class="ml-8 mt-2">
+                <span class="bar-track" aria-hidden="true"><span class="bar-fill" style="width:${ofFirst.toFixed(2)}%"></span></span>
+                <p class="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-400"><span>${line}</span>${leftLine}</p>
+            </div>
+        </li>`;
+    }).join('');
 }
 
 let currentFunnelData = null;
 
 function exportFunnelData(format) {
     if (!currentFunnelData) {
-        showToast('No funnel data to export. Please analyze a funnel first.', 'warning');
+        showToast('Analyze a funnel first.', 'warning');
         return;
     }
 
@@ -1724,6 +1145,12 @@ function exportFunnelData(format) {
     URL.revokeObjectURL(url);
 }
 
+/** A name as one CSV cell: quotes doubled, and never read as a formula by a spreadsheet. */
+function csvCell(text) {
+    const value = String(text == null ? '' : text);
+    return '"' + (/^[=+\-@\t\r]/.test(value) ? "'" : '') + value.replace(/"/g, '""') + '"';
+}
+
 function generateFunnelCSV(data) {
     let csv = 'Respectlytics Funnel Analysis Export\n';
     csv += `Export Date: ${new Date().toISOString()}\n`;
@@ -1741,7 +1168,7 @@ function generateFunnelCSV(data) {
         const dropOffCount = index > 0 ? prevCount - step.count : 0;
         const dropOffPercent = index > 0 && prevCount > 0 ? (((prevCount - step.count) / prevCount) * 100).toFixed(1) : 0;
 
-        csv += `${index + 1},"${step.step}",${step.count},${percentage}%,${stepPercentage}%,${dropOffCount},${dropOffPercent}%\n`;
+        csv += `${index + 1},${csvCell(step.step)},${step.count},${percentage}%,${stepPercentage}%,${dropOffCount},${dropOffPercent}%\n`;
     });
 
     // Add timing data if available
@@ -1750,7 +1177,7 @@ function generateFunnelCSV(data) {
         csv += 'From,To,Median (s),Mean (s),P25 (s),P75 (s),Sessions\n';
 
         currentTimingData.transitions.forEach(t => {
-            csv += `"${t.from}","${t.to}",${t.median_seconds || 0},${t.mean_seconds || 0},${t.p25_seconds || 0},${t.p75_seconds || 0},${t.sessions_analyzed || 0}\n`;
+            csv += `${csvCell(t.from)},${csvCell(t.to)},${t.median_seconds || 0},${t.mean_seconds || 0},${t.p25_seconds || 0},${t.p75_seconds || 0},${t.sessions_analyzed || 0}\n`;
         });
 
         // Add summary
@@ -1764,8 +1191,22 @@ function generateFunnelCSV(data) {
     return csv;
 }
 
+// Start over shows once the window differs from its default too
+const windowSelect = document.getElementById('conversionWindow');
+if (windowSelect) windowSelect.addEventListener('change', updateHelpText);
+
 // Initialize on page load
 if (appKey) {
+    EventGroups.load(eventGroupsUrl).then(() => {
+        if (DEMO_STEPS) {
+            selectedEvents = DEMO_STEPS.slice();
+            renderFunnelSteps();
+            analyzeFunnel();
+            return;
+        }
+        if (availableEvents.length) populateEventDatalist();
+        renderFunnelSteps();
+    });
     loadEventTypes();
 }
 </script>

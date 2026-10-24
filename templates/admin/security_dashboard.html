@@ -141,6 +141,9 @@
     .event-level-CRITICAL { color: #ff1744; font-weight: bold; }
     .event-type { color: #c586c0; }
     .event-ip { color: #ce9178; }
+    .help-text { margin: 0 0 8px; color: #94a3b8; }
+    .lift-form { display: flex; gap: 8px; margin: 0 0 16px; }
+    .lift-form input { padding: 6px 10px; min-width: 260px; }
     .event-email { color: #9cdcfe; }
     .refresh-info {
         color: #666;
@@ -156,11 +159,11 @@
     }
 </style>
 
-<h1>🛡️ Security Dashboard</h1>
+<h1>Security Dashboard</h1>
 
 <div class="info-box">
     <strong>Security Overview</strong> — This dashboard shows security events from the last 24 hours.
-    Data is refreshed on each page load. Use the actions to unban IPs or unlock accounts.
+    Data is refreshed on each page load. Use the actions to lift blocks or unlock accounts.
 </div>
 
 <!-- Statistics Cards -->
@@ -199,42 +202,48 @@
     </div>
 </div>
 
-<!-- Banned IPs Section -->
+<!-- Blocked addresses (analytics/blocks.py) -->
 <div class="section-header">
-    <h2>🚫 Currently Banned IPs</h2>
-    <span class="refresh-info">{{ banned_ips|length }} active ban(s)</span>
+    <h2>Blocked addresses</h2>
+    <span class="refresh-info">{{ banned_ips|length }} in force</span>
 </div>
+
+<p class="help-text">
+    A block keeps a code computed from the address, never the address itself. To lift the block on
+    an address you know, such as your own, type it here.
+</p>
+<form method="post" action="{% url 'admin:security-unban-ip' %}" class="lift-form">
+    {% csrf_token %}
+    <input type="text" name="ip" placeholder="203.0.113.7" aria-label="IP address" required>
+    <button type="submit" class="action-btn action-btn-success">Lift the block on this address</button>
+</form>
 
 <table class="data-table">
     <thead>
         <tr>
-            <th>IP Address</th>
-            <th>Banned At / Expires</th>
+            <th>Code</th>
+            <th>Kind</th>
+            <th>Blocked until</th>
+            <th>Times</th>
             <th>Reason</th>
             <th>Action</th>
         </tr>
     </thead>
     <tbody>
         {% if banned_ips %}
-            {% for ip_info in banned_ips %}
+            {% for row in banned_ips %}
             <tr>
-                <td><code>{{ ip_info.ip }}</code></td>
-                <td>
-                    {% if ip_info.banned_at %}
-                        {{ ip_info.banned_at }}
-                    {% elif ip_info.expires %}
-                        Expires: {{ ip_info.expires }}
-                    {% else %}
-                        —
-                    {% endif %}
-                </td>
-                <td>{{ ip_info.reason|default:"—" }}</td>
+                <td><code>{{ row.code }}</code></td>
+                <td>{{ row.kind }}</td>
+                <td>{{ row.expires }}</td>
+                <td>{{ row.times }}</td>
+                <td>{{ row.reason }}</td>
                 <td>
                     <form method="post" action="{% url 'admin:security-unban-ip' %}" style="display: inline;">
                         {% csrf_token %}
-                        <input type="hidden" name="ip" value="{{ ip_info.ip }}">
-                        <button type="submit" class="action-btn action-btn-success" onclick="return confirm('Unban {{ ip_info.ip }}?')">
-                            ✓ Unban
+                        <input type="hidden" name="key" value="{{ row.key }}">
+                        <button type="submit" class="action-btn action-btn-success" onclick="return confirm('Lift this block?')">
+                            Lift
                         </button>
                     </form>
                 </td>
@@ -242,7 +251,7 @@
             {% endfor %}
         {% else %}
             <tr>
-                <td colspan="4" class="empty">✅ No IPs currently banned</td>
+                <td colspan="6" class="empty">No address is blocked</td>
             </tr>
         {% endif %}
     </tbody>
@@ -250,7 +259,7 @@
 
 <!-- Locked Accounts Section -->
 <div class="section-header">
-    <h2>🔒 Locked Accounts</h2>
+    <h2>Locked Accounts</h2>
     <span class="refresh-info">{{ locked_accounts|length }} locked account(s)</span>
 </div>
 
@@ -275,7 +284,7 @@
                         {% csrf_token %}
                         <input type="hidden" name="email" value="{{ account.email }}">
                         <button type="submit" class="action-btn action-btn-success" onclick="return confirm('Unlock {{ account.email }}?')">
-                            🔓 Unlock
+                            Unlock
                         </button>
                     </form>
                 </td>
@@ -283,7 +292,7 @@
             {% endfor %}
         {% else %}
             <tr>
-                <td colspan="4" class="empty">✅ No accounts currently locked</td>
+                <td colspan="4" class="empty">No accounts currently locked</td>
             </tr>
         {% endif %}
     </tbody>
@@ -291,7 +300,7 @@
 
 <!-- Recent Security Events -->
 <div class="section-header">
-    <h2>📋 Recent Security Events</h2>
+    <h2>Recent Security Events</h2>
     <span class="refresh-info">Last {{ events|length }} events (24h)</span>
 </div>
 
@@ -323,7 +332,7 @@
 <!-- Event Type Breakdown -->
 {% if stats.event_counts %}
 <div class="section-header">
-    <h2>📊 Event Breakdown (24h)</h2>
+    <h2>Event Breakdown (24h)</h2>
 </div>
 
 <table class="data-table" style="max-width: 500px;">

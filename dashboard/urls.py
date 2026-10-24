@@ -7,6 +7,7 @@ Separated from website/ (public pages) and analytics/ (API endpoints).
 
 from django.urls import path
 
+from .groups import update_event_groups
 from .views import (
     dashboard_delete_events,
     dashboard_delete_events_preview,
@@ -37,6 +38,11 @@ urlpatterns = [
     path("api/apps/<slug:app_slug>/update/", update_app_name, name="update_app_name"),
     path("api/apps/<slug:app_slug>/delete/", delete_app, name="delete_app"),
     path("api/apps/<slug:app_slug>/event-count/", get_app_event_count, name="get_app_event_count"),
+    path(
+        "api/apps/<slug:app_slug>/event-groups/",
+        update_event_groups,
+        name="update_event_groups",
+    ),
     # Event data deletion (dashboard)
     path(
         "api/apps/<slug:app_slug>/events/delete/preview/",

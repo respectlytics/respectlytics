@@ -1,0 +1,88 @@
+{% extends 'users/account/base.html' %}
+
+{% block title %}Secret keys | Respectlytics{% endblock %}
+
+{% block account_content %}
+<div>
+  <h1 class="app-title">Secret keys</h1>
+  <p class="app-lead">A secret key reads, exports and deletes your data through the API.</p>
+</div>
+{% include 'users/account/_messages.html' %}
+
+{% if new_key %}
+<section class="card border-emerald-400/30" aria-labelledby="newKeyTitle" data-testid="new-secret-key">
+  <h2 id="newKeyTitle" class="card-title">Your new secret key</h2>
+  <p class="card-lead">Copy it now: it is shown only this once. Keep it on a server, never in an app.</p>
+  <div class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+    <code id="newSecretKey" class="min-w-0 flex-1 break-all rounded-lg border border-white/20 bg-[#0f172a] px-3 py-2 font-mono text-sm text-slate-50">{{ new_key }}</code>
+    <button type="button" data-copy="newSecretKey" class="btn-primary">Copy</button>
+  </div>
+</section>
+{% endif %}
+
+<section class="card" aria-labelledby="keysTitle">
+  <h2 id="keysTitle" class="card-title">Your keys</h2>
+  {% if keys %}
+  <ul class="mt-3 divide-y divide-white/10">
+    {% for key in keys %}
+    <li class="py-3.5">
+      <div class="flex items-center gap-4">
+        <div class="min-w-0 flex-1">
+          <code class="font-mono text-sm text-slate-50">{{ key.start }}…</code>
+          <p class="mt-0.5 text-sm text-slate-400">Made {{ key.created_at|date:"M j, Y" }}, {% if key.last_used_at %}last used {{ key.last_used_at|date:"M j, Y" }}{% else %}never used{% endif %}</p>
+        </div>
+        <button type="button" data-popover aria-expanded="false" aria-controls="revoke{{ key.pk }}" class="btn-danger-quiet">Revoke</button>
+      </div>
+      <div id="revoke{{ key.pk }}" hidden>
+        <form method="post" action="{% url 'account_api_key_revoke' key.pk %}" class="mt-3 flex flex-col gap-3 rounded-lg bg-rose-500/[0.08] p-3 sm:flex-row sm:items-center">
+          {% csrf_token %}
+          <p class="min-w-0 flex-1 text-sm text-slate-200">Revoke {{ key.start }}…? Requests with it are refused from then on.</p>
+          <button type="submit" class="btn-danger">Revoke key</button>
+        </form>
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="card-lead">No secret keys yet.</p>
+  {% endif %}
+
+  <form method="post" class="mt-5">
+    {% csrf_token %}
+    {% if at_limit %}
+    <p class="text-sm text-slate-400">You have {{ limit }} keys. Revoke one to make another.</p>
+    {% else %}
+    <button type="submit" class="{% if new_key %}btn-secondary{% else %}btn-primary{% endif %}">Create secret key</button>
+    {% endif %}
+  </form>
+</section>
+
+<section class="card" aria-labelledby="usingTitle">
+  <h2 id="usingTitle" class="card-title">Using a key</h2>
+  <p class="card-lead">Send it with the <a href="{% url 'dashboard:main' %}" class="text-link underline">app key</a> of the app you want to read. The <a href="{% url 'public-schema-redoc' %}" class="text-link underline">API reference</a> lists what you can ask for.</p>
+  <div class="code-card mt-4">
+    <div class="code-card-head">
+      <span>Example</span>
+      <button type="button" data-copy="secretKeyExample" class="code-copy">Copy</button>
+    </div>
+    <pre id="secretKeyExample" class="text-slate-200">curl {{ example_url }} \
+  -H "Authorization: Bearer {{ example_secret }}" \
+  -H "X-App-Key: {{ example_app_key }}"</pre>
+  </div>
+</section>
+
+<script>
+document.querySelectorAll('[data-copy]').forEach((button) => {
+  button.addEventListener('click', () => {
+    const text = document.getElementById(button.dataset.copy).textContent;
+    navigator.clipboard.writeText(text).then(() => {
+      button.textContent = 'Copied';
+    }, () => {
+      button.textContent = 'Copy failed';
+    }).finally(() => {
+      setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+    });
+  });
+});
+</script>
+{% endblock %}

@@ -1,720 +1,259 @@
 /**
- * Stats Page Styles - Dark Theme
- * Refactored for permanent dark mode with 8px grid system
- * Part of: UI/Design System Backlog - Task UI-005
+ * The stats page (dashboard/stats.html and partials/stats/): what the shared components in
+ * static/css/tailwind-input.css (card, card-title, btn-*, help) do not already draw.
+ *
+ * Since 2026-10-24: one segmented control for every choice of a few (the range, Day/Week/Month),
+ * one bar list for every ranked list, skeletons inside each card while it loads (no overlay over
+ * the page), and no hover-only tooltips (a help button beside a card's title says the rest).
  */
 
 /* ==========================================================================
-   Sidebar Navigation Styles - Dark theme
+   Tabs
    ========================================================================== */
 
-.sidebar-nav-item {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;  /* 12px */
-    width: 100%;
-    padding: 0.625rem 1rem;  /* 10px 16px */
-    border-radius: 0.5rem;  /* 8px */
-    font-size: 0.875rem;  /* 14px */
-    font-weight: 500;
-    color: #94a3b8;  /* Slate 400 */
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    transition: all 0.2s;
-    text-align: left;
-}
+.tab-content { display: none; }
+.tab-content.active { display: block; }
 
-.sidebar-nav-item:hover {
-    background: rgba(51, 65, 85, 0.5);  /* Slate 700/50 */
-    color: #f8fafc;  /* Slate 50 */
-}
+/* hidden means hidden, also on an element whose classes give it a display (a button, a flex row) */
+[hidden] { display: none !important; }
 
-.sidebar-nav-item.active {
-    background: rgba(99, 102, 241, 0.15);  /* Indigo 500/15 - luminous */
-    color: #818cf8;  /* Indigo 400 */
-    font-weight: 600;
-}
-
-.sidebar-nav-icon {
-    width: 1.25rem;  /* 20px */
-    height: 1.25rem;  /* 20px */
-    flex-shrink: 0;
-}
-
-.sidebar-divider {
-    height: 1px;
-    background: rgba(255, 255, 255, 0.1);
-    margin: 1rem 0.75rem;  /* 16px 12px */
-}
+/* A test reads its own dates and goals: the page's range and conversions do nothing on that tab */
+body[data-tab="experiments"] [data-page-filter] { display: none !important; }
 
 /* ==========================================================================
-   App Switcher Styles
+   A segmented control: the range, Day/Week/Month. Where you are is a quiet slate pill in the
+   heading colour, as in the sidebar, since the accent means "you can act on this".
    ========================================================================== */
 
-.sidebar-app-option {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;  /* 12px */
-    width: 100%;
-    padding: 0.625rem 0.75rem;  /* 10px 12px */
-    border-radius: 0.5rem;  /* 8px */
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    color: #cbd5e1;  /* Slate 300 */
-    transition: all 0.2s;
+.seg {
+    display: inline-flex;
+    flex: none;
+    gap: 2px;
+    padding: 3px;
+    border-radius: 0.625rem;
+    background: #0f172a;
+    border: 1px solid rgba(255, 255, 255, 0.12);
 }
-
-.sidebar-app-option:hover {
-    background: rgba(51, 65, 85, 0.5);  /* Slate 700/50 */
-}
-
-.sidebar-app-option.active {
-    background: rgba(99, 102, 241, 0.15);  /* Indigo 500/15 */
-}
-
-.sidebar-app-option-icon {
-    width: 2rem;  /* 32px */
-    height: 2rem;  /* 32px */
-    border-radius: 0.5rem;  /* 8px */
-    background: linear-gradient(135deg, #6366F1, #8B5CF6);
-    display: flex;
+.seg > button {
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-weight: 600;
-    font-size: 0.8125rem;  /* 13px */
-    color: white;
-}
-
-.sidebar-app-option-name {
-    flex: 1;
-    text-align: left;
+    gap: 0.375rem;
+    min-height: 2rem;
+    min-width: 2.25rem;
+    padding: 0 0.625rem;
+    border-radius: 0.4375rem;
+    font-size: 0.875rem;
     font-weight: 500;
+    color: #cbd5e1;  /* slate-300 */
+    white-space: nowrap;
+    transition: background-color 0.15s, color 0.15s;
 }
+.seg > button:hover { color: #f8fafc; background: rgba(255, 255, 255, 0.05); }
+.seg > button[aria-pressed="true"] {
+    color: #f8fafc;
+    font-weight: 600;
+    background: rgba(148, 163, 184, 0.2);
+}
+.seg > button:focus-visible { outline: 2px solid #818cf8; outline-offset: 1px; }
 
-.sidebar-app-option-check {
-    width: 1.125rem;  /* 18px */
-    height: 1.125rem;  /* 18px */
-    color: #34d399;  /* Emerald 400 */
-    display: none;
+/* A control in the bar: the same height as the segmented control */
+.bar-control {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 2.5rem;
+    max-width: 100%;
+    padding: 0 0.75rem;
+    border-radius: 0.625rem;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: #0f172a;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #e2e8f0;  /* slate-200 */
+    white-space: nowrap;
+    transition: background-color 0.15s, border-color 0.15s;
 }
+.bar-control:hover { background: rgba(255, 255, 255, 0.05); border-color: rgba(255, 255, 255, 0.22); }
+.bar-control:focus-visible { outline: 2px solid #818cf8; outline-offset: 2px; }
 
-.sidebar-app-option.active .sidebar-app-option-check {
-    display: block;
-}
+.event-status-popover.active { display: block !important; }
 
 /* ==========================================================================
-   Tab & UI Components
+   Ranked data as a list of bars: full names, the figure beside them, one colour
    ========================================================================== */
 
-.tab-content {
-    display: none;
+.bar-track {
+    display: flex;
+    height: 0.5rem;
+    width: 100%;
+    overflow: hidden;
+    border-radius: 9999px;
+    background: rgba(148, 163, 184, 0.14);
 }
-
-.tab-content.active {
-    display: block;
+.bar-fill {
+    height: 100%;
+    flex: none;
+    background: #6366f1;  /* brand-500 */
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.6, 1);
 }
-
-.pill-tab.active {
-    background: #1e293b;  /* Slate 800 */
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: #818cf8;  /* Indigo 400 */
-}
-
-.event-status-popover.active {
-    display: block !important;
-}
-
-.collapsible-section.collapsed .collapsible-content {
-    display: none;
-}
-
-.collapsible-section.collapsed .collapsible-toggle {
-    transform: rotate(-90deg);
-}
+.bar-fill + .bar-fill { box-shadow: inset 2px 0 0 #1e293b; }  /* a hairline between a group's events */
+.bar-fill.is-quiet { background: #475569; }
 
 /* ==========================================================================
-   Globe Section
+   Waiting: each card shows its own skeleton while it loads
    ========================================================================== */
 
-#globeSection {
-    background: linear-gradient(180deg, #0a0e27 0%, #1a1f3a 100%);
-}
-
-/* ==========================================================================
-   Skeleton Loading Animations - Dark theme
-   ========================================================================== */
-
-@keyframes shimmer {
-    0% {
-        background-position: -200% 0;
-    }
-    100% {
-        background-position: 200% 0;
-    }
+@keyframes stats-shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
 }
 
 .skeleton {
-    background: linear-gradient(90deg, #334155 25%, #475569 50%, #334155 75%);  /* Slate 700/600 gradient */
+    display: block;
+    border-radius: 0.5rem;
+    background: linear-gradient(90deg, #273449 25%, #31405a 50%, #273449 75%);
     background-size: 200% 100%;
-    animation: shimmer 1.5s infinite;
-    border-radius: 4px;
+    animation: stats-shimmer 1.5s ease-in-out infinite;
 }
 
-.skeleton-line--lg {
-    height: 24px;
-    width: 60%;
-    margin-bottom: 12px;  /* 8px grid */
+/* An Overview card that is loading: its figures keep their place under a skeleton */
+.loads { position: relative; }
+.is-loading .loads::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 0.5rem;
+    background: linear-gradient(90deg, #273449 25%, #31405a 50%, #273449 75%);
+    background-size: 200% 100%;
+    animation: stats-shimmer 1.5s ease-in-out infinite;
 }
 
-.skeleton-line--sm {
-    height: 16px;
-    width: 40%;
-    margin-bottom: 8px;  /* 8px grid */
-}
-
-.skeleton-chart {
-    height: 200px;
-    width: 100%;
-}
-
-.skeleton-stat {
-    height: 80px;
-    width: 100%;
-}
-
-.skeleton-card {
-    padding: 24px;  /* 8px grid */
-    background: #1e293b;  /* Slate 800 */
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 16px;
-    margin-bottom: 16px;  /* 8px grid */
-}
-
-.skeleton-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 16px;  /* 8px grid */
+@media (prefers-reduced-motion: reduce) {
+    .skeleton, .is-loading .loads::after { animation: none; }
 }
 
 /* ==========================================================================
-   Warning Banner - Luminous amber theme
+   Charts: the plot area, 200 px on a phone and 240 px from 768 px
    ========================================================================== */
 
-.warning-banner {
-    display: none;
-    background: rgba(251, 191, 36, 0.15);  /* Amber luminous */
-    border: 1px solid rgba(251, 191, 36, 0.3);
-    color: #fcd34d;  /* Amber 300 */
-    padding: 16px 24px;  /* 8px grid */
-    border-radius: 12px;
-    margin-bottom: 24px;  /* 8px grid */
-    align-items: center;
-    gap: 16px;  /* 8px grid */
-}
-
-.warning-banner.visible {
-    display: flex;
-}
+.chart-box { position: relative; height: 200px; }
+@media (min-width: 768px) { .chart-box { height: 240px; } }
 
 /* ==========================================================================
-   Cohort Table Heatmap - Luminous colors
+   Tables. :where() keeps these defaults below any utility a cell carries (a colour, a weight).
    ========================================================================== */
 
-.cohort-cell {
-    display: inline-block;
-    padding: 4px 8px;  /* 8px grid */
-    border-radius: 4px;
-    font-size: 12px;
-    font-weight: 600;
+.stats-table { width: 100%; font-size: 0.875rem; border-collapse: collapse; }
+:where(.stats-table) th {
+    padding: 0.5rem;
+    font-weight: 500;
+    color: #94a3b8;  /* slate-400 */
+    white-space: nowrap;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
-
-.cohort-cell--high {
-    background: rgba(16, 185, 129, 0.15);  /* Emerald luminous */
-    color: #34d399;  /* Emerald 400 */
-}
-
-.cohort-cell--medium {
-    background: rgba(251, 191, 36, 0.15);  /* Amber luminous */
-    color: #fcd34d;  /* Amber 300 */
-}
-
-.cohort-cell--low {
-    background: rgba(244, 63, 94, 0.15);  /* Rose luminous */
-    color: #fb7185;  /* Rose 400 */
-}
-
-.cohort-cell--none {
-    background: rgba(51, 65, 85, 0.5);  /* Slate 700/50 */
-    color: #64748b;  /* Slate 500 */
-}
-
-/* ==========================================================================
-   Live Activity Section
-   ========================================================================== */
-
-.live-metric {
-    transition: color 0.2s;
-}
-
-.live-metric.zero-value {
-    color: #64748b;  /* Slate 500 */
-}
-
-/* Live Activity - compact inline badges */
-.live-event-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;  /* 8px grid */
-    padding: 2px 8px;  /* 8px grid */
-    background: rgba(255, 255, 255, 0.08);
-    border-radius: 12px;
-    font-size: 11px;
+:where(.stats-table) td {
+    padding: 0.625rem 0.5rem;
+    color: #e2e8f0;  /* slate-200 */
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
     white-space: nowrap;
 }
-
-.live-event-badge .event-name {
-    color: #e5e7eb;  /* Gray 200 */
-    font-weight: 500;
-    max-width: 80px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.live-event-badge .event-flag {
-    font-size: 12px;
-}
-
-.live-event-badge .event-time {
-    color: rgba(255, 255, 255, 0.4);
-}
-
-.live-empty {
-    color: #64748b;  /* Slate 500 */
-    font-size: 11px;
-    font-style: italic;
-}
-
-/* ==========================================================================
-   Conversion Tab - Session Bars
-   ========================================================================== */
-
-.session-bar-new {
-    background: linear-gradient(to top, #6366f1, #818cf8);  /* Indigo gradient */
-    border-radius: 6px;
-    min-height: 24px;  /* 8px grid */
-    transition: height 0.3s ease;
-}
-
-/* ==========================================================================
-   Scrollable Table
-   ========================================================================== */
-
-.scrollable-table {
-    overflow-y: auto;
-    scrollbar-width: thin;
-    scrollbar-color: #475569 transparent;  /* Slate 600 */
-}
-
-/* ==========================================================================
-   Sortable Table Headers
-   ========================================================================== */
-
-.sortable-header {
-    cursor: pointer;
-    user-select: none;
-    transition: color 0.15s;
-}
-
-.sortable-header:hover {
-    color: #818cf8;  /* Indigo 400 */
-}
-
-.sortable-header .sort-icon {
-    opacity: 0.3;
-    transition: opacity 0.15s;
-}
-
-.sortable-header:hover .sort-icon {
-    opacity: 0.6;
-}
-
-.sortable-header.sort-active {
-    color: #818cf8;  /* Indigo 400 */
-}
-
-.sortable-header.sort-active .sort-icon {
-    opacity: 1;
-}
-
-/* ==========================================================================
-   Info Tooltip - Dark theme
-   ========================================================================== */
-
-.info-tooltip {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 16px;
-    height: 16px;
-    font-size: 11px;
-    font-weight: 600;
-    color: #94a3b8;  /* Slate 400 */
-    background: rgba(51, 65, 85, 0.5);  /* Slate 700/50 */
-    border-radius: 50%;
-    cursor: help;
-    transition: all 0.15s;
-}
-
-.info-tooltip:hover {
-    background: #334155;  /* Slate 700 */
-    color: #f8fafc;  /* Slate 50 */
-}
-
-.info-tooltip::after {
-    content: attr(data-tip);
-    position: absolute;
-    top: calc(100% + 8px);  /* 8px grid */
-    left: 50%;
-    transform: translateX(-50%);
-    padding: 10px 14px;
-    background: #334155;  /* Slate 700 - Overlay color */
-    color: #f8fafc;  /* Slate 50 */
-    font-size: 12px;
+/* a row's name, when the row has one */
+:where(.stats-table) tbody th {
+    padding-top: 0.625rem;
+    padding-bottom: 0.625rem;
     font-weight: 400;
-    line-height: 1.5;
-    white-space: normal;
-    width: 240px;
-    max-width: 280px;
+    color: #f1f5f9;
     text-align: left;
-    border-radius: 8px;  /* 8px grid */
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.1s, visibility 0.1s;
-    z-index: 1000;
-    pointer-events: none;
+    border-bottom-color: rgba(255, 255, 255, 0.06);
 }
-
-.info-tooltip::before {
-    content: '';
-    position: absolute;
-    top: calc(100% + 2px);
-    left: 50%;
-    transform: translateX(-50%);
-    border: 6px solid transparent;
-    border-bottom-color: #334155;  /* Slate 700 */
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.1s, visibility 0.1s;
-    z-index: 1000;
+:where(.stats-table) tbody tr:last-child > * { border-bottom: 0; }
+@media (min-width: 640px) {
+    :where(.stats-table) th, :where(.stats-table) td { padding-left: 0.75rem; padding-right: 0.75rem; }
 }
+:where(.stats-table) tr > :first-child { padding-left: 0; }
+:where(.stats-table) tr > :last-child { padding-right: 0; }
 
-.info-tooltip:hover::after,
-.info-tooltip:hover::before {
-    opacity: 1;
-    visibility: visible;
-}
-
-/* Tooltip alignment variants for edge columns */
-.info-tooltip.tooltip-left::after {
-    left: auto;
-    right: 0;
-    transform: translateX(0);
-}
-
-.info-tooltip.tooltip-left::before {
-    left: auto;
-    right: 12px;
-    transform: translateX(0);
-}
-
-.info-tooltip.tooltip-right::after {
-    left: auto;
-    right: 0;
-    transform: translateX(0);
-}
-
-.info-tooltip.tooltip-right::before {
-    left: auto;
-    right: 12px;
-    transform: translateX(0);
-}
-
-/* Globe panel tooltip trigger - JS-based floating tooltip */
-.globe-tooltip-trigger {
+/* A column that sorts: its header is a button */
+.sort-button {
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-    width: 16px;
-    height: 16px;
-    font-size: 10px;
-    font-weight: 600;
-    color: #94a3b8;  /* Slate 400 */
-    background: rgba(51, 65, 85, 0.8);  /* Slate 700/80 */
-    border-radius: 50%;
-    cursor: help;
-    transition: all 0.15s;
-}
-
-.globe-tooltip-trigger:hover {
-    background: #475569;  /* Slate 600 */
-    color: #f8fafc;  /* Slate 50 */
-}
-
-/* ==========================================================================
-   Behavior Tab - Lift Items (Boosters/Blockers)
-   ========================================================================== */
-
-.lift-item {
-    display: flex;
-    align-items: center;
-    gap: 12px;  /* 8px grid */
-    padding: 12px 0;  /* 8px grid */
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.lift-item:last-child {
-    border-bottom: none;
-}
-
-.lift-event {
-    flex-shrink: 0;
-    width: 120px;
-    font-size: 13px;
+    gap: 0.25rem;
+    border-radius: 0.375rem;
     font-weight: 500;
-    color: #cbd5e1;  /* Slate 300 */
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    color: inherit;
 }
-
-.lift-bar-container {
-    flex: 1;
-    height: 8px;  /* 8px grid */
-    background: rgba(51, 65, 85, 0.5);  /* Slate 700/50 */
-    border-radius: 4px;
-    overflow: hidden;
-}
-
-.lift-bar {
-    height: 100%;
-    border-radius: 4px;
-    transition: width 0.3s ease;
-}
-
-.lift-bar--positive {
-    background: linear-gradient(90deg, #10b981, #34d399);  /* Emerald gradient */
-}
-
-.lift-bar--negative {
-    background: linear-gradient(90deg, #f43f5e, #fb7185);  /* Rose gradient */
-}
-
-.lift-value {
-    flex-shrink: 0;
-    min-width: 52px;
-    text-align: right;
-    font-size: 13px;
-    font-weight: 600;
-}
-
-.lift-value--positive {
-    color: #34d399;  /* Emerald 400 */
-}
-
-.lift-value--negative {
-    color: #fb7185;  /* Rose 400 */
-}
-
-/* New detailed lift items for Behavior tab */
-.lift-item-detailed {
-    padding: 12px 0;  /* 8px grid */
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.lift-item-detailed:last-of-type {
-    border-bottom: none;
-}
+.sort-button:hover, .sort-button[data-sorted] { color: #f8fafc; }
+.sort-button:focus-visible { outline: 2px solid #818cf8; outline-offset: 2px; }
+.sort-button svg { width: 0.875rem; height: 0.875rem; opacity: 0.35; }
+.sort-button[data-sorted] svg { opacity: 1; }
 
 /* ==========================================================================
-   Behavior Tab - Signal Cards
+   The Countries card's map
    ========================================================================== */
 
-.signal-card {
-    background: #1e293b;  /* Slate 800 */
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 12px;
-    padding: 16px;  /* 8px grid */
-    transition: all 0.2s;
+#globeViz { aspect-ratio: 2 / 1; width: 100%; }
+#globeSection.map-fullscreen {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    margin: 0;
+    padding: 1rem;
+    border-radius: 0;
+    background: #0f172a;
 }
+#globeSection.map-fullscreen #globeViz { aspect-ratio: auto; height: calc(100vh - 2rem); }
 
-.signal-card:hover {
-    border-color: rgba(255, 255, 255, 0.2);
-}
-
-.signal-card--boost {
-    border-left: 3px solid #34d399;  /* Emerald 400 */
-    padding-left: 20px;
-}
-
-.signal-card--hurt {
-    border-left: 3px solid #fb7185;  /* Rose 400 */
-    padding-left: 20px;
-}
-
-.signal-event {
-    font-size: 14px;
-    font-weight: 600;
-    color: #f8fafc;  /* Slate 50 */
-    margin-bottom: 8px;  /* 8px grid */
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.signal-adjustment {
-    font-size: 20px;
-    font-weight: 700;
-    margin-bottom: 8px;  /* 8px grid */
-}
-
-.signal-adjustment--positive {
-    color: #34d399;  /* Emerald 400 */
-}
-
-.signal-adjustment--negative {
-    color: #fb7185;  /* Rose 400 */
-}
-
-.signal-meta {
-    display: flex;
-    align-items: center;
-    gap: 8px;  /* 8px grid */
-    flex-wrap: wrap;
-    font-size: 11px;
-    color: #94a3b8;  /* Slate 400 */
-}
-
-.signal-confidence {
-    letter-spacing: -1px;
-}
-
-.signal-early {
-    background: rgba(251, 191, 36, 0.15);  /* Amber luminous */
-    border: 1px solid rgba(251, 191, 36, 0.3);
-    color: #fcd34d;  /* Amber 300 */
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-weight: 500;
-    position: relative;
-    cursor: help;
-}
-
-.signal-early::after {
-    content: attr(data-tip);
-    position: absolute;
-    bottom: calc(100% + 8px);  /* 8px grid */
-    left: 50%;
-    transform: translateX(-50%);
-    padding: 8px 12px;  /* 8px grid */
-    background: #334155;  /* Slate 700 */
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: #f8fafc;  /* Slate 50 */
-    font-size: 12px;
-    font-weight: 400;
-    line-height: 1.4;
-    white-space: nowrap;
-    border-radius: 6px;
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.1s, visibility 0.1s;
-    z-index: 50;
-    pointer-events: none;
-}
-
-.signal-early::before {
-    content: '';
-    position: absolute;
-    bottom: calc(100% + 2px);
-    left: 50%;
-    transform: translateX(-50%);
-    border: 6px solid transparent;
-    border-top-color: #334155;  /* Slate 700 */
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.1s, visibility 0.1s;
-    z-index: 50;
-}
-
-.signal-early:hover::after,
-.signal-early:hover::before {
-    opacity: 1;
-    visibility: visible;
-}
+/* The way out of the full screen map, there only while it is full screen */
+.map-close { display: none !important; }
+.map-fullscreen .map-close { display: inline-flex !important; position: absolute; top: 1rem; right: 1rem; z-index: 1; }
 
 /* ==========================================================================
-   Retention Tab Styles
+   The calendar for days chosen by hand (flatpickr), on the page's dark surfaces
    ========================================================================== */
 
-.retention-granularity-btn {
-    transition: all 0.2s ease;
+.flatpickr-calendar {
+    background: #1e293b;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 0.875rem;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
 }
-
-.retention-granularity-btn.active {
-    background: #1e293b;  /* Slate 800 */
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: #a78bfa;  /* Purple 400 */
-    font-weight: 600;
+.flatpickr-calendar.arrowTop::before { border-bottom-color: rgba(255, 255, 255, 0.15); }
+.flatpickr-calendar.arrowTop::after { border-bottom-color: #1e293b; }
+.flatpickr-calendar.arrowBottom::before { border-top-color: rgba(255, 255, 255, 0.15); }
+.flatpickr-calendar.arrowBottom::after { border-top-color: #1e293b; }
+.flatpickr-months .flatpickr-month,
+.flatpickr-current-month .flatpickr-monthDropdown-months,
+.flatpickr-current-month input.cur-year { color: #f8fafc; fill: #f8fafc; background: transparent; }
+.flatpickr-current-month .flatpickr-monthDropdown-months option { background: #1e293b; }
+.flatpickr-current-month .flatpickr-monthDropdown-months:hover,
+.flatpickr-current-month span.cur-month:hover { background: rgba(255, 255, 255, 0.06); }
+.flatpickr-months .flatpickr-prev-month,
+.flatpickr-months .flatpickr-next-month { color: #cbd5e1; fill: #cbd5e1; }
+.flatpickr-months .flatpickr-prev-month:hover svg,
+.flatpickr-months .flatpickr-next-month:hover svg { fill: #f8fafc; }
+.numInputWrapper span.arrowUp::after { border-bottom-color: #cbd5e1; }
+.numInputWrapper span.arrowDown::after { border-top-color: #cbd5e1; }
+span.flatpickr-weekday { color: #94a3b8; }
+.flatpickr-day { color: #e2e8f0; }
+.flatpickr-day:hover, .flatpickr-day:focus { background: rgba(255, 255, 255, 0.08); border-color: transparent; }
+.flatpickr-day.today { border-color: #818cf8; }
+.flatpickr-day.today:hover, .flatpickr-day.today:focus { background: rgba(129, 140, 248, 0.2); border-color: #818cf8; color: #f8fafc; }
+.flatpickr-day.prevMonthDay, .flatpickr-day.nextMonthDay { color: #8492a8; }
+.flatpickr-day.flatpickr-disabled, .flatpickr-day.flatpickr-disabled:hover { color: #475569; background: none; }
+.flatpickr-day.inRange,
+.flatpickr-day.inRange:hover {
+    background: rgba(99, 102, 241, 0.25);
+    border-color: transparent;
+    box-shadow: -5px 0 0 rgba(99, 102, 241, 0.25), 5px 0 0 rgba(99, 102, 241, 0.25);
+    color: #f8fafc;
 }
-
-.retention-table {
-    border-collapse: separate;
-    border-spacing: 0;
+.flatpickr-day.selected, .flatpickr-day.startRange, .flatpickr-day.endRange,
+.flatpickr-day.selected:hover, .flatpickr-day.startRange:hover, .flatpickr-day.endRange:hover {
+    background: #4f46e5;
+    border-color: #4f46e5;
+    color: #ffffff;
 }
-
-.retention-table thead th {
-    position: sticky;
-    top: 0;
-    z-index: 10;
-}
-
-.retention-table tbody tr:hover {
-    background: rgba(139, 92, 246, 0.15) !important;  /* Purple luminous */
-}
-
-/* Engagement Chart Styles */
-#engagementChart {
-    position: relative;
-}
-
-#engagementLabels {
-    display: flex;
-    justify-content: space-around;
-    margin-top: 12px;  /* 8px grid */
-}
-
-/* Purple theme color variants - Dark theme adjusted */
-.text-purple-50 { color: #f3e8ff; }
-.text-purple-100 { color: #e9d5ff; }
-.text-purple-600 { color: #a78bfa; }  /* Purple 400 for dark backgrounds */
-.text-purple-700 { color: #8b5cf6; }  /* Purple 500 */
-.text-purple-800 { color: #7c3aed; }  /* Purple 600 */
-.text-purple-900 { color: #6d28d9; }  /* Purple 700 */
-
-.bg-purple-50 { background-color: rgba(139, 92, 246, 0.15); }  /* Purple luminous */
-.bg-purple-100 { background-color: rgba(139, 92, 246, 0.2); }
-.bg-purple-600 { background-color: #8b5cf6; }
-.bg-purple-700 { background-color: #7c3aed; }
-
-.border-purple-100 { border-color: rgba(139, 92, 246, 0.3); }
-
-.hover\:bg-purple-50\/30:hover {
-    background-color: rgba(139, 92, 246, 0.15);
-}
-
-.hover\:bg-purple-700:hover {
-    background-color: #7c3aed;
-}
+.flatpickr-day.selected.startRange + .endRange:not(:nth-child(7n+1)),
+.flatpickr-day.startRange.startRange + .endRange:not(:nth-child(7n+1)),
+.flatpickr-day.endRange.startRange + .endRange:not(:nth-child(7n+1)) { box-shadow: -10px 0 0 #4f46e5; }

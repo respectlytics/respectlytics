@@ -3,11 +3,12 @@ import re
 
 from django.conf import settings
 from django.core.cache import cache
-from django.http import Http404, HttpResponseForbidden, HttpResponsePermanentRedirect
+from django.http import HttpResponseForbidden, HttpResponsePermanentRedirect
 from django.utils.deprecation import MiddlewareMixin
 
+from .blocks import ATTACK, SCAN, active_block, address_key, block, blockable, refused
 from .client_ip import get_client_ip
-from .throttling import ban_ip, is_ip_banned, track_failed_auth_attempt
+from .throttling import track_failed_auth_attempt
 
 logger = logging.getLogger(__name__)
 
@@ -43,247 +44,158 @@ class WwwRedirectMiddleware(MiddlewareMixin):
 
 
 # =============================================================================
-# SEC-013: Path Scanning Detection Configuration
+# The door: blocked visitors, attack signals and 404 scans (analytics/blocks.py)
 # =============================================================================
 
-# Paths EXEMPT from 404 scanning detection
-# These are legitimate paths where 404s happen during normal use
-# (e.g., missing static files, authenticated dashboard usage, API endpoints)
+# Missing pages that never count toward a scan: a page whose images or files are
+# missing makes many 404s of its own, the signed-in dashboard and the API have their
+# own checks, and the crawler files are asked for by every bot.
 EXEMPT_404_PATH_PATTERNS = [
-    r"^/static/",  # Static files - may 404 during development/deployment
-    r"^/favicon",  # Favicon requests
-    r"^/robots\.txt$",  # Robots file
-    r"^/sitemap",  # Sitemap files
-    r"^/dashboard/",  # Dashboard pages - authenticated users browsing
-    r"^/api/",  # API endpoints - handled by API-level auth/throttling
+    r"^/static/",
+    r"^/favicon",
+    r"^/robots\.txt$",
+    r"^/sitemap",
+    r"^/dashboard/",
+    r"^/api/",
 ]
-
-# Compile exempt patterns for performance
 EXEMPT_404_REGEX = re.compile("|".join(EXEMPT_404_PATH_PATTERNS), re.IGNORECASE)
 
-# Known attack paths - these count toward the 404 limit and return 404 (not 403)
-# Returning 404 instead of 403 avoids revealing that files exist
-ATTACK_PATH_PATTERNS = [
-    # PHP/WordPress/CMS probes
-    r"\.php$",
-    r"/wp-",
-    r"/wordpress",
-    r"/wp-admin",
-    r"/wp-login",
-    r"/wp-includes",
-    r"/wp-content",
-    r"/xmlrpc\.php",
-    # Common exploit paths
-    r"/phpmyadmin",
-    r"/pma",
-    r"/myadmin",
-    r"/mysqladmin",
-    r"/admin\.php",
-    r"/administrator",
-    r"/joomla",
-    r"/drupal",
-    r"/magento",
-    # Sensitive file probes
-    r"/\.env",
-    r"/\.git",
-    r"/\.htaccess",
-    r"/\.htpasswd",
-    r"/config\.php",
-    r"/web\.config",
-    r"/\.aws",
-    r"/\.ssh",
-    r"/\.svn",
-    r"/\.hg",
-    # Shell/backdoor probes
-    r"/shell",
-    r"/c99",
-    r"/r57",
-    r"/webshell",
-    r"/backdoor",
-    # Scanner signatures
-    r"/actuator",
-    r"/console",
-    r"/manager/html",
-    r"/solr",
-    r"/jenkins",
-    r"/struts",
-    # Database admin tools
-    r"/adminer",
-    r"/dbadmin",
-    r"/sqlmanager",
-]
+# Search engines and AI answer engines follow old links too, and a dead link must
+# never shut them out. A scanner that claims to be one escapes the 404 count only;
+# an attack signal still blocks it.
+CRAWLERS = (
+    "googlebot",
+    "bingbot",
+    "applebot",
+    "duckduckbot",
+    "yandexbot",
+    "baiduspider",
+    "gptbot",
+    "oai-searchbot",
+    "chatgpt-user",
+    "claudebot",
+    "claude-searchbot",
+    "perplexitybot",
+)
 
-# Compile regex for performance
+
+def is_crawler(request):
+    agent = request.META.get("HTTP_USER_AGENT", "").lower()
+    return any(name in agent for name in CRAWLERS)
+
+
+# Paths only attack tools ask for. A request for one blocks the address at once for 12
+# months, so each is anchored to where tools ask for it, and a test proves that no page,
+# file or route of this site matches one: a pattern that matched inside a blog address
+# would lock a reader out for a year.
+ATTACK_PATH_PATTERNS = [
+    r"\.php\d?$",  # nothing here is PHP
+    r"^/(wp-|wordpress|xmlrpc)",
+    r"/\.(env|git|svn|hg|aws|ssh|htaccess|htpasswd|ds_store)(/|$|\.)",
+    r"^/(phpmyadmin|pma|myadmin|mysqladmin|adminer|dbadmin|sqlmanager)(/|$)",
+    r"^/(administrator|joomla|drupal|magento)(/|$)",
+    r"^/(cgi-bin|vendor/phpunit|actuator|manager/html|solr|jenkins|struts)(/|$)",
+    r"^/(shell|webshell|backdoor|c99|r57)(\.|/|$)",
+    r"^/(web\.config|config\.(json|yml|yaml|ini))$",
+]
 ATTACK_PATH_REGEX = re.compile("|".join(ATTACK_PATH_PATTERNS), re.IGNORECASE)
 
-# Suspicious path tracking settings (same for both 404s and attack paths)
-MAX_SUSPICIOUS_ATTEMPTS = 10  # Max attempts before ban
-SCAN_WINDOW_SECONDS = 600  # 10 minute window
-SCAN_BAN_DURATION = 3600  # 1 hour ban
+SCAN_LIMIT = 20  # different missing paths ...
+SCAN_WINDOW = 5 * 60  # ... within this many seconds
 
-# Answered for a banned address too, so that a ban can never look like an
+# Answered for a blocked address too, so that a block can never look like an
 # outage to whatever monitors the service.
-HEALTH_CHECK_PATH = "/api/v1/health/"
+HEALTH_CHECK_PATHS = ("/healthz", "/api/v1/health/")
+
+
+def is_attack(request) -> bool:
+    """A known scanner path, or a POST to the admin a hosted site keeps hidden: where the
+    admin lives elsewhere (ATTACK_SIGNAL_ADMIN_PREFIX, respectlytics.com's settings), only a
+    tool posts to /admin. The community edition's admin is /admin itself, so it sets none."""
+    if ATTACK_PATH_REGEX.search(request.path):
+        return True
+    prefix = getattr(settings, "ATTACK_SIGNAL_ADMIN_PREFIX", None)
+    return bool(prefix) and request.method == "POST" and request.path.startswith(prefix)
 
 
 class SecurityMiddleware(MiddlewareMixin):
     """
-    Security middleware to handle:
-    - IP banning for repeated authentication failures
-    - SEC-013: Path scanning detection and 404 rate limiting
-    - Request logging for security events
-    - Invalid API key tracking
+    The door (loheden-security, "Client address, bans and rate limits"):
 
-    Security principle: Always return 404 for security blocks (not 403)
-    to avoid revealing information about what exists.
+    - a blocked address is refused, and told so;
+    - an attack signal blocks the address at once for 12 months;
+    - 20 different missing pages within 5 minutes block it for 24 hours, longer on repeat;
+    - 10 refused API keys within 15 minutes block it for an hour (throttling.py).
+
+    The health answer comes before all of it. The blocks themselves are analytics/blocks.py.
     """
 
     def process_request(self, request):
-        """
-        Check if IP is banned and detect attack path probes.
-
-        SEC-013: Track attack path probes and ban after threshold.
-        Always returns 404 (never 403) to avoid information disclosure.
-        """
-        # Skip security checks during tests
         if getattr(settings, "TESTING", False):
             return None
-
-        if request.path == HEALTH_CHECK_PATH:
+        if request.path in HEALTH_CHECK_PATHS:
             return None
 
         ip = get_client_ip(request)
-
-        # Skip localhost in development
         if settings.DEBUG and ip in ("127.0.0.1", "localhost", "::1"):
             return None
 
-        # Check if IP is already banned - show clear blocked message
-        if is_ip_banned(request):
-            logger.warning(f"[SECURITY] Blocked request from banned IP: {ip}")
+        blocked = active_block(ip)
+        if blocked is not None:
+            logger.info("[SECURITY] Refused a blocked address (%s)", blocked.kind)
+            refused(ip, blocked)
             return self._blocked_response(request, ip)
 
-        # SEC-013: Check for attack path patterns - track like 404s, return 404
-        path = request.path.lower()
-        if ATTACK_PATH_REGEX.search(path):
-            is_banned = self._track_attack_path(ip, path)
-            if is_banned:
-                logger.warning(f"[SECURITY] IP {ip} banned for excessive attack path probes")
-                return self._blocked_response(request, ip)
-            # Return 404 for attack paths (don't reveal they're detected) until banned
-            raise Http404("Page not found")
+        if is_attack(request):
+            # The address every Worker shares, and the server's own, are refused one request
+            # at a time like anyone's, but never blocked (analytics/blocks.py).
+            block(ip, ATTACK, f"{request.method} {request.path[:80]}")
+            return self._blocked_response(request, ip)
 
         return None
 
     def process_response(self, request, response):
-        """
-        Log security events and track 404s for scanning detection.
-
-        SEC-013: Track 404 responses and ban excessive scanners.
-        Exempt authenticated users and static file paths from 404 banning.
-        """
         ip = get_client_ip(request)
 
-        # SEC-013: Track 404 responses for path scanning detection
-        if response.status_code == 404:
-            # Skip localhost in development
-            if not (settings.DEBUG and ip in ("127.0.0.1", "localhost", "::1")):
-                # Skip exempt paths (static files, dashboard, API, etc.)
-                # These are not attack probes - just missing files or normal navigation
-                if EXEMPT_404_REGEX.search(request.path):
-                    pass  # Don't track these 404s as suspicious
-                # Skip authenticated users - they're legitimate users, not scanners
-                elif hasattr(request, "user") and request.user and request.user.is_authenticated:
-                    pass  # Authenticated users get much more lenient treatment
-                else:
-                    # Track as potential path scanning (unauthenticated, non-exempt paths)
-                    is_banned = self._track_404(ip, request.path)
-                    if is_banned:
-                        logger.warning(
-                            f"[SECURITY] IP {ip} banned for excessive 404s (path scanning)"
-                        )
-                        # Return blocked page immediately when threshold is reached
-                        return self._blocked_response(request, ip)
+        if response.status_code == 404 and not getattr(settings, "TESTING", False):
+            if self._count_missing(request, ip):
+                return self._blocked_response(request, ip)
 
-        # Track failed authentication attempts (401 status)
         if response.status_code == 401:
             app_key = self._extract_app_key(request)
-
-            # Track the failed attempt
-            is_banned = track_failed_auth_attempt(request, app_key)
-
-            if is_banned:
-                logger.error(f"[SECURITY] IP {ip} banned due to repeated failed auth attempts")
+            if track_failed_auth_attempt(request, app_key):
+                logger.error("[SECURITY] Blocked an address for repeated refused API keys")
             else:
-                logger.warning(f"[SECURITY] Failed auth attempt from IP: {ip}, app_key: {app_key}")
+                logger.warning(f"[SECURITY] Refused API key: {app_key}")
 
-        # Log suspicious activity (too many errors)
         if response.status_code >= 500:
-            logger.error(
-                f"[SECURITY] Server error {response.status_code} for IP: {ip}, path: {request.path}"
-            )
+            logger.error(f"[SECURITY] Server error {response.status_code} for {request.path}")
 
         return response
 
-    def _track_404(self, ip, path):
-        """
-        SEC-013: Track 404 attempts and ban if threshold exceeded.
-
-        Returns True if IP was banned, False otherwise.
-        Fails open if cache/DB is unreachable.
-        """
+    def _count_missing(self, request, ip) -> bool:
+        """Count a missing page toward a scan. Returns whether this one blocked the address.
+        Fails open if the cache is unreachable."""
+        if settings.DEBUG and ip in ("127.0.0.1", "localhost", "::1"):
+            return False
+        if EXEMPT_404_REGEX.search(request.path) or is_crawler(request) or not blockable(ip):
+            return False
+        user = getattr(request, "user", None)
+        if user is not None and user.is_authenticated:
+            return False  # a signed-in customer following an old link is no scanner
         try:
-            cache_key = f"404_count:{ip}"
-            count = cache.get(cache_key, 0) + 1
-            cache.set(cache_key, count, SCAN_WINDOW_SECONDS)
-
-            logger.info(f"[SECURITY] 404 attempt #{count} from {ip}: {path}")
-
-            if count >= MAX_SUSPICIOUS_ATTEMPTS and ban_ip(ip, SCAN_BAN_DURATION):
-                logger.warning(
-                    f"[SECURITY] IP {ip} banned after {count} 404s in {SCAN_WINDOW_SECONDS}s"
-                )
-
-                # SEC-007: IP banned alert emails disabled (too noisy in production)
-                # Bans are still logged above - check logs/security.log
-
-                return True
+            counter = f"missing:{address_key(ip)}"
+            paths = cache.get(counter, set())
+            paths.add(request.path[:200])
+            if len(paths) < SCAN_LIMIT:
+                cache.set(counter, paths, SCAN_WINDOW)
+                return False
+            cache.delete(counter)
         except Exception:
-            logger.warning(
-                f"[SECURITY] Cache unavailable during 404 tracking for IP: {ip} \u2014 failing open"
-            )
-        return False
-
-    def _track_attack_path(self, ip, path):
-        """
-        SEC-013: Track attack path probes and ban if threshold exceeded.
-
-        Attack paths (like /.env, /wp-admin) are tracked separately from 404s
-        but use the same threshold. This allows legitimate 404s while still
-        catching attackers who specifically probe for vulnerabilities.
-
-        Returns True if IP was banned, False otherwise.
-        Fails open if cache/DB is unreachable.
-        """
-        try:
-            cache_key = f"attack_path_count:{ip}"
-            count = cache.get(cache_key, 0) + 1
-            cache.set(cache_key, count, SCAN_WINDOW_SECONDS)
-
-            logger.warning(f"[SECURITY] Attack path probe #{count} from {ip}: {path}")
-
-            if count >= MAX_SUSPICIOUS_ATTEMPTS and ban_ip(ip, SCAN_BAN_DURATION):
-                logger.error(f"[SECURITY] IP {ip} banned after {count} attack path probes")
-
-                # SEC-007: IP banned alert emails disabled (too noisy in production)
-
-                return True
-        except Exception:
-            logger.warning(
-                f"[SECURITY] Cache unavailable during attack path tracking for IP: {ip} \u2014 "
-                "failing open"
-            )
-        return False
+            logger.warning("[SECURITY] Cache unavailable during 404 counting, failing open")
+            return False
+        reason = f"{len(paths)} missing pages within {SCAN_WINDOW // 60} minutes"
+        return block(ip, SCAN, reason) is not None
 
     def _blocked_response(self, request, ip):
         """
@@ -337,32 +249,6 @@ class SecurityMiddleware(MiddlewareMixin):
             line-height: 1.6;
             margin-bottom: 2rem;
         }
-        .btn {
-            display: inline-block;
-            background: #334155;
-            color: #cbd5e1;
-            text-decoration: none;
-            padding: 1rem 2rem;
-            border-radius: 0.75rem;
-            font-weight: 600;
-            font-size: 1rem;
-            border: 2px solid #475569;
-            transition: all 0.2s;
-        }
-        .btn:hover {
-            background: #475569;
-            transform: translateY(-2px);
-        }
-        .help {
-            margin-top: 2rem;
-            color: #64748b;
-            font-size: 0.875rem;
-        }
-        .help a {
-            color: #a78bfa;
-            text-decoration: none;
-        }
-        .help a:hover { color: #c4b5fd; }
     </style>
 </head>
 <body>
@@ -371,7 +257,6 @@ class SecurityMiddleware(MiddlewareMixin):
         <div class="icon">&#128683;</div>
         <h1>Blocked</h1>
         <p>Your IP address has been blocked due to suspicious activity.</p>
-        <a href="/" class="btn">Go Home</a>
     </div>
 </body>
 </html>"""
@@ -493,11 +378,10 @@ class CSPMiddleware(MiddlewareMixin):
     # Keeping them listed here would let a stray CDN <script> load unnoticed.
     #
     # What remains is functional third-party *services*, not assets: Stripe for
-    # payment, Turnstile for the CAPTCHA challenge, and Simple Analytics, which
-    # is the one allowed exception - cookieless, collects no personal data, and
-    # self-updates, so it cannot be pinned and vendored.
+    # payment and Turnstile for the CAPTCHA challenge. No analytics script runs:
+    # respectlytics.com counts its visits on its own server, so Simple Analytics,
+    # allowed there until 2026-10-21, is gone.
     CDN_SCRIPTS = [
-        "https://scripts.simpleanalyticscdn.com",  # Simple Analytics
         "https://challenges.cloudflare.com",  # Cloudflare Turnstile
     ]
 
@@ -505,7 +389,6 @@ class CSPMiddleware(MiddlewareMixin):
 
     CDN_CONNECT = [
         "https://api.stripe.com",  # Stripe API
-        "https://simpleanalytics.com",  # Simple Analytics
     ]
 
     CDN_FRAMES = [
@@ -540,7 +423,9 @@ class CSPMiddleware(MiddlewareMixin):
             directive("frame-src", "'self'", *self.CDN_FRAMES),
             "object-src 'none'",
             "base-uri 'self'",
-            "form-action 'self'",
+            # A form's redirect counts as its action: the checkout and the portal answer with a
+            # redirect to Stripe, which 'self' alone blocked (owner, 2026-10-24).
+            "form-action 'self' https://checkout.stripe.com https://billing.stripe.com",
             "frame-ancestors 'none'",
         ]
 

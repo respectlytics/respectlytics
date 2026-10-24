@@ -115,6 +115,8 @@ class EventCreateSerializer(serializers.Serializer):
         - This enables single-session funnel analysis without cross-session tracking
         """
         app = validated_data.pop("app_key")
+        # The declared properties the intake kept (properties/declared.py), never the raw ones
+        declared = validated_data.pop("declared_properties", None)
 
         # Use current time if timestamp not provided
         if "timestamp" not in validated_data or validated_data["timestamp"] is None:
@@ -140,7 +142,7 @@ class EventCreateSerializer(serializers.Serializer):
                 session_id=validated_data["session_id"], app_id=str(app.id)
             )
 
-        event = Event.objects.create(app=app, **validated_data)
+        event = Event.objects.create(app=app, properties=declared or None, **validated_data)
         return event
 
 

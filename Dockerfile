@@ -1,26 +1,28 @@
-FROM python:3.12-slim
+# Respectlytics Community Edition. The base image is pinned by digest, so a build uses exactly
+# the image that was tested; every package is installed from requirements.txt with its hash
+# checked; and the app runs as an unprivileged user, never as root.
+FROM python:3.12-slim@sha256:a6e34c598f2467ed0e9a8d349809fcd8b5c603269512df273a0bb1784edc11b1
 
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
 
 WORKDIR /app
 
-# System dependencies for psycopg2
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc libpq-dev && \
-    rm -rf /var/lib/apt/lists/*
-
+# psycopg2-binary carries its own libpq, so no compiler or system library is needed.
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --require-hashes -r requirements.txt
 
+RUN useradd --system --uid 10001 --home-dir /app respectlytics
 COPY . .
+# The only folders the app writes to at run time: static files (collected at start), the GeoIP
+# database (downloaded at start, from DB-IP or with MaxMind credentials from MaxMind) and logs.
+RUN mkdir -p staticfiles geoip_data logs \
+    && chown respectlytics:respectlytics staticfiles geoip_data logs \
+    && cp entrypoint.sh /entrypoint.sh && chmod 755 /entrypoint.sh
 
-# Collect static files
-RUN python manage.py collectstatic --noinput 2>/dev/null || true
-
-COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
-
+USER respectlytics
 EXPOSE 8080
 
 ENTRYPOINT ["/entrypoint.sh"]

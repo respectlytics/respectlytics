@@ -1,11 +1,12 @@
 # The rules every Loheden Python project lints with (thereseai's pyproject is the
 # same set), checked on every push by .github/workflows/lint.yml. required-version
-# makes ruff refuse to run at any other version than requirements-dev.txt pins, and
+# makes ruff refuse to run at any other version than pyproject.toml's dev group pins, and
 # the community edition's CI installs the version named here.
 required-version = "==0.17.0"
 line-length = 100
 target-version = "py312"
-extend-exclude = ["migrations"]
+# vendor holds checked copies of other repositories (vendor/loheden_analytics), linted there.
+extend-exclude = ["migrations", "vendor"]
 
 [lint]
 select = ["E", "F", "I", "UP", "B", "DJ"]

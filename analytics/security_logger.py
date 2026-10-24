@@ -43,6 +43,7 @@ class SecurityEvent:
     REGISTRATION_STARTED = "registration_started"
     REGISTRATION_COMPLETED = "registration_completed"
     EMAIL_VERIFIED = "email_verified"
+    EMAIL_CHANGED = "email_changed"  # a change of address, once the new one is confirmed
     VERIFICATION_RESENT = "verification_resent"
 
     # Rate limiting & banning events

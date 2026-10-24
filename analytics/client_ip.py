@@ -9,15 +9,17 @@ Only a header that the edge in front of the app sets, and overwrites when a
 client sends its own, can say who the visitor is. Which headers those are
 depends on where the app runs, so settings.TRUSTED_CLIENT_IP_HEADERS names them:
 
-- respectlytics.com runs on DigitalOcean App Platform, whose edge is Cloudflare.
-  Cloudflare puts the visitor in CF-Connecting-IP and documents that it
-  overwrites any value a client sends, so that header comes first; App
-  Platform's do-connecting-ip, of which DigitalOcean says no such thing, is the
-  fallback. X-Forwarded-For is no answer there: App Platform fills it
-  with its own ingress server, and before that its first entry is whatever the
-  client chose to send, so a ban keyed on it could be dodged by changing the
-  header, or aimed at anyone else's address.
-  https://docs.digitalocean.com/support/where-can-i-find-the-client-ip-address-of-a-request-connecting-to-my-app/
+- respectlytics.com is reached only through Cloudflare: its records are proxied to a
+  Cloudflare Tunnel, and the server opens no web port, so every request comes
+  through Cloudflare, then the tunnel and the server's Caddy. Cloudflare sets
+  CF-Connecting-IP to the address that connected to it, and for a Worker on
+  another account to the one address every Worker shares, so that header alone
+  names the visitor there, and READ_X_FORWARDED_FOR is off.
+  https://developers.cloudflare.com/fundamentals/reference/http-headers/
+  Nothing a client can write counts: not X-Forwarded-For, which the client
+  starts and every proxy appends to, and no other header. A ban keyed on one
+  could be dodged by changing it, or aimed at anyone else's address. Without
+  CF-Connecting-IP the answer is the connection's own address.
 - A self-hosted copy trusts no such header unless its owner names one
   (TRUSTED_CLIENT_IP_HEADER, for a server behind Cloudflare), because without
   that edge in front anyone can send it. Behind the owner's own reverse proxy
@@ -65,6 +67,8 @@ def get_client_ip(request) -> str:
             return str(address)
 
     address = request.META.get("REMOTE_ADDR", "")
+    if not getattr(settings, "READ_X_FORWARDED_FOR", True):
+        return address
     hops = request.META.get("HTTP_X_FORWARDED_FOR", "").split(",")
     current = _address(address)
     while current and _is_proxy(current) and hops:

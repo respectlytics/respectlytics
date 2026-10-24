@@ -8,7 +8,18 @@ module.exports = {
     './billing/templates/**/*.html',
     './analytics/templates/**/*.html',
     './tools/templates/**/*.html',
+    // Every other app's templates (respectlytics.com's setup pages among them).
+    './[a-z]*/templates/**/*.html',
     './static/js/**/*.js',
+    // Each app's own scripts write class names into the page too.
+    './analytics/static/**/*.js',
+    './dashboard/static/**/*.js',
+    './tools/static/**/*.js',
+    './website/static/**/*.js',
+    // respectlytics.com's own apps (teams/, properties/, alerts/)
+    './teams/static/**/*.js',
+    './properties/static/**/*.js',
+    './alerts/static/**/*.js',
   ],
   theme: {
     extend: {

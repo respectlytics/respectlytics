@@ -1,6 +1,7 @@
 services:
   db:
-    image: postgres:16-alpine
+    # Pinned by digest, so every install runs the image that was tested.
+    image: postgres:16-alpine@sha256:f4610795587492cd4fb887c2dc3de301b813278bb6f616992061141b5f15ac36
     restart: unless-stopped
     environment:
       POSTGRES_DB: respectlytics
@@ -30,9 +31,13 @@ services:
       - SECURE_SSL=${SECURE_SSL:-False}
       - TRUSTED_CLIENT_IP_HEADER=${TRUSTED_CLIENT_IP_HEADER:-}
       - ADMIN_REQUIRE_OTP=${ADMIN_REQUIRE_OTP:-False}
+    volumes:
+      # The GeoIP database, kept between restarts and rebuilds (entrypoint.sh refreshes it monthly)
+      - geoip_data:/app/geoip_data
     depends_on:
       db:
         condition: service_healthy
 
 volumes:
   postgres_data:
+  geoip_data:

@@ -1,0 +1,125 @@
+/**
+ * An app's views on every dashboard page (dashboard/partials/_app_nav.html), loaded by
+ * dashboard_base.html: a sidebar from 1024 px, and below that a row under the top bar that
+ * scrolls sideways, so a phone reaches every view with one tap and no menu to open. Until
+ * 2026-10-24 the stats and funnel pages each kept a copy of these styles (the funnel's had
+ * drifted to violet), the Settings page had none, and a phone opened the views from a floating
+ * button over the content.
+ */
+
+/* ==========================================================================
+   Sidebar Navigation Styles - Dark theme
+   ========================================================================== */
+
+.sidebar-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;  /* 12px */
+    width: 100%;
+    padding: 0.625rem 1rem;  /* 10px 16px */
+    border-radius: 0.5rem;  /* 8px */
+    font-size: 0.875rem;  /* 14px */
+    font-weight: 500;
+    color: #94a3b8;  /* Slate 400 */
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: left;
+}
+
+.sidebar-nav-item:hover {
+    background: rgba(51, 65, 85, 0.5);  /* Slate 700/50 */
+    color: #f8fafc;  /* Slate 50 */
+}
+
+/* Where you are: a quiet pill in the heading colour, since the accent means "you can act" */
+.sidebar-nav-item.active {
+    background: rgba(148, 163, 184, 0.14);
+    color: #f8fafc;
+    font-weight: 600;
+}
+
+.sidebar-nav-icon {
+    width: 1.25rem;  /* 20px */
+    height: 1.25rem;  /* 20px */
+    flex-shrink: 0;
+}
+
+.sidebar-divider {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.1);
+    margin: 1rem 0.75rem;  /* 16px 12px */
+}
+
+/* ==========================================================================
+   The frame: a row on a phone, a sidebar from 1024 px
+   ========================================================================== */
+
+.app-sidebar {
+    position: sticky;
+    top: 3.5rem;  /* under the top bar (partials/app_bar.html, h-14) */
+    z-index: 30;
+    width: 100%;
+    background: #0f172a;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+.app-sidebar::-webkit-scrollbar { display: none; }
+/* Under the website's bar instead (the demo, a share link): 57 px on a phone, 68 px from 768 px */
+.app-sidebar-public { top: 57px; }
+@media (min-width: 768px) { .app-sidebar-public { top: 68px; } }
+
+.app-sidebar-nav {
+    display: flex;
+    gap: 0.25rem;
+    padding: 0.5rem 1rem;
+    width: max-content;
+}
+.app-sidebar .sidebar-nav-item {
+    width: auto;
+    min-height: 2.75rem;  /* 44 px, a thumb's target */
+    white-space: nowrap;
+    padding: 0.5rem 0.875rem;
+}
+.app-sidebar .sidebar-divider,
+.app-sidebar .sidebar-app-name { display: none; }
+
+@media (min-width: 1024px) {
+    .app-sidebar {
+        flex: none;
+        width: 15rem;
+        height: calc(100vh - 3.5rem);
+        border-bottom: 0;
+        border-right: 1px solid rgba(255, 255, 255, 0.1);
+        background: #111a2e;
+        overflow-x: hidden;
+        overflow-y: auto;
+    }
+    .app-sidebar-public { height: calc(100vh - 68px); }
+    .app-sidebar-nav {
+        flex-direction: column;
+        width: auto;
+        padding: 1.5rem 0.75rem;
+    }
+    .app-sidebar .sidebar-nav-item {
+        width: 100%;
+        min-height: 0;
+        padding: 0.625rem 0.875rem;
+    }
+    .app-sidebar .sidebar-divider { display: block; }
+    .app-sidebar .sidebar-app-name { display: flex; }
+}
+
+/* The app a share link or the demo shows, named above its views (no switcher: one app) */
+.sidebar-app-name {
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0 0.875rem 1rem;
+    margin-bottom: 0.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: #f8fafc;
+}

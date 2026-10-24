@@ -1,37 +1,23 @@
 /**
- * Respectlytics Dark Theme - Chart.js Global Configuration
- * 
- * Part of: UI/Design System Backlog - Task UI-003
- * Documentation: .github/design-system/
- * 
- * This file configures Chart.js defaults for consistent dark theme
- * across all charts in the dashboard. Load AFTER Chart.js CDN.
- * 
- * Usage:
- * <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
- * <script src="{% static 'js/chart-theme.js' %}"></script>
+ * Every dashboard chart's look (Chart.js 4, loaded before this by dashboard_base.html), set once:
+ * the one typeface, quiet axes, a tooltip on the card's own colours, and one series colour, the
+ * brand's, with lighter steps of it for the parts of one thing (a group's events).
+ *
+ * Dates on an axis lie flat and thin themselves out (about 6 on a phone, 10 on a desktop),
+ * through StatsApp.chartAxis in stats/charts.js.
  */
 
-(function() {
+(function () {
   'use strict';
-  
-  if (typeof Chart === 'undefined') {
-    return; // Chart.js not loaded yet - will be applied when it loads
-  }
-  
-  // ============================================
-  // GLOBAL COLOR SETTINGS
-  // ============================================
-  
-  Chart.defaults.color = '#94a3b8';  // Slate 400 - Default text color
-  Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.05)';  // Subtle borders
-  
-  // ============================================
-  // FONT CONFIGURATION
-  // ============================================
-  
-  // Schibsted Grotesk, the site's typeface (static/css/fonts.css). A chart
-  // drawn before the font arrived is drawn again once it has.
+
+  if (typeof Chart === 'undefined') return;
+
+  // Text and lines
+  Chart.defaults.color = '#94a3b8';  // slate-400
+  Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.06)';
+
+  // Schibsted Grotesk, the site's typeface (static/css/fonts.css). A chart drawn before the font
+  // arrived is drawn again once it has.
   Chart.defaults.font.family = "'Schibsted Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif";
   Chart.defaults.font.size = 12;
   if (document.fonts && document.fonts.ready) {
@@ -39,92 +25,34 @@
       Object.values(Chart.instances || {}).forEach(function (chart) { chart.update('none'); });
     });
   }
-  
-  // ============================================
-  // TOOLTIP CONFIGURATION
-  // ============================================
-  
-  Chart.defaults.plugins.tooltip.backgroundColor = '#1e293b';  // Slate 800 - Matches surface color
-  Chart.defaults.plugins.tooltip.titleColor = '#f8fafc';  // Slate 50 - Primary text
-  Chart.defaults.plugins.tooltip.bodyColor = '#94a3b8';  // Slate 400 - Secondary text
-  Chart.defaults.plugins.tooltip.borderColor = 'rgba(255, 255, 255, 0.1)';  // Subtle border
-  Chart.defaults.plugins.tooltip.borderWidth = 1;
-  Chart.defaults.plugins.tooltip.padding = 12;
-  Chart.defaults.plugins.tooltip.cornerRadius = 8;
-  Chart.defaults.plugins.tooltip.displayColors = true;
-  Chart.defaults.plugins.tooltip.boxPadding = 6;
-  
-  // ============================================
-  // LEGEND CONFIGURATION
-  // ============================================
-  
-  Chart.defaults.plugins.legend.labels.color = '#94a3b8';  // Slate 400
-  Chart.defaults.plugins.legend.labels.padding = 16;
-  Chart.defaults.plugins.legend.labels.boxWidth = 12;
-  Chart.defaults.plugins.legend.labels.boxHeight = 12;
-  Chart.defaults.plugins.legend.labels.useBorderRadius = true;
-  Chart.defaults.plugins.legend.labels.borderRadius = 2;
-  
-  // ============================================
-  // DATASET COLOR PALETTE
-  // ============================================
-  
+
+  // The tooltip: the page's own dark surface, the heading colour for its title
+  const tooltip = Chart.defaults.plugins.tooltip;
+  tooltip.backgroundColor = '#0f172a';
+  tooltip.titleColor = '#f8fafc';
+  tooltip.bodyColor = '#e2e8f0';
+  tooltip.borderColor = 'rgba(255, 255, 255, 0.15)';
+  tooltip.borderWidth = 1;
+  tooltip.padding = 10;
+  tooltip.cornerRadius = 8;
+  tooltip.displayColors = false;
+  tooltip.titleFont = { weight: '600', size: 13 };
+  tooltip.bodyFont = { size: 13 };
+
+  Chart.defaults.plugins.legend.display = false;
+
+  // A chart settles quickly when its range changes, and not at all with Reduce Motion
+  const still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (still) {
+    Chart.defaults.animation = false;
+  } else {
+    Chart.defaults.animation.duration = 250;
+    Chart.defaults.animation.easing = 'easeOutCubic';
+  }
+
   /**
-   * Global color palette optimized for dark backgrounds
-   * Use these colors for multi-dataset charts
+   * The one series colour, brand-500, and its lighter steps for the parts of one thing.
    */
-  window.chartColorPalette = [
-    '#8b5cf6',  // Purple 500 - Primary
-    '#06b6d4',  // Cyan 500 - Secondary
-    '#f59e0b',  // Amber 500 - Accent
-    '#10b981',  // Emerald 500 - Success
-    '#ef4444',  // Red 500 - Error
-    '#ec4899',  // Pink 500 - Highlight
-    '#6366f1',  // Indigo 500 - Brand
-    '#14b8a6'   // Teal 500 - Info
-  ];
-  
-  /**
-   * Helper function to get color from palette with alpha
-   * @param {number} index - Color index (0-7)
-   * @param {number} alpha - Opacity (0-1)
-   * @returns {string} RGBA color string
-   */
-  window.getChartColor = function(index, alpha = 1) {
-    const colors = window.chartColorPalette;
-    const color = colors[index % colors.length];
-    
-    if (alpha === 1) return color;
-    
-    // Convert hex to rgba
-    const r = parseInt(color.slice(1, 3), 16);
-    const g = parseInt(color.slice(3, 5), 16);
-    const b = parseInt(color.slice(5, 7), 16);
-    
-    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-  };
-  
-  /**
-   * Helper function to generate gradient backgrounds
-   * Useful for area charts on dark backgrounds
-   * @param {CanvasRenderingContext2D} ctx - Chart canvas context
-   * @param {string} color - Base color (hex)
-   * @param {number} height - Chart height
-   * @returns {CanvasGradient} Gradient object
-   */
-  window.createChartGradient = function(ctx, color, height) {
-    const gradient = ctx.createLinearGradient(0, 0, 0, height);
-    
-    // Parse hex color
-    const r = parseInt(color.slice(1, 3), 16);
-    const g = parseInt(color.slice(3, 5), 16);
-    const b = parseInt(color.slice(5, 7), 16);
-    
-    gradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, 0.3)`);
-    gradient.addColorStop(0.5, `rgba(${r}, ${g}, ${b}, 0.1)`);
-    gradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0.0)`);
-    
-    return gradient;
-  };
-  
+  window.chartBrand = '#6366f1';
+  window.chartColorPalette = ['#6366f1', '#818cf8', '#a5b4fc', '#c7d2fe'];
 })();

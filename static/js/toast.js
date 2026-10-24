@@ -29,22 +29,22 @@
         success: {
             bg: 'bg-emerald-600',
             border: 'border-emerald-500',
-            icon: '✓'
+            icon: 'check'
         },
         error: {
             bg: 'bg-red-600',
             border: 'border-red-500',
-            icon: '✕'
+            icon: 'x'
         },
         warning: {
             bg: 'bg-amber-600',
             border: 'border-amber-500',
-            icon: '⚠'
+            icon: 'alert'
         },
         info: {
             bg: 'bg-indigo-600',
             border: 'border-indigo-500',
-            icon: 'ℹ'
+            icon: 'info'
         }
     };
     
@@ -82,8 +82,8 @@
         
         // Icon
         const iconSpan = document.createElement('span');
-        iconSpan.className = 'text-lg flex-shrink-0';
-        iconSpan.textContent = style.icon;
+        iconSpan.className = 'flex-shrink-0';
+        iconSpan.innerHTML = window.icon ? window.icon(style.icon, 'h-4 w-4') : '';
         toast.appendChild(iconSpan);
         
         // Message

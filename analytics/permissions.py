@@ -25,3 +25,15 @@ class IsAuthenticatedOrReadOnly(BasePermission):
         if request.method in ["GET", "HEAD", "OPTIONS"]:
             return True
         return request.user and isinstance(request.user, App)
+
+
+class IsAppOwner(BasePermission):
+    """The app's owner only, for what cannot be undone (deleting events): a team member or a
+    share link reads, and never deletes (analytics/access.py)."""
+
+    message = "Only the app's owner can do this."
+
+    def has_permission(self, request, view):
+        from .access import OWN
+
+        return isinstance(request.user, App) and getattr(request._request, "app_role", OWN) == OWN

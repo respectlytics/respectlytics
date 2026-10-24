@@ -20,6 +20,8 @@ cross-session user tracking, which is not compatible with session-based analytic
 """
 
 import logging
+import re
+from collections import defaultdict
 from datetime import datetime, timedelta
 
 from dateutil.relativedelta import relativedelta
@@ -32,14 +34,46 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from analytics.authentication import AppKeyAuthentication
-from analytics.date_utils import get_cache_key_with_timezone, parse_date_range
+from analytics import event_groups
+from analytics.authentication import APP_OWNER
+from analytics.date_utils import freshness_mark, get_cache_key_with_timezone, parse_date_range
 
 # Import from analytics app (shared models, auth, permissions)
 from analytics.models import Event
 from analytics.permissions import HasValidAppKey
 
 logger = logging.getLogger(__name__)
+
+# A declared property's name (properties/models.py NAME), and the row its rare values share
+PROPERTY_NAME = re.compile(r"^[a-z][a-z0-9_]{0,39}$")
+MIN_PROPERTY_SESSIONS = 5
+OTHER_VALUES = "Other values"
+
+
+def _properties_included(app):
+    """Whether the app may be compared by its declared properties: on respectlytics.com while
+    its plan includes them (billing/features.py); elsewhere nothing declares any."""
+    from django.apps import apps
+
+    if not apps.is_installed("properties"):
+        return True
+    from billing import features
+
+    return features.for_app(app, "properties")
+
+
+# The dashboard reads events through the app's groups; an API caller who never asks keeps
+# reading every event by its own name (analytics/event_groups.py).
+GROUP_EVENTS = openapi.Parameter(
+    "group_events",
+    openapi.IN_QUERY,
+    description=(
+        "true reads every event as its event group, the way the dashboard shows it "
+        "(purchase_light and purchase_pro as purchase), and lets a group's name stand for its "
+        "events. Default false."
+    ),
+    type=openapi.TYPE_BOOLEAN,
+)
 
 
 class DAUView(APIView):
@@ -63,7 +97,8 @@ class DAUView(APIView):
     (maximum 2 hours). Sessions are not tracked across app restarts.
     """
 
-    authentication_classes = [AppKeyAuthentication]
+    share_links = True  # a share link's dashboard reads it (teams/)
+    authentication_classes = APP_OWNER
     permission_classes = [HasValidAppKey]
 
     # Valid granularity options
@@ -520,7 +555,8 @@ class ConversionSummaryView(APIView):
     Conversion rate is calculated as: sessions with conversions / total unique sessions per period
     """
 
-    authentication_classes = [AppKeyAuthentication]
+    share_links = True  # a share link's dashboard reads it (teams/)
+    authentication_classes = APP_OWNER
     permission_classes = [HasValidAppKey]
 
     # Valid granularity options (same as DAUView)
@@ -796,20 +832,21 @@ A session is a unique app usage period (max 2 hours), identified by session_id.
             item["period"]: item["unique_sessions"] for item in active_sessions_data
         }
 
-        # Count conversion events per period
+        # Sessions with a conversion event per period: a rate of sessions over sessions, which
+        # never passes 100% (until 2026-10-24 it counted the events, so a session that bought
+        # twice counted twice)
         conversion_data = (
-            events.filter(event_name__in=conversion_events)
+            events.filter(event_name__in=conversion_events, session_id__isnull=False)
+            .exclude(session_id="")
             .annotate(period=trunc_func("timestamp"))
             .values("period")
-            .annotate(conversions=Count("id"))
+            .annotate(conversions=Count("session_id", distinct=True))
             .order_by("-period")
         )
 
         # Format response data with conversion rates
         conversions_list = []
         total_conversions = 0
-        total_sessions_for_avg = 0
-        periods_with_conversions = 0
 
         for item in conversion_data:
             period_dt = item["period"]
@@ -833,11 +870,9 @@ A session is a unique app usage period (max 2 hours), identified by session_id.
                 )
 
                 total_conversions += conversion_count
-                if active_sessions > 0:
-                    total_sessions_for_avg += active_sessions
-                    periods_with_conversions += 1
 
-        # Calculate average conversion rate across all periods
+        # The rate over the whole range: every period's sessions, with a conversion or not
+        total_sessions_for_avg = sum(sessions_by_period.values())
         avg_conversion_rate = (
             round(total_conversions / total_sessions_for_avg, 4)
             if total_sessions_for_avg > 0
@@ -950,7 +985,8 @@ class TimeToConversionView(APIView):
         }
     """
 
-    authentication_classes = [AppKeyAuthentication]
+    share_links = True  # a share link's dashboard reads it (teams/)
+    authentication_classes = APP_OWNER
     permission_classes = [HasValidAppKey]
 
     # Show data even with 1 session - frontend shows small sample warning
@@ -1407,7 +1443,8 @@ class StepTimingView(APIView):
         }
     """
 
-    authentication_classes = [AppKeyAuthentication]
+    share_links = True  # a share link's dashboard reads it (teams/)
+    authentication_classes = APP_OWNER
     permission_classes = [HasValidAppKey]
 
     @swagger_auto_schema(
@@ -1434,6 +1471,7 @@ This endpoint analyzes events within the **same session_id**. This means:
 - Total funnel duration
         """,
         manual_parameters=[
+            GROUP_EVENTS,
             openapi.Parameter(
                 "steps",
                 openapi.IN_QUERY,
@@ -1584,8 +1622,10 @@ This endpoint analyzes events within the **same session_id**. This means:
         if end_datetime:
             events_qs = events_qs.filter(timestamp__lte=end_datetime)
 
-        # Calculate step timing analysis
-        analysis_result = self._calculate_step_timing(events_qs, steps)
+        # Calculate step timing analysis; a step may be a group's name (`group_events=true`)
+        analysis_result = self._calculate_step_timing(
+            events_qs, steps, event_groups.from_request(request, app)
+        )
 
         return Response(
             {
@@ -1597,7 +1637,7 @@ This endpoint analyzes events within the **same session_id**. This means:
             status=status.HTTP_200_OK,
         )
 
-    def _calculate_step_timing(self, events_qs, steps):
+    def _calculate_step_timing(self, events_qs, steps, grouping=event_groups.NONE):
         """
         Calculate timing between consecutive funnel steps within sessions.
 
@@ -1607,9 +1647,15 @@ This endpoint analyzes events within the **same session_id**. This means:
         Returns:
             dict with 'transitions' and 'funnel_summary'
         """
+        # Every event a step stands for: itself, or a group's events
+        step_index = {}
+        for i, step in enumerate(steps):
+            for name in grouping.expand([step]):
+                step_index[name] = i
+
         # Get all relevant events for the funnel steps
         relevant_events = (
-            events_qs.filter(event_name__in=steps)
+            events_qs.filter(event_name__in=list(step_index))
             .values("session_id", "event_name", "timestamp")
             .order_by("session_id", "timestamp")
         )
@@ -1624,9 +1670,7 @@ This endpoint analyzes events within the **same session_id**. This means:
                 {"event_name": event["event_name"], "timestamp": event["timestamp"]}
             )
 
-        # For each session, find step transitions
-        # Build a mapping of step index for ordering
-        step_index = {step: i for i, step in enumerate(steps)}
+        # For each session, find step transitions, by the step index built above
 
         # Collect timing data for each transition
         transition_times = {i: [] for i in range(len(steps) - 1)}
@@ -1797,7 +1841,8 @@ class ConversionPathsView(APIView):
         5. Rank by number of sessions, calculate timing statistics
     """
 
-    authentication_classes = [AppKeyAuthentication]
+    share_links = True  # a share link's dashboard reads it (teams/)
+    authentication_classes = APP_OWNER
     permission_classes = [HasValidAppKey]
 
     # Minimum sessions required for analysis
@@ -1828,6 +1873,7 @@ Automatically discover the most common behavior sequences that lead to conversio
 - Identify hidden conversion patterns within sessions
         """,
         manual_parameters=[
+            GROUP_EVENTS,
             openapi.Parameter(
                 "conversion_events",
                 openapi.IN_QUERY,
@@ -2044,9 +2090,10 @@ Automatically discover the most common behavior sequences that lead to conversio
         from django.conf import settings
         from django.core.cache import cache
 
+        grouping = event_groups.from_request(request, app)
         cache_params = (
             f"{','.join(sorted(conversion_events))}:{start_date}:{end_date}:"
-            f"{limit}:{min_sessions}:{max_path_length}:{tz_name}"
+            f"{limit}:{min_sessions}:{max_path_length}:{tz_name}:{grouping.key()}"
         )
         cache_hash = hashlib.md5(cache_params.encode()).hexdigest()[:16]
         cache_key = f"conversion_paths:{app.id}:{cache_hash}"
@@ -2063,6 +2110,7 @@ Automatically discover the most common behavior sequences that lead to conversio
             limit=limit,
             min_sessions=min_sessions,
             max_path_length=max_path_length,
+            grouping=grouping,
         )
 
         # Add small sample warning if sessions are low
@@ -2087,6 +2135,7 @@ Automatically discover the most common behavior sequences that lead to conversio
                 "limit": limit,
                 "min_sessions": min_sessions,
                 "max_path_length": max_path_length,
+                "group_events": bool(grouping.groups),
             },
             "data_quality": data_quality,
             "top_conversion_paths": analysis_result["paths"],
@@ -2102,7 +2151,14 @@ Automatically discover the most common behavior sequences that lead to conversio
         return Response(response_data, status=status.HTTP_200_OK)
 
     def _discover_conversion_paths(
-        self, app, events_qs, conversion_events, limit=5, min_sessions=1, max_path_length=10
+        self,
+        app,
+        events_qs,
+        conversion_events,
+        limit=5,
+        min_sessions=1,
+        max_path_length=10,
+        grouping=event_groups.NONE,
     ):
         """
         Discover the most common paths leading to conversion within sessions.
@@ -2123,10 +2179,6 @@ Automatically discover the most common behavior sequences that lead to conversio
         from collections import defaultdict
 
         from django.db import connection
-
-        # Keep app_id and table_name for the second query
-        app_id = app.id
-        table_name = events_qs.model._meta.db_table
 
         # Build conversion events SQL array
         conversion_events_list = list(conversion_events)
@@ -2221,7 +2273,9 @@ Automatically discover the most common behavior sequences that lead to conversio
 
             # Python: Remove consecutive duplicates and limit to max_path_length
             # Also stop at first conversion event
-            path = self._normalize_path(event_path_raw, conversion_events_list, max_path_length)
+            path = self._normalize_path(
+                event_path_raw, conversion_events_list, max_path_length, grouping
+            )
 
             if path and len(path) >= 1:
                 paths_analyzed += 1
@@ -2259,7 +2313,11 @@ Automatically discover the most common behavior sequences that lead to conversio
             top_path_session_ids.update(session_ids)
 
         session_timestamps = self._get_session_timestamps_bulk(
-            app_id, table_name, list(top_path_session_ids), conversion_events_list
+            events_qs,
+            list(top_path_session_ids),
+            conversion_events_list,
+            max_path_length,
+            grouping,
         )
 
         # Calculate statistics for each path
@@ -2315,7 +2373,24 @@ Automatically discover the most common behavior sequences that lead to conversio
             "paths": result_paths,
         }
 
-    def _normalize_path(self, event_list, conversion_events, max_length):
+    def _walk(self, events, conversion_events, max_length, grouping):
+        """The steps a converting session took, as (name, timestamp) pairs: each name read
+        through the groups, a step that repeats the one before dropped, ending at the first
+        conversion event, the last `max_length` kept. The path and its timings both come from
+        here, so the timings always line up with the steps they belong to."""
+        conversion_set = set(conversion_events)
+        steps = []
+        for event_name, timestamp in events:
+            name = grouping.label(event_name)
+            if not steps or steps[-1][0] != name:
+                steps.append((name, timestamp))
+            if event_name in conversion_set:
+                break
+        return steps[-max_length:]
+
+    def _normalize_path(
+        self, event_list, conversion_events, max_length, grouping=event_groups.NONE
+    ):
         """
         Normalize a path by removing consecutive duplicates and limiting length.
         Stops at the first conversion event.
@@ -2324,159 +2399,62 @@ Automatically discover the most common behavior sequences that lead to conversio
             event_list: List of event names (from array_agg)
             conversion_events: Set/list of conversion event names
             max_length: Maximum path length to return
+            grouping: the app's event groups, when the request asked for them
 
         Returns:
             List of event names (deduplicated)
         """
-        if not event_list:
-            return []
+        events = ((e, None) for e in event_list or [])
+        steps = self._walk(events, conversion_events, max_length, grouping)
+        return [name for name, _ in steps]
 
-        path = []
-        last_event = None
-        conversion_set = set(conversion_events)
-
-        for event_name in event_list:
-            # Skip consecutive duplicates
-            if event_name == last_event:
-                continue
-
-            path.append(event_name)
-            last_event = event_name
-
-            # Stop at first conversion event
-            if event_name in conversion_set:
-                break
-
-        # Limit path length (keep last N events including conversion)
-        if len(path) > max_length:
-            path = path[-max_length:]
-
-        return path
-
-    def _get_session_timestamps_bulk(self, app_id, table_name, session_ids, conversion_events):
+    def _get_session_timestamps_bulk(
+        self, events_qs, session_ids, conversion_events, max_length, grouping
+    ):
         """
-        Get timestamps for multiple sessions in a single query.
+        Get timestamps for multiple sessions in a single query, from the same events the paths
+        were read from (the date range included).
 
         Returns:
             dict: session_id -> {'timestamps': [...], 'total_duration': seconds}
         """
+        from collections import defaultdict
+
         from django.db import connection
 
         if not session_ids:
             return {}
 
-        # Create placeholders for session_ids and conversion_events
+        base_sql, base_params = events_qs.query.sql_with_params()
         session_placeholders = ",".join(["%s"] * len(session_ids))
-        conversion_placeholders = ",".join(["%s"] * len(conversion_events))
-
         sql = f"""
-        WITH first_conversions AS (
-            SELECT
-                session_id,
-                MIN(timestamp) as first_conversion_time
-            FROM {table_name}
-            WHERE app_id = %s
-                AND session_id IN ({session_placeholders})
-                AND event_name IN ({conversion_placeholders})
-            GROUP BY session_id
+        WITH base_events AS (
+            {base_sql}
         )
-        SELECT
-            e.session_id,
-            e.event_name,
-            e.timestamp
-        FROM {table_name} e
-        INNER JOIN first_conversions fc ON e.session_id = fc.session_id
-        WHERE e.app_id = %s
-            AND e.timestamp <= fc.first_conversion_time
-        ORDER BY e.session_id, e.timestamp
+        SELECT session_id, event_name, timestamp
+        FROM base_events
+        WHERE session_id IN ({session_placeholders})
+        ORDER BY session_id, timestamp
         """
 
-        params = [app_id, *session_ids, *conversion_events, app_id]
-
         with connection.cursor() as cursor:
-            cursor.execute(sql, params)
+            cursor.execute(sql, [*base_params, *session_ids])
             rows = cursor.fetchall()
 
-        # Group by session_id and extract normalized timestamps
-        from collections import defaultdict
-
         session_events = defaultdict(list)
-
-        for row in rows:
-            session_id, event_name, timestamp = row
+        for session_id, event_name, timestamp in rows:
             session_events[session_id].append((event_name, timestamp))
 
         result = {}
-        conversion_set = set(conversion_events)
-
         for session_id, events in session_events.items():
-            # Normalize: remove consecutive duplicates, stop at conversion
-            timestamps = []
-            last_event = None
-
-            for event_name, timestamp in events:
-                if event_name == last_event:
-                    continue
-                timestamps.append(timestamp)
-                last_event = event_name
-
-                if event_name in conversion_set:
-                    break
-
+            steps = self._walk(events, conversion_events, max_length, grouping)
+            timestamps = [timestamp for _, timestamp in steps]
             total_duration = None
             if len(timestamps) >= 2:
                 total_duration = (timestamps[-1] - timestamps[0]).total_seconds()
-
             result[session_id] = {"timestamps": timestamps, "total_duration": total_duration}
 
         return result
-
-    def _extract_path(self, events_list, conversion_events, max_length):
-        """
-        Extract the normalized path from a user's event sequence.
-
-        Normalization:
-        - Removes consecutive duplicate events (e.g., ["A", "A", "B"] -> ["A", "B"])
-        - Limits path length to max_length
-        - Ends with the conversion event
-
-        Returns:
-            dict with 'path' (list of event names), 'timestamps' (list),
-            'total_duration' (seconds or None)
-        """
-        if not events_list:
-            return None
-
-        path = []
-        timestamps = []
-        last_event = None
-
-        for event in events_list:
-            event_name = event["event_name"]
-
-            # Skip consecutive duplicates
-            if event_name == last_event:
-                continue
-
-            path.append(event_name)
-            timestamps.append(event["timestamp"])
-            last_event = event_name
-
-            # Stop if we hit a conversion event
-            if event_name in conversion_events:
-                break
-
-        # Limit path length (keep last N events including conversion)
-        if len(path) > max_length:
-            path = path[-max_length:]
-            timestamps = timestamps[-max_length:]
-
-        # Calculate total duration
-        total_duration = None
-        if len(timestamps) >= 2:
-            total_duration = (timestamps[-1] - timestamps[0]).total_seconds()
-
-        return {"path": path, "timestamps": timestamps, "total_duration": total_duration}
 
     def _calculate_step_timings(self, path, sessions):
         """
@@ -2551,7 +2529,8 @@ class DropOffView(APIView):
         5. Calculate drop-off rate and compare to converting session behavior
     """
 
-    authentication_classes = [AppKeyAuthentication]
+    share_links = True  # a share link's dashboard reads it (teams/)
+    authentication_classes = APP_OWNER
     permission_classes = [HasValidAppKey]
 
     @swagger_auto_schema(
@@ -2581,6 +2560,7 @@ Identify where non-converting sessions end.
 - Compare where converting vs non-converting sessions spend time
         """,
         manual_parameters=[
+            GROUP_EVENTS,
             openapi.Parameter(
                 "conversion_events",
                 openapi.IN_QUERY,
@@ -2783,9 +2763,10 @@ Identify where non-converting sessions end.
         from django.conf import settings
         from django.core.cache import cache
 
+        grouping = event_groups.from_request(request, app)
         cache_params = (
             f"{','.join(sorted(conversion_events))}:{start_date}:{end_date}:"
-            f"{min_sessions}:{limit}:{tz_name}"
+            f"{min_sessions}:{limit}:{tz_name}:{grouping.key()}"
         )
         cache_hash = hashlib.md5(cache_params.encode()).hexdigest()[:16]
         cache_key = f"drop_off:{app.id}:{cache_hash}"
@@ -2796,7 +2777,12 @@ Identify where non-converting sessions end.
 
         # Calculate drop-off diagnostics (session-based)
         analysis_result = self._analyze_drop_offs(
-            app, events_qs, conversion_events, min_sessions=min_sessions, limit=limit
+            app,
+            events_qs,
+            conversion_events,
+            min_sessions=min_sessions,
+            limit=limit,
+            grouping=grouping,
         )
 
         response_data = {
@@ -2807,6 +2793,7 @@ Identify where non-converting sessions end.
                 "end_date": end_date,
                 "min_sessions": min_sessions,
                 "limit": limit,
+                "group_events": bool(grouping.groups),
             },
             "data_quality": analysis_result["data_quality"],
             "drop_off_points": analysis_result["drop_off_points"],
@@ -2822,7 +2809,15 @@ Identify where non-converting sessions end.
 
         return Response(response_data, status=status.HTTP_200_OK)
 
-    def _analyze_drop_offs(self, app, events_qs, conversion_events, min_sessions=5, limit=10):
+    def _analyze_drop_offs(
+        self,
+        app,
+        events_qs,
+        conversion_events,
+        min_sessions=5,
+        limit=10,
+        grouping=event_groups.NONE,
+    ):
         """
         PERF-010 & PERF-FIX: Optimized drop-off analysis using SQL subqueries.
 
@@ -2835,6 +2830,10 @@ Identify where non-converting sessions end.
         3. Get distinct events per session for differential analysis (bulk SQL)
         4. Rank drop-off points by frequency
         5. Calculate event frequency differential between groups
+
+        With the app's groups (`grouping`), every event is read as its group in SQL, before
+        sessions are counted, so a session that sent purchase_light and purchase_pro counts once
+        for purchase, and a group is held to `min_sessions` as a whole.
 
         Returns:
             dict with 'data_quality', 'drop_off_points', and 'differential_events'
@@ -2849,6 +2848,9 @@ Identify where non-converting sessions end.
 
         # Build conversion events placeholder for SQL
         conversion_placeholders = ", ".join(["%s"] * len(conversion_events))
+        # Each event as its group, and the names a conversion event reads as
+        name_sql, name_params = grouping.sql("e.event_name")
+        conversion_names = {grouping.label(e) for e in conversion_events}
 
         # =========================================================================
         # QUERY 1: Get session counts and classification using SQL subqueries
@@ -2926,7 +2928,7 @@ Identify where non-converting sessions end.
         non_converting_events AS (
             SELECT
                 e.session_id,
-                e.event_name,
+                {name_sql} AS event_name,
                 e.timestamp
             FROM base_events e
             WHERE e.session_id IS NOT NULL AND e.session_id != ''
@@ -2960,7 +2962,7 @@ Identify where non-converting sessions end.
         WHERE last_event_name IS NOT NULL
         """
 
-        params = list(base_params) + list(conversion_events)
+        params = list(base_params) + list(conversion_events) + name_params
 
         with connection.cursor() as cursor:
             cursor.execute(last_events_sql, params)
@@ -2995,7 +2997,7 @@ Identify where non-converting sessions end.
         session_events AS (
             SELECT DISTINCT
                 e.session_id,
-                e.event_name,
+                {name_sql} AS event_name,
                 CASE WHEN cs.session_id IS NOT NULL THEN true ELSE false END as is_converter
             FROM base_events e
             LEFT JOIN converting_sessions cs ON e.session_id = cs.session_id
@@ -3009,7 +3011,7 @@ Identify where non-converting sessions end.
         GROUP BY event_name
         """
 
-        params = list(base_params) + list(conversion_events)
+        params = list(base_params) + list(conversion_events) + name_params
 
         with connection.cursor() as cursor:
             cursor.execute(events_per_session_sql, params)
@@ -3036,7 +3038,7 @@ Identify where non-converting sessions end.
                 continue
 
             # Skip if the drop-off event is a conversion event (these aren't really drop-offs)
-            if event_name in conversion_events:
+            if event_name in conversion_names:
                 continue
 
             drop_off_rate = (
@@ -3104,7 +3106,7 @@ Identify where non-converting sessions end.
         differential_events = []
 
         for event_name in all_events:
-            if event_name in conversion_events:
+            if event_name in conversion_names:
                 continue  # Skip conversion events themselves
 
             converters_rate = (
@@ -3181,7 +3183,8 @@ class EventCorrelationView(APIView):
         5. Rank by absolute lift value
     """
 
-    authentication_classes = [AppKeyAuthentication]
+    share_links = True  # a share link's dashboard reads it (teams/)
+    authentication_classes = APP_OWNER
     permission_classes = [HasValidAppKey]
 
     # Minimum sessions required for an event to be included in correlation analysis
@@ -3220,6 +3223,7 @@ Identify which events correlate with conversion (positive or negative lift).
 - A/B test validation: does new feature improve conversion?
         """,
         manual_parameters=[
+            GROUP_EVENTS,
             openapi.Parameter(
                 "conversion_events",
                 openapi.IN_QUERY,
@@ -3418,9 +3422,10 @@ Identify which events correlate with conversion (positive or negative lift).
         from django.conf import settings
         from django.core.cache import cache
 
+        grouping = event_groups.from_request(request, app)
         cache_params = (
             f"{','.join(sorted(conversion_events))}:{start_date}:{end_date}:"
-            f"{min_sessions}:{limit}:{tz_name}"
+            f"{min_sessions}:{limit}:{tz_name}:{grouping.key()}"
         )
         cache_hash = hashlib.md5(cache_params.encode()).hexdigest()[:16]
         cache_key = f"event_correlation:{app.id}:{cache_hash}"
@@ -3439,7 +3444,12 @@ Identify which events correlate with conversion (positive or negative lift).
 
         # Calculate event correlations (session-based)
         analysis_result = self._analyze_event_correlations(
-            app, events_qs, conversion_events, min_sessions=min_sessions, limit=limit
+            app,
+            events_qs,
+            conversion_events,
+            min_sessions=min_sessions,
+            limit=limit,
+            grouping=grouping,
         )
 
         response_data = {
@@ -3450,6 +3460,7 @@ Identify which events correlate with conversion (positive or negative lift).
                 "end_date": end_date,
                 "min_sessions": min_sessions,
                 "limit": limit,
+                "group_events": bool(grouping.groups),
             },
             "data_quality": analysis_result["data_quality"],
             "positive_correlations": analysis_result["positive_correlations"],
@@ -3467,7 +3478,13 @@ Identify which events correlate with conversion (positive or negative lift).
         return Response(response_data, status=status.HTTP_200_OK)
 
     def _analyze_event_correlations(
-        self, app, events_qs, conversion_events, min_sessions=10, limit=10
+        self,
+        app,
+        events_qs,
+        conversion_events,
+        min_sessions=10,
+        limit=10,
+        grouping=event_groups.NONE,
     ):
         """
         PERF-011 & PERF-FIX: Optimized event correlation analysis using SQL (session-based).
@@ -3480,6 +3497,10 @@ Identify which events correlate with conversion (positive or negative lift).
         2. Use SQL to compute correlation stats per event type in single query
         3. No session IDs are ever loaded into Python memory
 
+        With the app's groups (`grouping`), each event is read as its group before a session's
+        events are made distinct, so a session counts once for a group, and a group that holds a
+        conversion event is left out with it.
+
         Returns:
             dict with 'data_quality', 'positive_correlations',
             'negative_correlations', 'neutral_events'
@@ -3491,6 +3512,11 @@ Identify which events correlate with conversion (positive or negative lift).
 
         # Build conversion events placeholder for SQL
         conversion_placeholders = ", ".join(["%s"] * len(conversion_events))
+        # Each event as its group; the events left out: the conversion events and every event
+        # of a group that holds one
+        name_sql, name_params = grouping.sql("event_name")
+        left_out = grouping.expand({grouping.label(e) for e in conversion_events})
+        left_out_placeholders = ", ".join(["%s"] * len(left_out))
 
         # =========================================================================
         # Single query that computes everything in SQL:
@@ -3520,10 +3546,10 @@ Identify which events correlate with conversion (positive or negative lift).
         ),
         -- Get distinct events per session (excluding conversion events)
         session_events AS (
-            SELECT DISTINCT session_id, event_name
+            SELECT DISTINCT session_id, {name_sql} AS event_name
             FROM base_events
             WHERE session_id IS NOT NULL AND session_id != ''
-              AND event_name NOT IN ({conversion_placeholders})
+              AND event_name NOT IN ({left_out_placeholders})
         ),
         -- Count ALL unique event types (before filtering)
         all_event_types AS (
@@ -3575,12 +3601,13 @@ Identify which events correlate with conversion (positive or negative lift).
         WHERE (total_sessions - sessions_with_event) >= %s  -- Ensure enough sessions without
         """
 
-        # Parameters: base_params + conversion_events + conversion_events
-        # + min_sessions + min_sessions
+        # Parameters, in the order they appear: base_params + conversion_events + the group
+        # names + the events left out + min_sessions + min_sessions
         params = (
             list(base_params)
             + list(conversion_events)
-            + list(conversion_events)
+            + name_params
+            + left_out
             + [min_sessions, min_sessions]
         )
 
@@ -3719,7 +3746,8 @@ class SegmentComparisonView(APIView):
         conversion_events (required): Comma-separated list of event names to
             count as conversions (e.g., "purchase,subscription_start")
         segment_by (optional): How to segment data: 'platform' (default), 'country', 'depth',
-            or 'hour'
+            'hour', or 'property:<name>' for a property the app declared (respectlytics.com,
+            on paid plans), where a value seen in fewer than 5 sessions joins "Other values"
         granularity (optional): Time period grouping - 'day' (default), 'week',
             'month', 'quarter', 'year'
         from (optional): Start date in YYYY-MM-DD format
@@ -3769,7 +3797,8 @@ class SegmentComparisonView(APIView):
         }
     """
 
-    authentication_classes = [AppKeyAuthentication]
+    share_links = True  # a share link's dashboard reads it (teams/)
+    authentication_classes = APP_OWNER
     permission_classes = [HasValidAppKey]
 
     VALID_GRANULARITIES = ("day", "week", "month", "quarter", "year")
@@ -3833,10 +3862,10 @@ are exposed. Country data comes from request headers only - no IP geolocation.
                 openapi.IN_QUERY,
                 description=(
                     "Segmentation type: platform (default), country, depth (events per session), "
-                    "or hour (0-23 UTC)"
+                    "hour (0-23 UTC), or property:<name> for a declared property "
+                    "(respectlytics.com, paid plans)"
                 ),
                 type=openapi.TYPE_STRING,
-                enum=["platform", "country", "depth", "hour"],
                 required=False,
             ),
             openapi.Parameter(
@@ -4010,8 +4039,19 @@ are exposed. Country data comes from request headers only - no IP geolocation.
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Validate segment_by
-        if segment_by not in self.VALID_SEGMENT_TYPES:
+        # Validate segment_by: a fixed kind, or a declared property ("property:plan")
+        prop = segment_by.split(":", 1)[1] if segment_by.startswith("property:") else None
+        if prop is not None and not PROPERTY_NAME.match(prop):
+            return Response(
+                {"error": "Invalid property name in segment_by"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if prop is not None and not _properties_included(app):
+            return Response(
+                {"error": "Properties come with every paid plan."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        if prop is None and segment_by not in self.VALID_SEGMENT_TYPES:
             return Response(
                 {
                     "error": (
@@ -4103,7 +4143,12 @@ are exposed. Country data comes from request headers only - no IP geolocation.
         trunc_func = trunc_functions[granularity]
 
         # Calculate segment data based on segment_by type
-        if segment_by == "depth":
+        if prop is not None:
+            # A declared property's values (properties/, respectlytics.com)
+            segments_data = self._calculate_property_segments(
+                events, conversion_events, trunc_func, prop
+            )
+        elif segment_by == "depth":
             # Session depth segmentation (events per session)
             segments_data = self._calculate_depth_segments(
                 app.id, from_datetime, to_datetime, conversion_events, trunc_func
@@ -4177,34 +4222,36 @@ are exposed. Country data comes from request headers only - no IP geolocation.
 
         Returns list of segment dicts with summary and periods.
         """
-        from collections import defaultdict
-
-        from django.db.models import Case, IntegerField, When
+        from django.db.models import Q
 
         # Filter to events with session_id for session counting
         events_with_session = events.filter(session_id__isnull=False).exclude(session_id="")
 
-        # Single query using CASE to count both active sessions and conversions
+        # One query for both: the sessions, and the sessions with a conversion event, so the
+        # rate is sessions over sessions, as for depth and hour (until 2026-10-24 conversions
+        # counted the events, and a rate could pass 100%)
         segment_data = (
             events_with_session.annotate(period=trunc_func("timestamp"))
             .values("period", segment_field)
             .annotate(
                 unique_sessions=Count("session_id", distinct=True),
                 conversions=Count(
-                    Case(
-                        When(event_name__in=conversion_events, then=1), output_field=IntegerField()
-                    )
+                    "session_id", distinct=True, filter=Q(event_name__in=conversion_events)
                 ),
             )
         )
 
+        return self._segments_from(segment_data, segment_field)
+
+    def _segments_from(self, segment_data, key, label=lambda value: value or "Unknown"):
+        """Rows of (period, key, unique_sessions, conversions) as the segments' answer."""
         # Build segment data structure from single query result
         segment_periods = defaultdict(
             lambda: defaultdict(lambda: {"active_sessions": 0, "conversions": 0})
         )
 
         for item in segment_data:
-            segment = item[segment_field] or "Unknown"
+            segment = label(item[key])
             period = item["period"]
             if period:
                 segment_periods[segment][period]["active_sessions"] = item["unique_sessions"]
@@ -4256,6 +4303,42 @@ are exposed. Country data comes from request headers only - no IP geolocation.
 
         return segments
 
+    def _calculate_property_segments(self, events, conversion_events, trunc_func, name):
+        """A declared property's values as segments (properties/, respectlytics.com): for each
+        value, the sessions with an event that carried it and those of them with a conversion
+        event, sessions over sessions. A value seen in fewer than MIN_PROPERTY_SESSIONS
+        sessions joins one "Other values" row, so a rare value never stands alone. Read on the
+        (app, timestamp) index, as every segment is."""
+        from django.db.models import Q, Subquery
+        from django.db.models.fields.json import KeyTextTransform
+
+        with_session = events.filter(session_id__isnull=False).exclude(session_id="")
+        converting = with_session.filter(event_name__in=conversion_events).values("session_id")
+        rows = list(
+            with_session.filter(properties__has_key=name)
+            .annotate(period=trunc_func("timestamp"), value=KeyTextTransform(name, "properties"))
+            .values("period", "value")
+            .annotate(
+                unique_sessions=Count("session_id", distinct=True),
+                conversions=Count(
+                    "session_id", distinct=True, filter=Q(session_id__in=Subquery(converting))
+                ),
+            )
+        )
+        totals = defaultdict(int)
+        for row in rows:
+            totals[row["value"]] += row["unique_sessions"]
+        rare = {value for value, n in totals.items() if n < MIN_PROPERTY_SESSIONS}
+        if rare:
+            merged = defaultdict(lambda: {"unique_sessions": 0, "conversions": 0})
+            for row in rows:
+                value = OTHER_VALUES if row["value"] in rare else row["value"]
+                cell = merged[(row["period"], value)]
+                cell["unique_sessions"] += row["unique_sessions"]
+                cell["conversions"] += row["conversions"]
+            rows = [{"period": p, "value": v, **c} for (p, v), c in merged.items()]
+        return self._segments_from(rows, "value")
+
     def _calculate_depth_segments(self, app_id, from_date, to_date, conversion_events, trunc_func):
         """
         Calculate segment data based on session depth (events per session).
@@ -4291,12 +4374,13 @@ are exposed. Country data comes from request headers only - no IP geolocation.
         else:  # year
             trunc_sql = "DATE_TRUNC('year', MIN(timestamp))"
 
-        # Build conversion events SQL array (properly escaped)
-        conversion_events_sql = ", ".join([f"'{e}'" for e in conversion_events])
+        # The conversion events as placeholders, never as text in the SQL: a name is whatever the
+        # caller sent, and the placeholders come first in the query, so their values do too
+        conversion_placeholders = ", ".join(["%s"] * len(conversion_events))
 
         # Build date filter SQL
         date_filter = ""
-        params = [str(app_id)]
+        params = [*conversion_events, str(app_id)]
         if from_date:
             date_filter += " AND timestamp >= %s"
             params.append(from_date)
@@ -4311,7 +4395,7 @@ are exposed. Country data comes from request headers only - no IP geolocation.
                 session_id,
                 {trunc_sql} as period,
                 COUNT(*) as event_count,
-                MAX(CASE WHEN event_name IN ({conversion_events_sql}) THEN 1 ELSE 0 END)
+                MAX(CASE WHEN event_name IN ({conversion_placeholders}) THEN 1 ELSE 0 END)
                     as converted
             FROM analytics_event
             WHERE app_id = %s
@@ -4440,12 +4524,13 @@ are exposed. Country data comes from request headers only - no IP geolocation.
         """
         from django.db import connection
 
-        # Build conversion events SQL array (properly escaped)
-        conversion_events_sql = ", ".join([f"'{e}'" for e in conversion_events])
+        # The conversion events as placeholders, never as text in the SQL: a name is whatever the
+        # caller sent, and the placeholders come first in the query, so their values do too
+        conversion_placeholders = ", ".join(["%s"] * len(conversion_events))
 
         # Build date filter SQL
         date_filter = ""
-        params = [str(app_id)]
+        params = [*conversion_events, str(app_id)]
         if from_date:
             date_filter += " AND timestamp >= %s"
             params.append(from_date)
@@ -4460,7 +4545,7 @@ are exposed. Country data comes from request headers only - no IP geolocation.
             SELECT
                 session_id,
                 EXTRACT(HOUR FROM MIN(timestamp) AT TIME ZONE 'UTC') as session_hour,
-                MAX(CASE WHEN event_name IN ({conversion_events_sql}) THEN 1 ELSE 0 END)
+                MAX(CASE WHEN event_name IN ({conversion_placeholders}) THEN 1 ELSE 0 END)
                     as converted
             FROM analytics_event
             WHERE app_id = %s
@@ -4582,7 +4667,8 @@ class GlobeStatsView(APIView):
         }
     """
 
-    authentication_classes = [AppKeyAuthentication]
+    share_links = True  # a share link's dashboard reads it (teams/)
+    authentication_classes = APP_OWNER
     permission_classes = [HasValidAppKey]
 
     @swagger_auto_schema(
@@ -4681,7 +4767,7 @@ class GlobeStatsView(APIView):
         from django.conf import settings
         from django.core.cache import cache
         from django.db import connection
-        from django.db.models import Case, Count, IntegerField, When
+        from django.db.models import Count, Q
 
         logger = logging.getLogger("analytics.performance")
         start_time = time.time()
@@ -4733,8 +4819,12 @@ class GlobeStatsView(APIView):
             conversion_hash = hashlib.md5(",".join(sorted(conversion_events)).encode()).hexdigest()[
                 :8
             ]
+            fresh = freshness_mark(
+                app_key, to_date_str, getattr(settings, "GLOBE_STATS_CACHE_TTL", 900)
+            )
             cache_key = (
                 f"globe_stats_{app_key}_{conversion_hash}_{from_date_str}_{to_date_str}_{tz_name}"
+                f"_{fresh}"
             )
 
             # Check cache
@@ -4750,7 +4840,7 @@ class GlobeStatsView(APIView):
                     {"data": cached_data, "cached": True, "cache_expires_in": cache_ttl}
                 )
 
-            # Get app from request (set by AppKeyAuthentication as request.user)
+            # Get app from request (set by AppOwnerSessionAuthentication as request.user)
             app = request.user
 
             # Set query timeout from settings
@@ -4774,12 +4864,11 @@ class GlobeStatsView(APIView):
             # Build aggregation
             aggregation = {"events": Count("id"), "sessions": Count("session_id", distinct=True)}
 
-            # Add conversion counting if conversion events specified
+            # Sessions with a conversion event, so the rate is sessions over sessions and never
+            # passes 100% (until 2026-10-24 it counted the events)
             if conversion_events:
                 aggregation["conversions"] = Count(
-                    Case(
-                        When(event_name__in=conversion_events, then=1), output_field=IntegerField()
-                    )
+                    "session_id", distinct=True, filter=Q(event_name__in=conversion_events)
                 )
 
             results = list(

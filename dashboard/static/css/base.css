@@ -256,3 +256,34 @@ html {
 /* ============================================
    END OF FILE
    ============================================ */
+
+/* The line under the buy button (billing/_start_line.html) appears once a private buyer is
+   chosen; a browser without :has() never hides it, so it is never missed. */
+body:not(:has(input[name="buyer"][value="private"]:checked)) [data-start-line] {
+    display: none;
+}
+
+/* The plan slider and the period switch (billing/_plan_finder.html): native controls with no
+   Tailwind equivalent, on the pricing page and the plan page. */
+/* The track is filled up to the thumb; --fill is the position (the template, then the script). */
+.slider-thumb {
+    background: linear-gradient(to right, #6366f1, #818cf8 var(--fill, 100%), rgba(148, 163, 184, 0.22) var(--fill, 100%));
+}
+.slider-thumb:focus-visible { outline: 3px solid #a5b4fc; outline-offset: 6px; }
+.slider-thumb::-webkit-slider-thumb {
+    appearance: none; width: 22px; height: 22px; border-radius: 50%; background: #fff; cursor: pointer;
+    box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.35), 0 4px 10px rgba(0, 0, 0, 0.35);
+    transition: box-shadow 0.15s;
+}
+.slider-thumb::-webkit-slider-thumb:hover { box-shadow: 0 0 0 6px rgba(99, 102, 241, 0.45), 0 4px 10px rgba(0, 0, 0, 0.35); }
+.slider-thumb::-moz-range-thumb {
+    width: 22px; height: 22px; border: none; border-radius: 50%; background: #fff; cursor: pointer;
+    box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.35), 0 4px 10px rgba(0, 0, 0, 0.35);
+}
+.billing-toggle {
+    padding: 0.45rem 1.1rem; border-radius: 0.6rem; border: none; background: transparent; cursor: pointer;
+    font-size: 0.875rem; font-weight: 600; color: #94a3b8; transition: background 0.15s, color 0.15s;
+}
+.billing-toggle.active { background: #5558e8; color: #fff; }
+.billing-toggle:not(.active):hover { color: #e2e8f0; }
+.billing-toggle:focus-visible { outline: 3px solid #a5b4fc; outline-offset: 2px; }

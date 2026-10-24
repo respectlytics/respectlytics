@@ -1,12 +1,7 @@
 /**
- * Demo Fetch Interceptor
- * 
- * Intercepts all fetch() calls to API endpoints and returns
- * static demo data instead of making real network requests.
- * 
- * This allows the demo dashboard to work identically to the
- * production dashboard without requiring authentication or
- * a live backend.
+ * The demo's answers (demo/): every call the stats and funnel pages make, to the API and to the
+ * event groups, is answered from static/demo/demo_data.json, so the demo runs the dashboard's
+ * own pages with no account and no request to the server for data.
  */
 
 (function() {
@@ -27,8 +22,6 @@
         try {
             const response = await originalFetch('/static/demo/demo_data.json');
             DEMO_DATA = await response.json();
-            window.DEMO_DATA = DEMO_DATA; // Make available globally for debugging
-            console.log('[Demo] Loaded demo data successfully');
             return DEMO_DATA;
         } catch (error) {
             console.error('[Demo] Failed to load demo data:', error);
@@ -113,64 +106,93 @@
     }
     
     /**
-     * Get segment data based on segment_by parameter
+     * A segments answer as the API gives it: the sample's days (oldest first, sessions and
+     * conversions) summed into the granularity asked for, each dated and with its rate, the
+     * newest first (conversion/views.py _segments_from).
      */
-    function getSegmentData(segmentBy, granularity) {
-        if (!DEMO_DATA) return null;
-        
+    function withPeriods(answer, granularity) {
+        const size = { week: 7, month: 30 }[granularity] || 1;
+        const segments = answer.segments.map(segment => {
+            if (!segment.periods) return segment;
+            const days = segment.periods;
+            const groups = [];
+            for (let end = days.length; end > 0; end -= size) {
+                const chunk = days.slice(Math.max(0, end - size), end);
+                const sessions = chunk.reduce((n, d) => n + d.active_sessions, 0);
+                const conversions = chunk.reduce((n, d) => n + d.conversions, 0);
+                groups.unshift({ active_sessions: sessions, conversions });
+            }
+            const dates = generateDateLabels(groups.length, granularity);
+            const periods = groups.map((g, i) => ({
+                period: dates[i],
+                ...g,
+                conversion_rate: g.active_sessions ? g.conversions / g.active_sessions : 0
+            })).reverse();
+            return { ...segment, periods };
+        });
+        return { ...answer, granularity, segments };
+    }
+
+    /** The segments the Segments tab asks for, by its segment_by. */
+    function getSegmentData(segmentBy) {
         switch (segmentBy) {
-            case 'platform':
-                return DEMO_DATA.segments_platform;
             case 'country':
                 return DEMO_DATA.segments_country;
+            case 'depth':
             case 'events_per_session':
                 return DEMO_DATA.segments_events_per_session;
             case 'hour':
                 return DEMO_DATA.segments_hour;
             default:
+                // A declared property ("property:paywall")
+                if (segmentBy.startsWith('property:')) {
+                    return DEMO_DATA.segments_property[segmentBy.slice(9)] || DEMO_DATA.segments_platform;
+                }
                 return DEMO_DATA.segments_platform;
         }
     }
-    
-    /**
-     * Override fetch to intercept API calls
-     */
-    window.fetch = async function(url, options = {}) {
-        const urlStr = typeof url === 'string' ? url : url.toString();
-        
-        // Only intercept API calls
-        if (!urlStr.includes('/api/v1/')) {
-            return originalFetch(url, options);
-        }
-        
-        // Ensure demo data is loaded
-        if (!DEMO_DATA) {
-            await loadDemoData();
-        }
-        
-        if (!DEMO_DATA) {
-            console.error('[Demo] No demo data available');
-            return mockResponse({ error: 'Demo data not loaded' }, 500);
-        }
-        
-        const params = parseParams(urlStr);
+
+    /** One answer per kind of call, from the sample data. */
+    function answer(urlStr, params) {
         const granularity = params.granularity || 'day';
-        
-        console.log('[Demo] Intercepted:', urlStr);
-        
-        // Route to appropriate mock data
+
+        if (urlStr.includes('/event-groups/')) {
+            return DEMO_DATA.event_groups_state;
+        }
+        if (urlStr.includes('/insights/')) {
+            // The Last week card: the sample's findings, for the week before today
+            const today = new Date();
+            const monday = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
+            monday.setUTCDate(monday.getUTCDate() - ((monday.getUTCDay() + 6) % 7) - 7);
+            const sunday = new Date(monday);
+            sunday.setUTCDate(monday.getUTCDate() + 6);
+            const iso = (d) => d.toISOString().split('T')[0];
+            return { ...DEMO_DATA.insights, week: { start: iso(monday), end: iso(sunday) } };
+        }
+        if (urlStr.includes('/properties/')) {
+            return DEMO_DATA.properties;
+        }
+        if (urlStr.includes('/experiments/')) {
+            // The sample tests, dated back from today as a live app's would be
+            const ago = (days) => new Date(Date.now() - days * 86400000).toISOString();
+            const data = { ...DEMO_DATA.experiments };
+            data.experiments = data.experiments.map(t => ({
+                ...t,
+                started_at: ago(t.started_days_ago),
+                ended_at: t.ended_days_ago === null ? null : ago(t.ended_days_ago)
+            }));
+            return data;
+        }
         if (urlStr.includes('/events/summary/')) {
             const data = { ...DEMO_DATA.summary };
             data.events_by_day = addDatesToEventsByDay(data.events_by_day);
-            return mockResponse(data);
+            return data;
         }
-        
         if (urlStr.includes('/events/event-types/')) {
-            return mockResponse(DEMO_DATA.event_types);
+            return DEMO_DATA.event_types;
         }
-        
         if (urlStr.includes('/events/recent-activity/')) {
-            // Update timestamps to be recent
+            // Recent, as a live app's would be
             const data = { ...DEMO_DATA.recent_activity };
             const now = new Date();
             data.server_time = now.toISOString();
@@ -179,20 +201,23 @@
                 ...e,
                 timestamp: new Date(now - (i * 45000)).toISOString()
             }));
-            return mockResponse(data);
+            return data;
         }
-        
         if (urlStr.includes('/events/geo-summary/')) {
-            return mockResponse(DEMO_DATA.geo_summary);
+            return DEMO_DATA.geo_summary;
         }
-        
         if (urlStr.includes('/events/count/')) {
-            return mockResponse({
-                total_events: DEMO_DATA.summary.total_events,
-                date_range: { from: null, to: null }
-            });
+            return { total_events: DEMO_DATA.summary.total_events, date_range: { from: null, to: null } };
         }
-        
+        if (urlStr.includes('/events/filter-options/')) {
+            return {
+                filters: {
+                    countries: DEMO_DATA.geo_summary.countries.map(c => c.country),
+                    platforms: ['ios', 'android'],
+                    event_names: DEMO_DATA.event_types.event_types
+                }
+            };
+        }
         if (urlStr.includes('/analytics/dau/')) {
             let dauData;
             if (granularity === 'week') {
@@ -202,83 +227,53 @@
             } else {
                 dauData = { ...DEMO_DATA.dau };
             }
-            dauData.active_sessions = addPeriodsToDAU(dauData.active_sessions, granularity);
+            // The sample runs oldest to newest; the API answers newest first (conversion/views.py)
+            dauData.active_sessions = addPeriodsToDAU(dauData.active_sessions, granularity).reverse();
             dauData.granularity = granularity;
-            return mockResponse(dauData);
+            return dauData;
         }
-        
         if (urlStr.includes('/analytics/globe-stats/')) {
-            return mockResponse(DEMO_DATA.globe_stats);
+            return DEMO_DATA.globe_stats;
         }
-        
         if (urlStr.includes('/analytics/time-to-conversion/')) {
-            return mockResponse(DEMO_DATA.time_to_conversion);
+            return DEMO_DATA.time_to_conversion;
         }
-        
         if (urlStr.includes('/analytics/conversion-paths/')) {
-            return mockResponse(DEMO_DATA.conversion_paths);
+            return DEMO_DATA.conversion_paths;
         }
-        
         if (urlStr.includes('/analytics/drop-off/')) {
-            return mockResponse(DEMO_DATA.drop_off);
+            return DEMO_DATA.drop_off;
         }
-        
         if (urlStr.includes('/analytics/event-correlation/')) {
-            return mockResponse(DEMO_DATA.event_correlation);
+            return DEMO_DATA.event_correlation;
         }
-        
         if (urlStr.includes('/analytics/segments/')) {
-            const segmentBy = params.segment_by || 'platform';
-            const segmentData = getSegmentData(segmentBy, granularity);
-            return mockResponse(segmentData);
+            return withPeriods(getSegmentData(params.segment_by || 'platform'), granularity);
         }
-        
+        // The funnel page's sample funnel and its timing
         if (urlStr.includes('/events/funnel/')) {
-            // Build funnel from selected events
-            const steps = params.steps ? params.steps.split(',') : ['app_opened', 'onboarding_completed', 'purchase_completed'];
-            const funnel = steps.map(step => ({
-                step: step,
-                count: DEMO_DATA.events.counts[step] || 0
-            }));
-            return mockResponse({
-                app_name: DEMO_DATA.app.name,
-                funnel: funnel,
-                total_sessions_analyzed: DEMO_DATA.dau.summary.total_sessions
-            });
+            return DEMO_DATA.funnel;
         }
-        
-        // For conversion preferences save - just return success
-        if (urlStr.includes('/conversion-preferences/') || urlStr.includes('/save-conversion/')) {
-            return mockResponse({ success: true, message: 'Demo mode - preferences not saved' });
+        if (urlStr.includes('/analytics/step-timing/')) {
+            return DEMO_DATA.step_timing;
         }
-        
-        // Default: pass through to original fetch (will fail, but that's expected for unknown endpoints)
-        console.warn('[Demo] Unknown API endpoint:', urlStr);
-        return mockResponse({ error: 'Unknown endpoint in demo mode' }, 404);
+        return null;
+    }
+
+    window.fetch = async function(url, options = {}) {
+        const urlStr = typeof url === 'string' ? url : url.toString();
+        if (!urlStr.includes('/api/v1/') && !urlStr.includes('/dashboard/api/') && !urlStr.includes('/event-groups/')) {
+            return originalFetch(url, options);
+        }
+        if (!DEMO_DATA) await loadDemoData();
+        if (!DEMO_DATA) return mockResponse({ error: 'Demo data not loaded' }, 500);
+        const data = answer(urlStr, parseParams(urlStr));
+        if (data === null) {
+            console.warn('[Demo] No sample answer for', urlStr);
+            return mockResponse({ error: 'Not in the demo' }, 404);
+        }
+        return mockResponse(data);
     };
-    
-    // Load demo data immediately
+
     loadDemoData();
-    
-    // Disable real-time polling in demo mode
-    window.addEventListener('DOMContentLoaded', function() {
-        // Wait for StatsApp to be defined
-        const checkInterval = setInterval(function() {
-            if (window.StatsApp) {
-                window.StatsApp.isLiveMode = false;
-                if (window.StatsApp.realtimePoller) {
-                    window.StatsApp.realtimePoller.stop();
-                }
-                console.log('[Demo] Disabled real-time polling');
-                clearInterval(checkInterval);
-            }
-        }, 100);
-        
-        // Stop checking after 5 seconds
-        setTimeout(function() {
-            clearInterval(checkInterval);
-        }, 5000);
-    });
-    
-    console.log('[Demo] Fetch interceptor initialized');
 })();

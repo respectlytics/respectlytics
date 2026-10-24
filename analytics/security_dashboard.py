@@ -9,6 +9,7 @@ Provides a security overview dashboard for admin users including:
 - Unban/unlock actions
 """
 
+import ipaddress
 import json
 import os
 import re
@@ -20,6 +21,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.db import connection
+from django.utils import timezone
 
 User = get_user_model()
 
@@ -29,66 +31,26 @@ User = get_user_model()
 # =============================================================================
 
 # These patterns match the cache keys used by our security middleware
-BANNED_IP_PATTERN = "banned:"  # banned:{ip}
 LOCKED_ACCOUNT_PATTERN = "account_locked:"  # account_locked:{email}
 LOGIN_ATTEMPTS_PATTERN = "login_attempts:"  # login_attempts:{email}
-FAILED_AUTH_PATTERN = "failed_auth:"  # failed_auth:{ip}
-SCAN_404_PATTERN = "404_scan:"  # 404_scan:{ip}
 
 
 def get_banned_ips() -> list[dict[str, Any]]:
-    """
-    Get list of currently banned IPs from cache.
+    """The blocks in force now (analytics/blocks.py), newest first. A block keeps only a code
+    computed from the address, so that code is what the dashboard shows."""
+    from .models import BlockedAddress
 
-    Note: Django's database cache doesn't support key scanning,
-    so we track banned IPs separately.
-
-    Returns:
-        List of dicts with 'ip', 'banned_at', 'reason'
-    """
-    # Try to get tracked banned IPs list
-    tracked_ips = cache.get("security:banned_ips_list", [])
-
-    # Validate each IP is still actually banned
-    valid_banned = []
-    for ip_info in tracked_ips:
-        ip = ip_info.get("ip")
-        if ip and cache.get(f"banned:{ip}"):
-            valid_banned.append(ip_info)
-
-    # Also check the database cache table directly for banned: keys
-    try:
-        with connection.cursor() as cursor:
-            cursor.execute(
-                """
-                SELECT cache_key, expires 
-                FROM django_cache 
-                WHERE cache_key LIKE %s 
-                AND expires > NOW()
-                ORDER BY expires DESC
-                LIMIT 100
-            """,
-                ["%banned:%"],
-            )
-            rows = cursor.fetchall()
-
-            # Extract IPs from cache keys (format: :1:banned:192.168.1.100)
-            for cache_key, expires in rows:
-                # Cache key format: :version:key. Everything after "banned:"
-                # is the address, colons included, or an IPv6 ban is missed.
-                match = re.search(r"banned:(.+)$", cache_key)
-                if match:
-                    ip = match.group(1)
-                    # Check if already in list
-                    if not any(b["ip"] == ip for b in valid_banned):
-                        valid_banned.append(
-                            {"ip": ip, "expires": expires, "reason": "Unknown (from cache)"}
-                        )
-    except Exception:
-        # Silently fail if direct cache access doesn't work
-        pass
-
-    return valid_banned
+    return [
+        {
+            "key": row.key,
+            "code": row.key[:12],
+            "kind": row.get_kind_display(),
+            "reason": row.reason,
+            "times": row.times,
+            "expires": row.expires_at,
+        }
+        for row in BlockedAddress.objects.filter(expires_at__gt=timezone.now())[:200]
+    ]
 
 
 def get_locked_accounts() -> list[dict[str, Any]]:
@@ -313,26 +275,30 @@ def get_security_stats(hours: int = 24) -> dict[str, Any]:
     }
 
 
+def lift_blocks(key: str = "", ip: str = "") -> tuple[int, bool]:
+    """Lift a block, by its code (a row in the dashboard) or by an address the owner typed:
+    how many were lifted, and whether the edge in front was told (analytics/blocks.py)."""
+    from .blocks import address_key, lift
+
+    keys = set()
+    if key:
+        keys.add(key.strip())
+    if ip:
+        try:
+            address = str(ipaddress.ip_address(ip.strip()))
+        except ValueError:
+            return 0, True
+        code = address_key(address)
+        keys.add(code)
+        # The counts that could block it again at once (middleware.py, throttling.py).
+        cache.delete_many([f"missing:{code}", f"failed_auth:{code}"])
+    return lift(keys) if keys else (0, True)
+
+
 def unban_ip(ip: str) -> bool:
-    """
-    Remove an IP from the ban list.
-
-    Returns:
-        True if successfully unbanned, False otherwise
-    """
-    try:
-        cache.delete(f"banned:{ip}")
-        cache.delete(f"failed_auth:{ip}")
-        cache.delete(f"404_scan:{ip}")
-
-        # Also remove from tracked list
-        tracked_ips = cache.get("security:banned_ips_list", [])
-        tracked_ips = [b for b in tracked_ips if b.get("ip") != ip]
-        cache.set("security:banned_ips_list", tracked_ips, 86400)
-
-        return True
-    except Exception:
-        return False
+    """Lift the block on this address. Returns whether there was one."""
+    deleted, _ = lift_blocks(ip=ip)
+    return deleted > 0
 
 
 def unlock_account(email: str) -> bool:
@@ -349,22 +315,3 @@ def unlock_account(email: str) -> bool:
         return True
     except Exception:
         return False
-
-
-def track_banned_ip(ip: str, reason: str) -> None:
-    """
-    Add a banned IP to the tracked list for dashboard display.
-
-    Call this when banning an IP to ensure it shows in the dashboard.
-    """
-    tracked_ips = cache.get("security:banned_ips_list", [])
-
-    # Add new entry
-    tracked_ips.append(
-        {"ip": ip, "banned_at": datetime.utcnow().isoformat() + "Z", "reason": reason}
-    )
-
-    # Keep only last 100
-    tracked_ips = tracked_ips[-100:]
-
-    cache.set("security:banned_ips_list", tracked_ips, 86400)  # 24 hours

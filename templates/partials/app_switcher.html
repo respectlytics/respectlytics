@@ -1,0 +1,21 @@
+{% comment %} The app switcher in the top bar (app_nav.app_switcher): the open app, and a menu of every app the person may open {% endcomment %}
+{% if show %}
+<span class="hidden text-slate-600 sm:inline" aria-hidden="true">/</span>
+<div class="relative min-w-0">
+  <button type="button" data-popover aria-expanded="false" aria-controls="appMenu"
+          class="flex min-w-0 max-w-[11rem] items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-semibold text-slate-50 hover:bg-white/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-400 sm:max-w-xs">
+    <span class="truncate">{{ current.name }}</span>
+    <svg class="h-4 w-4 flex-none text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+  </button>
+  <div id="appMenu" class="menu-panel left-0 max-h-80 overflow-y-auto" hidden>
+    {% for app in apps %}
+    <a href="{% url 'dashboard:stats' app.slug %}" class="menu-item"{% if app.slug == current.slug %} aria-current="page"{% endif %}>
+      <span class="min-w-0 flex-1 truncate">{{ app.name }}{% if app.user_id != own_id %} <span class="text-slate-400">(shared)</span>{% endif %}</span>
+      {% if app.slug == current.slug %}<svg class="h-4 w-4 flex-none text-brand-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>{% endif %}
+    </a>
+    {% endfor %}
+    <div class="my-1.5 border-t border-white/10"></div>
+    <a href="{% url 'dashboard:main' %}" class="menu-item">All apps</a>
+  </div>
+</div>
+{% endif %}

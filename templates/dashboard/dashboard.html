@@ -92,7 +92,7 @@
                 <!-- Actions -->
                 <div class="flex justify-end">
                     <a href="{% url 'dashboard:stats' app.slug %}" class="px-3 py-1.5 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors shadow-md shadow-purple-900/50">
-                        View Analytics →
+                        View analytics
                     </a>
                 </div>
             </div>
@@ -101,7 +101,6 @@
         {% else %}
         <!-- Empty State -->
         <div class="text-center py-8 px-6 bg-gradient-to-br from-brand-500/10 to-purple-500/10 rounded-lg border border-dashed border-white/20">
-            <div class="text-4xl mb-3 opacity-30">📱</div>
             <h3 class="text-base font-semibold text-slate-50 mb-2">No Apps Yet</h3>
             <p class="text-sm text-slate-400 mb-4 max-w-md mx-auto">Create your first mobile app to start tracking events, analyzing user behavior, and building conversion funnels.</p>
             <button onclick="showCreateAppModal()" class="px-4 py-2 bg-brand-600 text-white text-sm font-semibold rounded hover:bg-brand-700 transition-colors">
@@ -111,7 +110,7 @@
             <!-- SDK Links -->
             <div class="mt-8 pt-6 border-t border-white/10">
                 <div class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-purple-500/10 border border-purple-500/20">
-                    <span class="text-lg">📚</span>
+                    {% include 'partials/icon.html' with name='book' %}
                     <span class="text-xs text-slate-300">Check the <a href="https://respectlytics.com/sdk/" class="text-purple-400 hover:text-purple-300 underline underline-offset-2">SDK Documentation</a> to integrate your app</span>
                 </div>
             </div>
@@ -159,19 +158,19 @@
                     <button onclick="copyCreatedApiKey()" id="copyCreatedKeyBtn" class="w-full px-3 py-2 bg-slate-700 text-slate-200 text-xs font-medium rounded hover:bg-slate-600 transition-colors">
                         Copy API Key
                     </button>
-                    <p class="text-xs text-slate-500 mt-2">⚠️ Save this key securely. You can view it later in your dashboard.</p>
+                    <p class="text-xs text-slate-500 mt-2">Save this key securely. You can view it later in your dashboard.</p>
                 </div>
                 
                 <!-- Integration Options -->
                 <p class="text-xs font-medium text-slate-400 mb-3">Next: Integrate the SDK</p>
                 <div class="grid grid-cols-2 gap-3 mb-4">
                     <a href="https://respectlytics.com/sdk/" class="flex flex-col items-center gap-2 p-4 rounded-lg bg-purple-500/10 border border-purple-500/30 hover:bg-purple-500/20 hover:border-purple-400/50 transition-all group">
-                        <span class="text-2xl">📚</span>
+                        {% include 'partials/icon.html' with name='book' size='h-6 w-6' %}
                         <span class="text-xs font-semibold text-purple-300 group-hover:text-purple-200">SDK Docs</span>
                         <span class="text-[10px] text-slate-400">Get Started</span>
                     </a>
                     <a href="/api/v1/reference/" class="flex flex-col items-center gap-2 p-4 rounded-lg bg-slate-700/50 border border-white/10 hover:bg-slate-700 hover:border-white/20 transition-all group">
-                        <span class="text-2xl">📖</span>
+                        {% include 'partials/icon.html' with name='doc' size='h-6 w-6' %}
                         <span class="text-xs font-semibold text-slate-300 group-hover:text-slate-200">API Reference</span>
                         <span class="text-[10px] text-slate-400">Endpoints</span>
                     </a>
@@ -238,7 +237,7 @@
             <p class="text-slate-400 mb-3 text-xs">You are about to permanently delete <strong class="text-slate-50" id="deleteAppName"></strong>.</p>
 
             <div class="bg-rose-500/15 border border-rose-400/30 rounded p-3 mb-4">
-                <p class="font-semibold text-slate-50 mb-1.5 text-xs">⚠️ This action is permanent and cannot be undone:</p>
+                <p class="font-semibold text-slate-50 mb-1.5 text-xs">This action is permanent and cannot be undone:</p>
                 <ul class="list-disc pl-4 text-slate-300 text-xs space-y-1">
                     <li><span id="deleteEventCountText">All events</span> will be permanently deleted</li>
                     <li>All analytics data and conversion goals will be lost</li>

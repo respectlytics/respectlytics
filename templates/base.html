@@ -95,6 +95,7 @@
     {% block extra_css %}{% endblock %}
 </head>
 <body class="font-body leading-relaxed text-slate-400 bg-[#0f172a]">
+    {% block site_header %}
     <header class="bg-[#1e293b] border-b border-white/10 py-3 md:py-4 sticky top-0 z-50">
         <div class="{% block navbar_container_class %}max-w-7xl mx-auto{% endblock %} px-4 md:px-6 lg:px-12 flex items-center justify-between">
             <!-- Logo -->
@@ -129,6 +130,7 @@
             </nav>
         </div>
     </header>
+    {% endblock site_header %}
 
     <!-- Messages -->
     {% if messages %}
@@ -143,6 +145,14 @@
 
     {% block content %}{% endblock %}
 
+    {% block site_footer %}{% endblock site_footer %}
+
+    {# The icons scripts draw and the toast every dashboard error shows, as respectlytics.com's base loads them #}
+    {% include 'partials/icon_templates.html' %}
+    <script src="{% static 'js/icons.js' %}"></script>
+    <script src="{% static 'js/toast.js' %}"></script>
+    <!-- Menus and help that open on a click (partials/app_bar.html, partials/help.html) -->
+    <script src="{% static 'js/app-shell.js' %}" defer></script>
     {% block extra_js %}{% endblock %}
 
     <!-- CSRF Token for AJAX -->

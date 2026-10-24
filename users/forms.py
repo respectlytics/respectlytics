@@ -130,17 +130,18 @@ class LoginForm(AuthenticationForm):
 class EmailUpdateForm(forms.Form):
     """Form for updating user email address."""
 
+    # The account pages' one field look (.field); the label is in the template, so no placeholder
     email = forms.EmailField(
         required=True,
-        widget=forms.EmailInput(
-            attrs={
-                "class": (
-                    "w-full px-4 py-3 bg-slate-800 border border-white/10 rounded-lg text-slate-50 "
-                    "placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                ),
-                "placeholder": "your@email.com",
-            }
-        ),
+        widget=forms.EmailInput(attrs={"class": "field", "autocomplete": "email"}),
+    )
+
+    # Asked with the password, so a session left open cannot hand the account to another
+    # address; on respectlytics.com the change also waits for the new address to be confirmed
+    password = forms.CharField(
+        required=True,
+        strip=False,
+        widget=forms.PasswordInput(attrs={"class": "field", "autocomplete": "current-password"}),
     )
 
     def __init__(self, *args, user=None, **kwargs):
@@ -148,50 +149,41 @@ class EmailUpdateForm(forms.Form):
         super().__init__(*args, **kwargs)
 
     def clean_email(self):
-        email = self.cleaned_data.get("email")
-        if email and User.objects.filter(email=email).exclude(pk=self.user.pk).exists():
+        email = (self.cleaned_data.get("email") or "").lower()
+        if email and email == (self.user.email or "").lower():
+            raise forms.ValidationError("That is already your address.")
+        if email and User.objects.filter(email__iexact=email).exclude(pk=self.user.pk).exists():
             raise forms.ValidationError("This email is already in use by another account.")
-        return email.lower()
+        return email
+
+    def clean_password(self):
+        password = self.cleaned_data.get("password")
+        if not self.user.check_password(password or ""):
+            raise forms.ValidationError("That is not your current password.")
+        return password
 
 
 class PasswordChangeForm(DjangoPasswordChangeForm):
-    """Custom password change form with styled fields."""
+    """The password page's form, in the account pages' field look, with each field saying what
+    it holds so a password manager fills it (WCAG 1.3.5)."""
 
     old_password = forms.CharField(
-        label="Current Password",
-        widget=forms.PasswordInput(
-            attrs={
-                "class": (
-                    "w-full px-4 py-3 bg-slate-800 border border-white/10 rounded-lg text-slate-50 "
-                    "placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                ),
-                "placeholder": "Current password",
-            }
-        ),
+        label="Current password",
+        widget=forms.PasswordInput(attrs={"class": "field", "autocomplete": "current-password"}),
     )
     new_password1 = forms.CharField(
-        label="New Password",
+        label="New password",
         widget=forms.PasswordInput(
             attrs={
-                "class": (
-                    "w-full px-4 py-3 bg-slate-800 border border-white/10 rounded-lg text-slate-50 "
-                    "placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                ),
-                "placeholder": "New password",
+                "class": "field",
+                "autocomplete": "new-password",
+                "aria-describedby": "newPasswordHint",
             }
         ),
     )
     new_password2 = forms.CharField(
-        label="Confirm New Password",
-        widget=forms.PasswordInput(
-            attrs={
-                "class": (
-                    "w-full px-4 py-3 bg-slate-800 border border-white/10 rounded-lg text-slate-50 "
-                    "placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                ),
-                "placeholder": "Confirm new password",
-            }
-        ),
+        label="New password again",
+        widget=forms.PasswordInput(attrs={"class": "field", "autocomplete": "new-password"}),
     )
 
 
@@ -204,16 +196,7 @@ class DeleteAccountForm(forms.Form):
     """
 
     password = forms.CharField(
-        widget=forms.PasswordInput(
-            attrs={
-                "class": (
-                    "w-full px-4 py-3 bg-slate-700/50 border border-white/10 rounded-lg "
-                    "text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 "
-                    "focus:ring-red-500/50 focus:border-red-500/50"
-                ),
-                "placeholder": "Enter your password to confirm",
-            }
-        ),
+        widget=forms.PasswordInput(attrs={"class": "field", "autocomplete": "current-password"}),
         label="Password",
     )
 

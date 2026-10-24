@@ -1,7 +1,14 @@
+import hashlib
+import secrets
+import string
 import uuid
+from datetime import timedelta
 
 from django.contrib.auth.models import User
 from django.db import models
+from django.utils import timezone
+
+from .blocks import KINDS
 
 
 class App(models.Model):
@@ -25,6 +32,13 @@ class App(models.Model):
         default=list,
         blank=True,
         help_text="Event names to use as conversion events in analytics dashboards",
+    )
+    # The owner's changes to the event groups that make themselves (analytics/event_groups.py):
+    # {"separate": [first words shown separately], "own": {group name: [event names]}}
+    event_groups = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Event groups: automatic ones shown separately, and the owner's own",
     )
 
     class Meta:
@@ -60,7 +74,10 @@ class App(models.Model):
 
         Strategy: Use raw SQL to update the primary key and foreign key references.
         Django's ORM doesn't support updating primary keys, so we use raw SQL.
-        We must manually update Event.app_id foreign keys since CASCADE only applies to DELETE.
+        Every row that points at the app is moved to the new key, whichever app installed its
+        table: the events, and on respectlytics.com the usage records too, which until
+        2026-10-23 were left pointing at the old key and failed the change for any account
+        that had them.
 
         Note: SQLite stores UUIDs as strings without hyphens, so we must convert them.
         """
@@ -77,11 +94,16 @@ class App(models.Model):
         with transaction.atomic():
             # Use raw SQL to update the primary key and related foreign keys
             with connection.cursor() as cursor:
-                # First, update all Event records to point to the new key
-                cursor.execute(
-                    "UPDATE analytics_event SET app_id = %s WHERE app_id = %s",
-                    [new_key_db, old_key_db],
-                )
+                quote = connection.ops.quote_name
+                for relation in self._meta.related_objects:
+                    if relation.many_to_many or not relation.field.concrete:
+                        continue
+                    table = quote(relation.related_model._meta.db_table)
+                    column = quote(relation.field.column)
+                    cursor.execute(
+                        f"UPDATE {table} SET {column} = %s WHERE {column} = %s",  # noqa: S608
+                        [new_key_db, old_key_db],
+                    )
 
                 # Then update the app's primary key
                 cursor.execute(
@@ -95,6 +117,60 @@ class App(models.Model):
             self.pk = new_key
 
         return old_key, new_key
+
+
+class SecretKey(models.Model):
+    """A key that reads, exports and deletes an account's data through the API
+    (analytics/authentication.py, SecretKeyAuthentication), sent with the app key that names
+    which of the account's apps.
+
+    The app key ships inside every copy of an app, so it may only send events; this one stays
+    with the developer, on their own server or computer. Only its SHA-256 is kept, so the key
+    itself is shown once, when it is made, and a leaked database holds nothing that works.
+    """
+
+    PREFIX = "rl_secret_"
+    LIMIT = 5  # per account, enough to replace one without a gap
+    ALPHABET = string.ascii_letters + string.digits
+    LENGTH = 40  # about 238 bits
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="secret_keys")
+    digest = models.CharField(max_length=64, unique=True, editable=False)
+    start = models.CharField("begins with", max_length=20, editable=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_used_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["created_at"]
+
+    def __str__(self):
+        return f"{self.start}... ({self.user_id})"
+
+    @staticmethod
+    def digest_of(key: str) -> str:
+        return hashlib.sha256(key.encode()).hexdigest()
+
+    @classmethod
+    def make(cls, user) -> tuple["SecretKey", str]:
+        """A new key for this account: the row, and the key, which nothing keeps."""
+        key = cls.PREFIX + "".join(secrets.choice(cls.ALPHABET) for _ in range(cls.LENGTH))
+        row = cls.objects.create(
+            user=user, digest=cls.digest_of(key), start=key[: len(cls.PREFIX) + 4]
+        )
+        return row, key
+
+    @classmethod
+    def find(cls, key: str):
+        """The row of a key as it was sent, or None."""
+        if not key.startswith(cls.PREFIX) or len(key) != len(cls.PREFIX) + cls.LENGTH:
+            return None
+        return cls.objects.select_related("user").filter(digest=cls.digest_of(key)).first()
+
+    def note_use(self) -> None:
+        """When it was last used, to the hour, so a busy key does not write on every request."""
+        now = timezone.now()
+        if self.last_used_at is None or now - self.last_used_at >= timedelta(hours=1):
+            SecretKey.objects.filter(pk=self.pk).update(last_used_at=now)
 
 
 class Event(models.Model):
@@ -131,6 +207,10 @@ class Event(models.Model):
     # Generated in-memory by SDK, rotates every 2 hours or on app restart
     # Enables funnel analysis within a single session, no cross-session tracking
     session_id = models.CharField(max_length=255, null=True, blank=True)  # noqa: DJ001
+    # The declared properties the event kept (properties/declared.py): {name: a declared value or
+    # a number's band}, never free text. Empty where nothing was declared, and in the community
+    # edition, which does not read them.
+    properties = models.JSONField(null=True, blank=True)
 
     class Meta:
         ordering = ["-timestamp"]
@@ -207,3 +287,30 @@ class DeletionLog(models.Model):
 
     def __str__(self):
         return f"Deleted {self.events_deleted} events from {self.app_name} on {self.deleted_at}"
+
+
+class BlockedAddress(models.Model):
+    """One blocked visitor, filed under a code computed from their address (analytics/blocks.py)."""
+
+    key = models.CharField(max_length=64, unique=True, editable=False)
+    kind = models.CharField(max_length=10, choices=KINDS)
+    reason = models.CharField(max_length=200)
+    times = models.PositiveIntegerField("times blocked", default=1)
+    first_blocked = models.DateTimeField(default=timezone.now)
+    last_blocked = models.DateTimeField(default=timezone.now)
+    expires_at = models.DateTimeField("blocked until", db_index=True)
+    # Until when a listener of blocks.address_banned has the address listed in front of the
+    # site, or has claimed it while it lists it; empty where nothing listens.
+    listed_until = models.DateTimeField(null=True, blank=True, editable=False)
+
+    class Meta:
+        verbose_name = "blocked address"
+        verbose_name_plural = "blocked addresses"
+        ordering = ["-last_blocked"]
+
+    def __str__(self):
+        return f"{self.get_kind_display()} {self.key[:12]}"
+
+    @property
+    def active(self):
+        return self.expires_at > timezone.now()

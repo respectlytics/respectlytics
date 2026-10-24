@@ -1,4 +1,4 @@
-SECURITY ALERT: Account Locked
+{% autoescape off %}SECURITY ALERT: Account Locked
 ==============================
 
 An account has been locked due to failed login attempts.
@@ -20,4 +20,4 @@ You can manually unlock it from the Django admin if needed.
 View in Admin: {{ admin_users_url }}
 
 ---
-Respectlytics Security System
+Respectlytics Security System{% endautoescape %}

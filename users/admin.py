@@ -53,7 +53,7 @@ class CustomUserAdmin(BaseUserAdmin):
         failed_attempts = cache.get(f"login_failures:{email_lower}", 0)
 
         if is_locked:
-            return format_html('<span style="color: #dc2626; font-weight: bold;">🔒 LOCKED</span>')
+            return format_html('<span style="color: #dc2626; font-weight: bold;">LOCKED</span>')
         elif failed_attempts > 0:
             color = "#f59e0b" if failed_attempts >= 3 else "#6b7280"
             return format_html(
@@ -62,11 +62,11 @@ class CustomUserAdmin(BaseUserAdmin):
                 failed_attempts,
                 LOCKOUT_THRESHOLD,
             )
-        return format_html('<span style="color: #10b981;">✓ OK</span>')
+        return format_html('<span style="color: #10b981;">OK</span>')
 
     get_lockout_status.short_description = "Login Status"
 
-    @admin.action(description="🔓 Unlock selected accounts (clear lockouts)")
+    @admin.action(description="Unlock selected accounts (clear lockouts)")
     def unlock_accounts(self, request, queryset):
         """
         SEC-003: Admin action to unlock accounts.

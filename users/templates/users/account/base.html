@@ -1,49 +1,51 @@
-{% extends 'base.html' %}
+{% extends 'app_base.html' %}
 {% load static %}
+{% comment %}
+The account area's frame (the loheden-design skill, a settings page): on a desktop a list of
+the account's pages beside the page's cards, on a phone the same list as rows behind one button
+(static/js/app-shell.js opens it). The page you are on is a quiet slate pill with
+aria-current, never the accent, which means "you can act"; it is found from the URL, so a view
+passes nothing for it. Delete account sits apart at the end. Each page writes its own title
+(.app-title) at the top of account_content. The withdrawal pages (billing/withdraw.html) show
+Billing as the page you are on, and nothing here names them.
+{% endcomment %}
 
-{% block title %}Account Settings | Respectlytics{% endblock %}
+{% block title %}Account settings | Respectlytics{% endblock %}
 
 {% block content %}
-<div class="min-h-screen bg-slate-950 py-6">
-  <div class="max-w-5xl mx-auto px-4">
-    
-    <!-- Page Header -->
-    <div class="mb-6">
-      <h1 class="text-2xl font-bold text-slate-50 mb-1">Account Settings</h1>
-      <p class="text-sm text-slate-400">Manage your profile, billing, and preferences</p>
+{% url 'teams:team' as team_url %}
+{% with here=request.resolver_match.url_name %}
+<div class="px-4 py-6 md:px-6 md:py-8 lg:px-8 lg:py-10">
+  <div class="mx-auto grid w-full max-w-6xl gap-6 lg:grid-cols-[13.5rem_minmax(0,48rem)] lg:gap-12">
+    <div class="lg:sticky lg:top-24 lg:self-start">
+      <button type="button" data-popover aria-expanded="false" aria-controls="accountPages"
+              class="flex min-h-12 w-full items-center justify-between gap-3 rounded-xl border border-white/10 bg-[#1e293b] px-4 text-[0.9375rem] font-medium text-slate-100 hover:border-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400 lg:hidden">
+        Account settings
+        <svg class="h-4 w-4 flex-none text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <nav id="accountPages" aria-label="Account settings" hidden
+           class="mt-2 rounded-xl border border-white/10 bg-[#1e293b] p-1.5 lg:mt-0 lg:!block lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0">
+        <p class="mb-2 hidden px-3 text-sm font-semibold text-slate-200 lg:block">Account settings</p>
+        <ul class="space-y-0.5">
+          {% url 'account_profile' as url %}{% include 'users/account/_nav_link.html' with label='Profile' name='account_profile' %}
+          {% url 'account_billing' as url %}{% include 'users/account/_nav_link.html' with label='Billing' name='account_billing' also='withdraw' %}
+          {% url 'account_preferences' as url %}{% include 'users/account/_nav_link.html' with label='Emails' name='account_preferences' %}
+          {% url 'account_security' as url %}{% include 'users/account/_nav_link.html' with label='Password' name='account_security' %}
+          {% if team_url %}{% include 'users/account/_nav_link.html' with url=team_url label='Team' name='team' %}{% endif %}
+          {% url 'account_api_keys' as url %}{% include 'users/account/_nav_link.html' with label='Secret keys' name='account_api_keys' %}
+          {% url 'account_data_management' as url %}{% include 'users/account/_nav_link.html' with label='Deletion history' name='account_data_management' %}
+        </ul>
+        <div class="mx-3 my-2 border-t border-white/10"></div>
+        <ul>
+          {% url 'account_delete' as url %}{% include 'users/account/_nav_link.html' with label='Delete account' name='account_delete' danger=True %}
+        </ul>
+      </nav>
     </div>
-    
-    <!-- Tab Navigation -->
-    <div class="bg-[#1e293b] border border-white/10 rounded-lg p-1.5 mb-5">
-      <div class="flex flex-wrap gap-1.5">
-        <a href="{% url 'account_profile' %}" 
-           class="px-3 py-1.5 rounded-md text-xs font-medium transition-colors {% if active_tab == 'profile' %}bg-purple-600 text-white{% else %}text-slate-400 hover:text-slate-50 hover:bg-slate-800{% endif %}">
-          Profile
-        </a>
-        <a href="{% url 'account_billing' %}" 
-           class="px-3 py-1.5 rounded-md text-xs font-medium transition-colors {% if active_tab == 'billing' %}bg-purple-600 text-white{% else %}text-slate-400 hover:text-slate-50 hover:bg-slate-800{% endif %}">
-          Billing & Subscription
-        </a>
-        <a href="{% url 'account_preferences' %}" 
-           class="px-3 py-1.5 rounded-md text-xs font-medium transition-colors {% if active_tab == 'preferences' %}bg-purple-600 text-white{% else %}text-slate-400 hover:text-slate-50 hover:bg-slate-800{% endif %}">
-          Preferences
-        </a>
-        <a href="{% url 'account_security' %}" 
-           class="px-3 py-1.5 rounded-md text-xs font-medium transition-colors {% if active_tab == 'security' %}bg-purple-600 text-white{% else %}text-slate-400 hover:text-slate-50 hover:bg-slate-800{% endif %}">
-          Security
-        </a>
-        <a href="{% url 'account_data_management' %}" 
-           class="px-3 py-1.5 rounded-md text-xs font-medium transition-colors {% if active_tab == 'data_management' %}bg-purple-600 text-white{% else %}text-slate-400 hover:text-slate-50 hover:bg-slate-800{% endif %}">
-          Data Management
-        </a>
-      </div>
-    </div>
-    
-    <!-- Tab Content -->
-    <div class="bg-[#1e293b] border border-white/10 rounded-xl p-5">
+
+    <div class="min-w-0 space-y-6">
       {% block account_content %}{% endblock %}
     </div>
-    
   </div>
 </div>
+{% endwith %}
 {% endblock %}

@@ -1,23 +1,21 @@
-"""
-Custom test runner for managed PostgreSQL environments.
+"""The suite always runs on fresh databases.
 
-DigitalOcean (and similar) managed PostgreSQL services block access to the
-'postgres' system database, which Django needs for CREATE/DROP DATABASE.
-This causes `manage.py test` to hang indefinitely.
+Each run creates the test database and, with --parallel, one copy per worker, migrates them and
+drops them at the end. A database left behind by a run that crashed is dropped without asking,
+because the deploy gate and CI have no keyboard to answer Django's question.
 
-Solution: Always pass keepdb=True so Django reuses the existing test database
-and only applies pending migrations instead of recreating it from scratch.
-
-The test database must be created once manually via the hosting provider's
-console (e.g., DigitalOcean → Databases → Users & Databases → Add Database).
+Until 2026-10-22 this runner did the opposite, keeping the database between runs, because
+DigitalOcean's managed PostgreSQL refused CREATE and DROP DATABASE. With --parallel that kept
+the workers' copies as they were, so a new migration never reached them and the suite failed
+on a missing table. The suite now runs only on PostgreSQL we run ourselves: locally, CI's
+service container and the deploy gate.
 """
 
 from django.test.runner import DiscoverRunner
 
 
-class KeepDbTestRunner(DiscoverRunner):
-    """Test runner that always reuses the existing test database."""
-
+class FreshDatabaseTestRunner(DiscoverRunner):
     def __init__(self, *args, **kwargs):
-        kwargs["keepdb"] = True
+        kwargs["keepdb"] = False
+        kwargs["interactive"] = False
         super().__init__(*args, **kwargs)

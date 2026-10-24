@@ -16,8 +16,8 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
         </svg>
         <div>
-            <p class="text-rose-300 font-semibold">Account Locked</p>
-            <p class="text-rose-400/80 text-sm mt-1">Too many failed login attempts. Please wait 30 minutes or <a href="{% url 'password_reset' %}" class="underline hover:text-rose-300">reset your password</a>.</p>
+            <p class="text-rose-300 font-semibold">Sign-in paused</p>
+            <p class="text-rose-400/80 text-sm mt-1">Too many failed attempts. <a href="{% url 'password_reset' %}" class="underline hover:text-rose-300">Reset your password</a> to sign in now, or try again later.</p>
         </div>
     </div>
 </div>
@@ -29,12 +29,15 @@
         </svg>
         <div>
             <p class="text-amber-300 font-semibold">Too many attempts</p>
-            <p class="text-amber-400/80 text-sm mt-1">Please wait 10 minutes before trying again. This helps protect your account.</p>
+            <p class="text-amber-400/80 text-sm mt-1">Please try again later. This helps protect your account.</p>
         </div>
     </div>
 </div>
 {% endif %}
 
+{% if request.GET.expired %}
+<p role="status" class="mb-6 rounded-xl bg-slate-800/70 px-4 py-3 text-sm text-slate-200 ring-1 ring-inset ring-white/10">This page had been open a while, so we opened it again. Please try once more.</p>
+{% endif %}
 <form method="post" action="{% url 'login' %}" class="space-y-6">
     {% csrf_token %}
     

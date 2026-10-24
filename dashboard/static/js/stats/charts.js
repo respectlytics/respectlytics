@@ -1,606 +1,277 @@
 /**
- * Stats Dashboard - Charts Module
+ * The Overview's charts and ranked lists (partials/stats/_tab_overview.html).
  *
- * Contains all Chart.js chart creation functions.
- * Dependencies: Chart.js, ChartDataLabels plugin
+ * Over time is three small charts of one series each (events, sessions, average session), in the
+ * brand's colour, with dates written "Oct 3" through StatsApp.utils.formatPeriod, lying flat and
+ * thinned out to about 6 on a phone and 10 on a desktop. Ranked data (events by type, countries)
+ * is a list of bars with each name written out in full and its figure beside it, so nothing is
+ * cut off and nothing waits for the pointer. Dependencies: Chart.js (chart-theme.js sets its look).
  */
 
-// Namespace setup
 window.StatsApp = window.StatsApp || {};
-
-// Chart instances storage
 StatsApp.charts = {};
 
-/**
- * Create Events Over Time chart
- * @param {Array} eventsByPeriod - Array of {date, count, unique_buckets} objects
- */
-function createEventsOverTimeChart(eventsByPeriod) {
-    const { charts } = StatsApp;
-    const { currentDatePreset } = StatsApp.state || { currentDatePreset: 'today' };
+const BRAND = '#6366f1';                 // brand-500, the one series colour
+const TINTS = ['#6366f1', '#818cf8', '#a5b4fc', '#c7d2fe'];  // a group's events, lighter in turn
 
-    // Destroy existing chart
-    if (charts.eventsChart) charts.eventsChart.destroy();
-
-    const container = document.getElementById('eventsChart').parentElement;
-    const canvas = document.getElementById('eventsChart');
-
-    // Check for empty data
-    if (!eventsByPeriod || eventsByPeriod.length === 0 || eventsByPeriod.every(d => d.count === 0)) {
-        canvas.style.display = 'none';
-        let emptyMsg = container.querySelector('.empty-state-msg');
-        if (!emptyMsg) {
-            emptyMsg = document.createElement('div');
-            emptyMsg.className = 'empty-state-msg flex flex-col items-center justify-center py-12 text-slate-400';
-            emptyMsg.innerHTML = '<div class="text-4xl mb-2">📊</div><div class="text-sm">No events recorded yet</div><div class="text-xs mt-1">Events will appear here as they come in</div>';
-            container.appendChild(emptyMsg);
+/** The x axis of a chart over time: dates flat, as many as fit. */
+StatsApp.chartAxis = function(labels) {
+    return {
+        grid: { display: false },
+        border: { display: false },
+        ticks: {
+            color: '#94a3b8',
+            maxRotation: 0,
+            autoSkip: true,
+            autoSkipPadding: 12,
+            maxTicksLimit: window.innerWidth < 640 ? 6 : 10,
+            callback: (value, index) => StatsApp.utils.formatPeriod(labels[index])
         }
-        return;
-    }
-
-    // Check if only 1 data point (today view) - show single-day summary instead
-    if (eventsByPeriod.length === 1 && currentDatePreset === 'today') {
-        canvas.style.display = 'none';
-        let singleDayMsg = container.querySelector('.single-day-msg');
-        if (!singleDayMsg) {
-            singleDayMsg = document.createElement('div');
-            singleDayMsg.className = 'single-day-msg flex flex-col items-center justify-center py-8 text-slate-400';
-            container.appendChild(singleDayMsg);
-        }
-        const data = eventsByPeriod[0];
-        const sessionsHtml = data.unique_buckets !== undefined
-            ? `<div class="mt-2 text-sm"><span class="font-semibold text-emerald-400">${(data.unique_buckets || 0).toLocaleString()}</span> active sessions</div>`
-            : '';
-        const noteText = 'Select a longer date range to see trends over time';
-        singleDayMsg.innerHTML = `
-            <div class="text-3xl font-bold text-indigo-400 mb-1">${(data.count || 0).toLocaleString()}</div>
-            <div class="text-sm text-slate-400">events today</div>
-            ${sessionsHtml}
-            <div class="mt-4 text-xs text-slate-500">${noteText}</div>
-        `;
-        return;
-    }
-
-    // Show canvas, hide any messages
-    canvas.style.display = 'block';
-    const emptyMsg = container.querySelector('.empty-state-msg');
-    if (emptyMsg) emptyMsg.remove();
-    const singleDayMsg = container.querySelector('.single-day-msg');
-    if (singleDayMsg) singleDayMsg.remove();
-
-    const ctx = canvas.getContext('2d');
-
-    // Create subtle gradient for fill
-    const gradient = ctx.createLinearGradient(0, 0, 0, 300);
-    gradient.addColorStop(0, 'rgba(99, 102, 241, 0.12)');
-    gradient.addColorStop(1, 'rgba(99, 102, 241, 0)');
-
-    // Build datasets - always include events, optionally include unique buckets
-    const datasets = [{
-        label: 'Events',
-        data: eventsByPeriod.map(d => d.count),
-        borderColor: '#4F46E5',
-        backgroundColor: gradient,
-        borderWidth: 2.5,
-        tension: 0.35,
-        fill: true,
-        pointRadius: 0,
-        pointHoverRadius: 5,
-        pointHoverBackgroundColor: '#4F46E5',
-        pointHoverBorderColor: '#fff',
-        pointHoverBorderWidth: 2,
-        yAxisID: 'y'
-    }];
-
-    // Add unique buckets line if data is available
-    if (eventsByPeriod.length > 0 && eventsByPeriod[0].unique_buckets !== undefined) {
-        const gradient2 = ctx.createLinearGradient(0, 0, 0, 300);
-        gradient2.addColorStop(0, 'rgba(16, 185, 129, 0.08)');
-        gradient2.addColorStop(1, 'rgba(16, 185, 129, 0)');
-
-        datasets.push({
-            label: 'Active Sessions',
-            data: eventsByPeriod.map(d => d.unique_buckets),
-            borderColor: '#10B981',
-            backgroundColor: gradient2,
-            borderWidth: 2.5,
-            tension: 0.35,
-            fill: true,
-            pointRadius: 0,
-            pointHoverRadius: 5,
-            pointHoverBackgroundColor: '#10B981',
-            pointHoverBorderColor: '#fff',
-            pointHoverBorderWidth: 2,
-            yAxisID: 'y1'
-        });
-    }
-
-    charts.eventsChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: eventsByPeriod.map(d => d.date),
-            datasets: datasets
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: true,
-            interaction: { mode: 'index', intersect: false },
-            plugins: {
-                legend: {
-                    display: datasets.length > 1,
-                    position: 'top',
-                    labels: {
-                        usePointStyle: true,
-                        pointStyle: 'circle',
-                        padding: 20,
-                        font: { size: 13, weight: '500' }
-                    }
-                },
-                tooltip: {
-                    backgroundColor: 'rgba(17, 24, 39, 0.95)',
-                    titleFont: { size: 14, weight: '600' },
-                    bodyFont: { size: 13 },
-                    padding: 12,
-                    cornerRadius: 8,
-                    callbacks: {
-                        label: (context) => {
-                            const label = context.dataset.label || '';
-                            const value = context.parsed.y || 0;
-                            return ` ${label}: ${(value || 0).toLocaleString()}`;
-                        }
-                    }
-                }
-            },
-            scales: {
-                x: {
-                    grid: { display: false },
-                    ticks: { color: '#94a3b8', font: { size: 13 } }
-                },
-                y: {
-                    type: 'linear',
-                    display: true,
-                    position: 'left',
-                    beginAtZero: true,
-                    ticks: { precision: 0, color: '#94a3b8', font: { size: 13 } },
-                    grid: { color: 'rgba(255, 255, 255, 0.05)', drawBorder: false },
-                    title: { display: true, text: 'Events', color: '#94a3b8', font: { size: 14, weight: '600' } }
-                },
-                y1: {
-                    type: 'linear',
-                    display: datasets.length > 1,
-                    position: 'right',
-                    beginAtZero: true,
-                    ticks: { precision: 0, color: '#94a3b8', font: { size: 13 } },
-                    title: { display: true, text: 'Active Sessions', color: '#94a3b8', font: { size: 14, weight: '600' } },
-                    grid: { drawOnChartArea: false }
-                }
-            }
-        }
-    });
-}
-
-/**
- * Create Daily Sessions & Avg Duration chart (dual-axis)
- * @param {Array} dauData - Array of {date, unique_sessions, avg_session_length_seconds} objects
- */
-function createDAUChart(dauData) {
-    const { charts } = StatsApp;
-    const { currentDatePreset } = StatsApp.state || { currentDatePreset: 'today' };
-
-    if (charts.dauChart) charts.dauChart.destroy();
-
-    const canvas = document.getElementById('dauChart');
-    if (!canvas) return;
-
-    const container = canvas.parentElement;
-
-    // Helper to get session count from either field name
-    const getSessionCount = (d) => d.unique_buckets || d.unique_sessions || 0;
-
-    // Helper to format duration for tooltip
-    const formatDuration = (seconds) => {
-        if (!seconds || seconds <= 0) return '-';
-        if (seconds < 60) return `${Math.round(seconds)}s`;
-        const minutes = Math.floor(seconds / 60);
-        const secs = Math.round(seconds % 60);
-        return secs > 0 ? `${minutes}m ${secs}s` : `${minutes}m`;
     };
-
-    // Check for empty data
-    if (!dauData || dauData.length === 0 || dauData.every(d => getSessionCount(d) === 0)) {
-        canvas.style.display = 'none';
-        let emptyMsg = container.querySelector('.empty-state-msg');
-        if (!emptyMsg) {
-            emptyMsg = document.createElement('div');
-            emptyMsg.className = 'empty-state-msg flex flex-col items-center justify-center py-12 text-slate-400';
-            emptyMsg.innerHTML = '<div class="text-4xl mb-2">👥</div><div class="text-sm">No active sessions yet</div><div class="text-xs mt-1">Session activity will appear here</div>';
-            container.appendChild(emptyMsg);
-        }
-        return;
-    }
-
-    // Check if only 1 data point (today view) - show single-day summary
-    if (dauData.length === 1 && currentDatePreset === 'today') {
-        canvas.style.display = 'none';
-        let singleDayMsg = container.querySelector('.single-day-msg');
-        if (!singleDayMsg) {
-            singleDayMsg = document.createElement('div');
-            singleDayMsg.className = 'single-day-msg flex flex-col items-center justify-center py-8 text-slate-400';
-            container.appendChild(singleDayMsg);
-        }
-        const data = dauData[0];
-        const durationHtml = data.avg_session_length_seconds
-            ? `<div class="mt-2 text-sm"><span class="font-semibold text-purple-400">${formatDuration(data.avg_session_length_seconds)}</span> avg duration</div>`
-            : '';
-        const noteText = 'Select a longer date range to see trends over time';
-        singleDayMsg.innerHTML = `
-            <div class="text-3xl font-bold text-emerald-400 mb-1">${getSessionCount(data).toLocaleString()}</div>
-            <div class="text-sm text-slate-400">active sessions today</div>
-            ${durationHtml}
-            <div class="mt-4 text-xs text-slate-500">${noteText}</div>
-        `;
-        return;
-    }
-
-    // Show canvas, hide any messages
-    canvas.style.display = 'block';
-    const emptyMsg = container.querySelector('.empty-state-msg');
-    if (emptyMsg) emptyMsg.remove();
-    const singleDayMsg = container.querySelector('.single-day-msg');
-    if (singleDayMsg) singleDayMsg.remove();
-
-    // Create gradient for sessions fill
-    const context = canvas.getContext('2d');
-    const gradient = context.createLinearGradient(0, 0, 0, 250);
-    gradient.addColorStop(0, 'rgba(16, 185, 129, 0.15)');
-    gradient.addColorStop(1, 'rgba(16, 185, 129, 0)');
-
-    // Check if we have session length data
-    const hasSessionLength = dauData.some(d => d.avg_session_length_seconds && d.avg_session_length_seconds > 0);
-
-    // Minimum sessions required for reliable avg duration (avoid outlier spikes)
-    const MIN_SESSIONS_FOR_DURATION = 10;
-
-    // Build datasets
-    const datasets = [{
-        label: 'Sessions',
-        data: dauData.map(d => getSessionCount(d)),
-        borderColor: '#10B981',
-        backgroundColor: gradient,
-        borderWidth: 2.5,
-        tension: 0.35,
-        fill: true,
-        pointRadius: 0,
-        pointHoverRadius: 5,
-        pointHoverBackgroundColor: '#10B981',
-        pointHoverBorderColor: '#fff',
-        pointHoverBorderWidth: 2,
-        yAxisID: 'y'
-    }];
-
-    // Add avg session length line if data available
-    if (hasSessionLength) {
-        datasets.push({
-            label: 'Avg Session Length',
-            // Null out values with insufficient sample size to avoid misleading spikes
-            data: dauData.map(d => {
-                const sampleSize = d.sessions_with_duration || getSessionCount(d);
-                if (sampleSize < MIN_SESSIONS_FOR_DURATION) return null;
-                return d.avg_session_length_seconds || null;
-            }),
-            borderColor: '#A855F7',
-            backgroundColor: 'rgba(168, 85, 247, 0.1)',
-            borderWidth: 2,
-            borderDash: [5, 5],
-            tension: 0.35,
-            fill: false,
-            pointRadius: 0,
-            pointHoverRadius: 5,
-            pointHoverBackgroundColor: '#A855F7',
-            pointHoverBorderColor: '#fff',
-            pointHoverBorderWidth: 2,
-            yAxisID: 'y1'
-        });
-    }
-
-    charts.dauChart = new Chart(canvas, {
-        type: 'line',
-        data: {
-            labels: dauData.map(d => d.date || d.period),
-            datasets: datasets
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: true,
-            interaction: { mode: 'index', intersect: false },
-            plugins: {
-                legend: {
-                    display: hasSessionLength,
-                    position: 'top',
-                    labels: {
-                        usePointStyle: true,
-                        pointStyle: 'circle',
-                        padding: 16,
-                        font: { size: 12, weight: '500' }
-                    }
-                },
-                tooltip: {
-                    backgroundColor: 'rgba(17, 24, 39, 0.95)',
-                    titleFont: { size: 13, weight: '600' },
-                    bodyFont: { size: 12 },
-                    padding: 12,
-                    cornerRadius: 8,
-                    callbacks: {
-                        label: (context) => {
-                            if (context.datasetIndex === 0) {
-                                return ` ${(context.parsed.y || 0).toLocaleString()} sessions`;
-                            } else {
-                                return ` ${formatDuration(context.parsed.y)} avg duration`;
-                            }
-                        }
-                    }
-                }
-            },
-            scales: {
-                x: {
-                    grid: { display: false },
-                    ticks: { color: '#94a3b8', font: { size: 13 } }
-                },
-                y: {
-                    type: 'linear',
-                    display: true,
-                    position: 'left',
-                    beginAtZero: true,
-                    ticks: { precision: 0, color: '#94a3b8', font: { size: 12 } },
-                    grid: { color: 'rgba(255, 255, 255, 0.05)', drawBorder: false },
-                    title: { display: true, text: 'Sessions', color: '#10B981', font: { size: 12, weight: '600' } }
-                },
-                y1: {
-                    type: 'linear',
-                    display: hasSessionLength,
-                    position: 'right',
-                    beginAtZero: true,
-                    ticks: {
-                        precision: 0,
-                        color: '#94a3b8',
-                        font: { size: 12 },
-                        callback: (value) => formatDuration(value)
-                    },
-                    title: { display: true, text: 'Avg Duration', color: '#A855F7', font: { size: 12, weight: '600' } },
-                    grid: { drawOnChartArea: false }
-                }
-            }
-        }
-    });
-}
+};
 
 /**
- * Create Events Type distribution chart (horizontal bar)
+ * One series over time on a canvas, in the brand's colour. Points that are null (an average
+ * from too few sessions) leave a gap rather than a spike.
  */
-function createEventsTypeChart(eventsByName) {
-    const { charts } = StatsApp;
-
-    if (charts.eventsTypeChart) charts.eventsTypeChart.destroy();
-
-    const canvas = document.getElementById('eventsTypeChart');
-    const container = canvas.parentElement;
-    const entries = Object.entries(eventsByName || {}).sort((a, b) => b[1] - a[1]).slice(0, 10);
-
-    // Check for empty data
-    if (!eventsByName || entries.length === 0 || entries.every(e => e[1] === 0)) {
-        canvas.style.display = 'none';
-        let emptyMsg = container.querySelector('.empty-state-msg');
-        if (!emptyMsg) {
-            emptyMsg = document.createElement('div');
-            emptyMsg.className = 'empty-state-msg flex flex-col items-center justify-center py-16 text-slate-400';
-            emptyMsg.innerHTML = '<div class="text-4xl mb-2">🎯</div><div class="text-sm">No event types recorded</div><div class="text-xs mt-1">Event distribution will appear here</div>';
-            container.appendChild(emptyMsg);
-        }
-        return;
-    }
-
-    // Show canvas, hide empty message
-    canvas.style.display = 'block';
-    const emptyMsg = container.querySelector('.empty-state-msg');
-    if (emptyMsg) emptyMsg.remove();
-
+function lineChart(id, labels, values, { format = (v) => (v || 0).toLocaleString(), tick = null, stepSize = undefined } = {}) {
+    const canvas = document.getElementById(id);
+    if (!canvas) return;
+    if (StatsApp.charts[id]) StatsApp.charts[id].destroy();
     const ctx = canvas.getContext('2d');
-
-    // Cohesive color palette
-    const cohesivePalette = [
-        '#4F46E5', '#6366F1', '#818CF8', '#7C3AED', '#8B5CF6',
-        '#A78BFA', '#14B8A6', '#2DD4BF', '#5EEAD4', '#99F6E4'
-    ];
-
-    const total = entries.reduce((sum, e) => sum + e[1], 0);
-
-    charts.eventsTypeChart = new Chart(ctx, {
-        type: 'bar',
+    const fill = ctx.createLinearGradient(0, 0, 0, 240);
+    fill.addColorStop(0, 'rgba(99, 102, 241, 0.22)');
+    fill.addColorStop(1, 'rgba(99, 102, 241, 0)');
+    const few = labels.length <= 8;
+    StatsApp.charts[id] = new Chart(ctx, {
+        type: 'line',
         data: {
-            labels: entries.map(e => e[0]),
+            labels,
             datasets: [{
-                data: entries.map(e => e[1]),
-                backgroundColor: cohesivePalette,
-                borderWidth: 0,
-                borderRadius: 4,
-                barThickness: 24
+                data: values,
+                borderColor: BRAND,
+                backgroundColor: fill,
+                borderWidth: 2,
+                tension: 0.3,
+                fill: true,
+                spanGaps: false,
+                pointRadius: few ? 3 : 0,
+                pointBackgroundColor: BRAND,
+                pointHoverRadius: 4,
+                pointHoverBackgroundColor: BRAND,
+                pointHoverBorderColor: '#f8fafc',
+                pointHoverBorderWidth: 2
             }]
         },
-        plugins: [ChartDataLabels],
         options: {
-            indexAxis: 'y',
             responsive: true,
             maintainAspectRatio: false,
-            layout: { padding: { right: 60 } },
+            interaction: { mode: 'index', intersect: false },
+            layout: { padding: { top: 4 } },
             plugins: {
-                legend: { display: false },
                 tooltip: {
-                    backgroundColor: 'rgba(17, 24, 39, 0.95)',
-                    titleFont: { size: 13, weight: '600' },
-                    bodyFont: { size: 12 },
-                    padding: 12,
-                    cornerRadius: 8,
                     callbacks: {
-                        label: (context) => ` ${(context.parsed.x || 0).toLocaleString()} events (${((context.parsed.x / total) * 100).toFixed(1)}%)`
+                        title: (items) => StatsApp.utils.formatPeriod(labels[items[0].dataIndex], { long: true }),
+                        label: (context) => context.parsed.y === null ? 'Too few sessions' : format(context.parsed.y)
                     }
-                },
-                datalabels: {
-                    color: '#f8fafc',
-                    font: { weight: '700', size: 13 },
-                    anchor: 'end',
-                    align: 'right',
-                    offset: 4,
-                    formatter: (value) => ((value / total) * 100).toFixed(0) + '%'
                 }
             },
             scales: {
-                x: {
+                x: StatsApp.chartAxis(labels),
+                y: {
                     beginAtZero: true,
-                    grid: { color: 'rgba(255, 255, 255, 0.05)', drawBorder: false },
+                    border: { display: false },
+                    grid: { color: 'rgba(255, 255, 255, 0.06)' },
                     ticks: {
                         color: '#94a3b8',
-                        font: { size: 13 },
-                        callback: function(value) {
-                            return value >= 1000 ? (value / 1000).toFixed(0) + 'K' : value;
-                        }
+                        precision: 0,
+                        maxTicksLimit: 5,
+                        stepSize,
+                        callback: tick || ((value) => (value >= 1000 ? `${+(value / 1000).toFixed(1)}K` : value))
                     }
-                },
-                y: {
-                    grid: { display: false },
-                    ticks: { color: '#f8fafc', font: { size: 13, weight: '500' }, padding: 8 }
                 }
             }
         }
     });
+}
+
+/** "4m 1s", "45s"; "-" for none. */
+function shortDuration(seconds) {
+    if (!seconds || seconds <= 0) return '-';
+    if (seconds < 60) return `${Math.round(seconds)}s`;
+    const minutes = Math.floor(seconds / 60);
+    const secs = Math.round(seconds % 60);
+    return secs > 0 ? `${minutes}m ${secs}s` : `${minutes}m`;
 }
 
 /**
- * Create Countries chart (vertical bar)
+ * The Over time card: events, sessions and the average session per period. One period (Today)
+ * has no trend to draw, so the card says so once and offers a longer range.
+ * @param {Array} points - [{date, count, unique_sessions, avg_session_length_seconds, sessions_with_duration}], oldest first
  */
-function createCountriesChart(topCountries) {
-    const { charts } = StatsApp;
-
-    if (charts.countriesChart) charts.countriesChart.destroy();
-
-    const canvas = document.getElementById('countriesChart');
-    const container = canvas.parentElement;
-    const top10 = (topCountries || []).slice(0, 10);
-
-    // Check for empty data
-    if (!topCountries || top10.length === 0 || top10.every(c => c.count === 0)) {
-        canvas.style.display = 'none';
-        let emptyMsg = container.querySelector('.empty-state-msg');
-        if (!emptyMsg) {
-            emptyMsg = document.createElement('div');
-            emptyMsg.className = 'empty-state-msg flex flex-col items-center justify-center py-16 text-slate-400';
-            emptyMsg.innerHTML = '<div class="text-4xl mb-2">🌍</div><div class="text-sm">No geographic data yet</div><div class="text-xs mt-1">Country data will appear as events come in</div>';
-            container.appendChild(emptyMsg);
-        }
+function renderOverTime(points) {
+    const charts = document.getElementById('overTimeCharts');
+    const note = document.getElementById('overTimeNote');
+    if (!charts || !note) return;
+    const data = points || [];
+    const hasEvents = data.some(p => (p.count || 0) > 0);
+    // Today is one day, whichever days its hours fall on in UTC
+    const oneDay = (StatsApp.state && StatsApp.state.currentDatePreset === 'today') || data.length < 2;
+    if (!hasEvents || oneDay) {
+        charts.hidden = true;
+        note.hidden = false;
+        note.querySelector('[data-note-text]').textContent = !hasEvents
+            ? 'No events in this range yet.'
+            : 'A trend needs more than one day.';
+        note.querySelector('[data-note-action]').hidden = !hasEvents;
         return;
     }
-
-    // Show canvas, hide empty message
-    canvas.style.display = 'block';
-    const emptyMsg = container.querySelector('.empty-state-msg');
-    if (emptyMsg) emptyMsg.remove();
-
-    const ctx = canvas.getContext('2d');
-
-    // Create gradient for bars
-    const gradient = ctx.createLinearGradient(0, 0, 0, 200);
-    gradient.addColorStop(0, '#4F46E5');
-    gradient.addColorStop(1, '#6366F1');
-
-    // Helper function to get country flag emoji
-    const getCountryFlag = (countryCode) => {
-        if (!countryCode || countryCode.length !== 2) return '🌍';
-        const codePoints = countryCode.toUpperCase().split('').map(char => 127397 + char.charCodeAt());
-        return String.fromCodePoint(...codePoints);
-    };
-
-    // Helper function to get country name using Intl.DisplayNames API
-    const getCountryName = (countryCode) => {
-        if (!countryCode) return 'Unknown';
-        try {
-            const displayNames = new Intl.DisplayNames(['en'], { type: 'region' });
-            return displayNames.of(countryCode.toUpperCase()) || countryCode;
-        } catch (e) {
-            return countryCode;
-        }
-    };
-
-    charts.countriesChart = new Chart(canvas, {
-        type: 'bar',
-        data: {
-            labels: top10.map(c => c.country),
-            datasets: [{
-                label: 'Events',
-                data: top10.map(c => c.count),
-                backgroundColor: gradient,
-                borderRadius: 4,
-                borderSkipped: false
-            }]
-        },
-        plugins: [ChartDataLabels],
-        options: {
-            responsive: true,
-            maintainAspectRatio: true,
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    backgroundColor: 'rgba(17, 24, 39, 0.95)',
-                    titleFont: { size: 13, weight: '600' },
-                    bodyFont: { size: 12 },
-                    padding: 12,
-                    cornerRadius: 8,
-                    callbacks: {
-                        title: (context) => {
-                            const countryCode = context[0].label;
-                            const flag = getCountryFlag(countryCode);
-                            const name = getCountryName(countryCode);
-                            return `${flag} ${name}`;
-                        },
-                        label: (context) => ` ${(context.parsed.y || 0).toLocaleString()} events`
-                    }
-                },
-                datalabels: {
-                    color: '#FFFFFF',
-                    font: { weight: '700', size: 13 },
-                    anchor: 'center',
-                    align: 'center',
-                    formatter: (value) => (value || 0) >= 1000 ? ((value || 0) / 1000).toFixed(1) + 'K' : (value || 0).toLocaleString()
-                }
-            },
-            scales: {
-                x: {
-                    grid: { display: false },
-                    ticks: {
-                        color: '#f8fafc',
-                        font: { size: 11 },
-                        callback: function(value, index) {
-                            const countryCode = this.getLabelForValue(value);
-                            const flag = getCountryFlag(countryCode);
-                            const name = getCountryName(countryCode);
-                            // Truncate long country names to fit chart
-                            const displayName = name.length > 12 ? name.substring(0, 10) + '…' : name;
-                            return `${flag} ${displayName}`;
-                        }
-                    },
-                    title: { display: true, text: 'Country', font: { size: 14, weight: '600' }, color: '#94a3b8' }
-                },
-                y: {
-                    beginAtZero: true,
-                    ticks: { precision: 0, color: '#94a3b8', font: { size: 13 } },
-                    grid: { color: 'rgba(255, 255, 255, 0.05)', drawBorder: false },
-                    title: { display: true, text: 'Event Count', font: { size: 14, weight: '600' }, color: '#94a3b8' }
-                }
-            }
-        }
+    charts.hidden = false;
+    note.hidden = true;
+    const labels = data.map(p => p.date);
+    lineChart('eventsChart', labels, data.map(p => p.count || 0), {
+        format: (v) => `${v.toLocaleString()} events`
     });
+    lineChart('dauChart', labels, data.map(p => p.unique_sessions || 0), {
+        format: (v) => `${v.toLocaleString()} sessions`
+    });
+    // An average from fewer than 10 sessions is left out rather than drawn as a spike
+    const durations = data.map(p => {
+        const sample = p.sessions_with_duration !== undefined ? p.sessions_with_duration : (p.unique_sessions || 0);
+        return sample >= 10 && p.avg_session_length_seconds ? p.avg_session_length_seconds : null;
+    });
+    const durationEmpty = document.getElementById('durationEmpty');
+    const durationBox = document.getElementById('durationChart')?.parentElement;
+    const anyDuration = durations.some(v => v !== null);
+    if (durationEmpty) durationEmpty.hidden = anyDuration;
+    if (durationBox) durationBox.hidden = !anyDuration;
+    if (anyDuration) {
+        // ticks on whole minutes (or seconds for short sessions), at most four of them
+        const longest = Math.max(...durations.filter(v => v !== null), 1);
+        const stepSize = [15, 30, 60, 120, 300, 600, 900, 1800, 3600].find(step => longest / step <= 4) || 3600;
+        lineChart('durationChart', labels, durations, {
+            format: (v) => `${shortDuration(v)} on average`,
+            tick: (value) => (value ? shortDuration(value) : '0'),
+            stepSize
+        });
+    }
 }
 
-// Make functions globally available
-window.createEventsOverTimeChart = createEventsOverTimeChart;
-window.createDAUChart = createDAUChart;
+/**
+ * One row of a ranked list: the name in full, its figure at the right, and a bar under it whose
+ * parts are the row's share of the largest row (a group's events in lighter steps).
+ * @param {{name: string, value: string, parts: Array<{pct: number, color?: string}>, extra?: string, quiet?: boolean}} row
+ *        name and value are HTML the caller has escaped
+ */
+StatsApp.barRow = function(row) {
+    const fills = row.parts.map(p => `<span class="bar-fill${row.quiet ? ' is-quiet' : ''}" style="width:${Math.max(0, Math.min(100, p.pct)).toFixed(2)}%${p.color && !row.quiet ? `;background:${p.color}` : ''}"></span>`).join('');
+    return `<li class="py-2.5 first:pt-0 last:pb-0">
+        <div class="flex items-baseline justify-between gap-4">
+            <span class="min-w-0 break-words text-sm text-slate-100">${row.name}</span>
+            <span class="flex-none text-sm text-slate-50">${row.value}</span>
+        </div>
+        <span class="bar-track mt-1.5" aria-hidden="true">${fills}</span>
+        ${row.extra || ''}
+    </li>`;
+};
+
+/**
+ * Events by type: one bar per group (analytics/event_groups.py), split into its events in
+ * lighter steps of the brand's colour and written out under it, and one per event in no group;
+ * the ten largest, each with its share of every event in the range.
+ */
+function createEventsTypeChart(eventsByName, eventGroups) {
+    const list = document.getElementById('eventsTypeList');
+    if (!list) return;
+    const esc = StatsApp.utils.escapeHtml;
+    const groups = eventGroups || [];
+    const inGroup = new Set(groups.flatMap(g => g.events.map(e => e.event_name)));
+    const all = [
+        ...groups.map(g => ({ label: g.name, total: g.total, group: true,
+                              parts: g.events.map(e => [e.event_name, e.count]) })),
+        ...Object.entries(eventsByName || {}).filter(([name]) => !inGroup.has(name))
+            .map(([name, count]) => ({ label: name, total: count, group: false, parts: [[name, count]] }))
+    ].sort((a, b) => b.total - a.total);
+    const rows = all.slice(0, 10);
+    const total = all.reduce((sum, r) => sum + r.total, 0);
+
+    if (!rows.length || total === 0) {
+        StatsApp.state.eventTypeRows = [];
+        list.innerHTML = '<li class="py-6 text-sm text-slate-400">No events in this range yet.</li>';
+        return;
+    }
+    rows.forEach(row => { row.colors = row.parts.map((_, k) => TINTS[Math.min(k, TINTS.length - 1)]); });
+    StatsApp.state.eventTypeRows = rows;
+    const largest = rows[0].total || 1;
+    const share = (n, of) => `${Math.round((n / of) * 100)}%`;
+
+    list.innerHTML = rows.map(row => {
+        const name = row.group && window.EventGroups ? EventGroups.name(row.label) : esc(row.label);
+        const extra = row.group && row.parts.length > 1
+            ? `<ul class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-300">${row.parts.map(([event, count], k) => `
+                <li class="flex min-w-0 max-w-full items-center gap-1.5">
+                    <span class="h-2 w-2 flex-none rounded-sm" style="background:${row.colors[k]}" aria-hidden="true"></span>
+                    <span class="break-all font-mono">${esc(event)}</span>
+                    <span class="flex-none whitespace-nowrap text-slate-400">${count.toLocaleString()} · ${share(count, row.total || 1)}</span>
+                </li>`).join('')}</ul>`
+            : '';
+        return StatsApp.barRow({
+            name,
+            value: `${row.total.toLocaleString()} <span class="ml-1 text-slate-400">${share(row.total, total)}</span>`,
+            parts: row.parts.map(([, count], k) => ({ pct: (count / largest) * 100, color: row.colors[k] })),
+            extra
+        });
+    }).join('');
+}
+
+/**
+ * The Countries card's list: each country with its flag, its sessions and, where conversion
+ * events are chosen, the share of its sessions that converted; the five with most sessions,
+ * and every one behind Show all.
+ * @param {Array} countries - [{country, count, sessions, conversions, conversion_rate}], rate in percent
+ */
+function renderCountriesList(countries) {
+    const list = document.getElementById('countriesList');
+    const more = document.getElementById('countriesMore');
+    const rateHead = document.getElementById('countriesRateHead');
+    if (!list) return;
+    const esc = StatsApp.utils.escapeHtml;
+    // the page's chosen conversions (stats.html, filters.js)
+    const withRate = (typeof selectedConversionEvents !== 'undefined' ? selectedConversionEvents : []).length > 0;
+    const rows = [...(countries || [])]
+        .filter(c => c && c.country && ((c.sessions || 0) > 0 || (c.count || 0) > 0))
+        .sort((a, b) => (b.sessions || 0) - (a.sessions || 0) || (b.count || 0) - (a.count || 0));
+    if (rateHead) rateHead.hidden = !withRate;
+    if (!rows.length) {
+        list.innerHTML = `<tr><td colspan="3" class="py-6 text-slate-400">No sessions with a country in this range yet.</td></tr>`;
+        if (more) more.hidden = true;
+        return;
+    }
+    const open = list.dataset.all === '1';
+    const shown = open ? rows : rows.slice(0, 5);
+    list.innerHTML = shown.map(c => `
+        <tr>
+            <td class="whitespace-normal">
+                <span class="flex items-center gap-2"><span class="flex-none text-base leading-none" aria-hidden="true">${StatsApp.utils.getCountryFlag(c.country)}</span><span class="min-w-0 text-slate-100">${esc(StatsApp.utils.getCountryName(c.country))}</span></span>
+            </td>
+            <td class="text-right">${(c.sessions || 0).toLocaleString()}</td>
+            ${withRate ? `<td class="text-right">${(c.conversion_rate || 0).toFixed(1)}%</td>` : ''}
+        </tr>`).join('');
+    if (more) {
+        more.hidden = rows.length <= 5;
+        more.textContent = open ? 'Show fewer' : `Show all ${rows.length} countries`;
+        more.setAttribute('aria-expanded', open ? 'true' : 'false');
+    }
+}
+
+function toggleCountriesList() {
+    const list = document.getElementById('countriesList');
+    if (!list) return;
+    list.dataset.all = list.dataset.all === '1' ? '' : '1';
+    renderCountriesList(StatsApp.state.countries || []);
+}
+
+window.renderOverTime = renderOverTime;
 window.createEventsTypeChart = createEventsTypeChart;
-window.createCountriesChart = createCountriesChart;
+window.renderCountriesList = renderCountriesList;
+window.toggleCountriesList = toggleCountriesList;

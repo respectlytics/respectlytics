@@ -1,4 +1,4 @@
-SECURITY ALERT: IP Address Banned
+{% autoescape off %}SECURITY ALERT: IP Address Banned
 ==================================
 
 An IP address has been banned for suspicious activity.
@@ -19,4 +19,4 @@ The IP will be automatically unbanned after {{ ban_duration }}.
 No action is required unless you see repeated patterns from the same IP range.
 
 ---
-Respectlytics Security System
+Respectlytics Security System{% endautoescape %}

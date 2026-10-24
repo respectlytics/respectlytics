@@ -2,7 +2,7 @@
 {% block title %}Suspicious Login Activity | Respectlytics{% endblock %}
 
 {% block content %}
-<h1>⚠️ Suspicious login activity detected</h1>
+<h1>Suspicious login activity detected</h1>
 
 <p>Hi{% if user.first_name %} {{ user.first_name }}{% endif %},</p>
 
@@ -23,7 +23,7 @@
     <a href="{{ password_reset_url }}" class="btn btn-primary" style="color: #ffffff !important;">Reset Password</a>
 </p>
 
-<p><strong>If this wasn't you</strong>, someone may be trying to access your account. Your account will be temporarily locked after 5 failed attempts for your protection.</p>
+<p><strong>If this wasn't you</strong>, someone may be trying to access your account. If the attempts go on, sign-ins from there are paused for your protection.</p>
 
 <p class="text-muted text-small">
     For your security, we recommend using a strong, unique password and never sharing it with anyone.

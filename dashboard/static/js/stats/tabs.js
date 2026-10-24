@@ -2,14 +2,19 @@
  * Stats Dashboard - Tab Management Module
  * 
  * Handles tab switching, lazy loading of tab data, and keyboard navigation.
- * Dependencies: realtime.js (for sidebar mobile)
  */
 
 // Namespace setup
 window.StatsApp = window.StatsApp || {};
 
 // ===== Tab Constants =====
-StatsApp.TABS = ['overview', 'conversion', 'behavior', 'segments'];
+// The tabs the page holds (a .tab-content per tab), so a tab only respectlytics.com has
+// (Experiments, properties/) joins without this file knowing it
+StatsApp.TABS = Array.from(document.querySelectorAll('.tab-content[id^="tab-"]'))
+    .map(el => el.id.slice(4));
+if (!StatsApp.TABS.length) StatsApp.TABS = ['overview', 'conversion', 'behavior', 'segments'];
+// A tab's own loader, for a tab this file does not know: StatsApp.tabLoaders.experiments = fn
+StatsApp.tabLoaders = StatsApp.tabLoaders || {};
 
 // ===== Tab State =====
 StatsApp.tabDataCache = {};  // Cache loaded data per tab
@@ -28,8 +33,9 @@ function switchTab(tabName, updateHash = true) {
         return;
     }
     
-    // Update current tab
+    // Update current tab (and say it on the body, for a tab that hides what does not apply)
     StatsApp.currentTab = tabName;
+    document.body.dataset.tab = tabName;
     
     // 1. Update URL hash (for bookmarking/sharing)
     if (updateHash) {
@@ -48,6 +54,13 @@ function switchTab(tabName, updateHash = true) {
     document.querySelectorAll('.sidebar-nav-item[data-tab]').forEach(item => {
         const isActive = item.dataset.tab === tabName;
         item.classList.toggle('active', isActive);
+        if (isActive) {
+            item.setAttribute('aria-current', 'page');
+            // On a phone the views are a row that scrolls: keep the open one in sight
+            item.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+        } else {
+            item.removeAttribute('aria-current');
+        }
     });
     
     // 4. Update tab content visibility
@@ -55,44 +68,18 @@ function switchTab(tabName, updateHash = true) {
         const isActive = content.id === `tab-${tabName}`;
         content.classList.toggle('active', isActive);
     });
-    
-    // 5. Hide global loading overlay when switching away from overview tab
-    // (Other tabs manage their own loading states)
-    if (tabName !== 'overview') {
-        const loadingOverlay = document.getElementById('loadingOverlay');
-        if (loadingOverlay) {
-            loadingOverlay.style.display = 'none';
-        }
-    }
-    
+
+    // 5. The bar's title names the view, in the sidebar's own words
+    const title = document.getElementById('viewTitle');
+    const navItem = document.querySelector(`.sidebar-nav-item[data-tab="${tabName}"]`);
+    if (title && navItem) title.textContent = navItem.textContent.trim();
+
     // 6. Load tab data if not cached (for non-overview tabs)
     // Also reload tabs previously cached as empty (prevents tabs getting stuck
     // in an empty state when prerequisites later change).
-    if (tabName !== 'overview' && (!tabDataCache[tabName] || tabDataCache[tabName].empty)) {
+    // While the page opens, the date range is not set yet: the range setter loads the tab.
+    if (!StatsApp.holdTabLoad && tabName !== 'overview' && (!tabDataCache[tabName] || tabDataCache[tabName].empty)) {
         loadTabData(tabName);
-    }
-    
-    // 6. Re-center globe when switching back to overview tab
-    if (tabName === 'overview' && window.globeInstance) {
-        // Use setTimeout to ensure the tab is fully visible before resizing
-        setTimeout(() => {
-            const globeViz = document.getElementById('globeViz');
-            if (globeViz && window.globeInstance) {
-                window.globeInstance.width(globeViz.clientWidth);
-                window.globeInstance.height(700);
-            }
-        }, 50);
-    }
-    
-    // 7. Close mobile sidebar after switching tabs
-    if (window.innerWidth <= 1024 && typeof closeSidebar === 'function') {
-        closeSidebar();
-    }
-    
-    // 8. Announce to screen readers
-    const tabContent = document.getElementById(`tab-${tabName}`);
-    if (tabContent) {
-        tabContent.setAttribute('aria-live', 'polite');
     }
 }
 
@@ -110,7 +97,8 @@ async function loadTabData(tabName) {
     
     // Special handling for tabs that manage their own progressive loading
     // These tabs use individual section skeletons + processing banners
-    const managesOwnLoading = ['conversion', 'behavior', 'segments'].includes(tabName);
+    const managesOwnLoading = ['conversion', 'behavior', 'segments'].includes(tabName)
+        || Boolean(StatsApp.tabLoaders[tabName]);
     
     // Show loading state (unless tab handles it internally)
     // Use classList only - Tailwind's hidden class uses !important
@@ -127,6 +115,8 @@ async function loadTabData(tabName) {
             await loadBehaviorTabData();
         } else if (tabName === 'segments') {
             await loadSegmentsTabData();
+        } else if (StatsApp.tabLoaders[tabName]) {
+            await StatsApp.tabLoaders[tabName]();
         } else {
             // Placeholder for other tabs
             await new Promise(resolve => setTimeout(resolve, 500));
@@ -143,7 +133,8 @@ async function loadTabData(tabName) {
         }
         
     } catch (error) {
-        console.error(`[TABS] Error loading ${tabName} data:`, error.message, error.stack);
+        // 'empty' is a state, not a failure: no conversion events are chosen yet
+        if (error.message !== 'empty') console.error(`[TABS] Error loading ${tabName} data:`, error.message, error.stack);
         
         // Hide loading (tabs that manage their own loading handle visibility internally)
         // Use classList only - Tailwind's hidden class uses !important
@@ -166,11 +157,7 @@ async function loadTabData(tabName) {
             if (contentEl) {
                 contentEl.classList.add('hidden');
             }
-            if (errorEl) {
-                errorEl.classList.remove('hidden');
-                const errorMsg = document.getElementById(`${tabName}-error-msg`);
-                if (errorMsg) errorMsg.textContent = error.message;
-            }
+            if (errorEl) errorEl.classList.remove('hidden');
         }
     }
 }

@@ -10,15 +10,15 @@ class UserPreferences(models.Model):
 
     Email Categories:
     - Transactional: Always sent (payments, password resets, security alerts)
-    - Important Updates: Quota warnings, trial expiry (default ON)
+    - Important Updates: usage warnings and notices about the account (default ON)
     - Product News: New features, tips, re-engagement (default OFF - opt-in)
     """
 
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="preferences")
 
-    # Important Updates: quota warnings, trial expiry (default ON)
+    # Important Updates: usage warnings and notices about the account (default ON)
     email_important_updates = models.BooleanField(
-        default=True, help_text="Receive quota warnings and trial expiry notifications"
+        default=True, help_text="Receive usage warnings and notices about the account"
     )
 
     # Product News: new features, tips, re-engagement (default OFF - opt-in)

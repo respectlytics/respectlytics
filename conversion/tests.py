@@ -31,6 +31,8 @@ class DAUViewTestCase(APITestCase):
         """Set up test data with multiple sessions across multiple days"""
         self.user = User.objects.create_user(username="testuser", password="testpass123")
         self.app = App.objects.create(name="Test App", user=self.user)
+        # Reading an app's data takes its signed-in owner, never the app key alone.
+        self.client.force_login(self.user)
         self.app_key = str(self.app.id)
 
         # Create another app to test app isolation
@@ -403,6 +405,8 @@ class ConversionSummaryViewTestCase(APITestCase):
         across days"""
         self.user = User.objects.create_user(username="conversionuser", password="testpass123")
         self.app = App.objects.create(name="Conversion App", user=self.user)
+        # Reading an app's data takes its signed-in owner, never the app key alone.
+        self.client.force_login(self.user)
         self.app_key = str(self.app.id)
 
         # Create another app to test app isolation
@@ -854,6 +858,8 @@ class TimeToConversionViewTestCase(APITestCase):
         """Set up test data with users who have first events and conversions"""
         self.user = User.objects.create_user(username="ttcuser", password="testpass123")
         self.app = App.objects.create(name="TTC App", user=self.user)
+        # Reading an app's data takes its signed-in owner, never the app key alone.
+        self.client.force_login(self.user)
         self.app_key = str(self.app.id)
 
         # Create another app to test app isolation
@@ -1521,6 +1527,8 @@ class StepTimingViewTestCase(APITestCase):
         """Set up test data with sessions that have funnel events"""
         self.user = User.objects.create_user(username="steptiming", password="testpass123")
         self.app = App.objects.create(name="Step Timing App", user=self.user)
+        # Reading an app's data takes its signed-in owner, never the app key alone.
+        self.client.force_login(self.user)
         self.app_key = str(self.app.id)
 
         # Create another app to test app isolation
@@ -2128,6 +2136,8 @@ class ConversionPathsViewTestCase(APITestCase):
         """Set up test data with multiple users taking different paths to conversion"""
         self.user = User.objects.create_user(username="pathuser", password="testpass123")
         self.app = App.objects.create(name="Path App", user=self.user)
+        # Reading an app's data takes its signed-in owner, never the app key alone.
+        self.client.force_login(self.user)
         self.app_key = str(self.app.id)
 
         # Create another app to test app isolation
@@ -2784,6 +2794,8 @@ class DropOffViewTestCase(APITestCase):
         """Set up test data with converters and non-converters"""
         self.user = User.objects.create_user(username="dropoffuser", password="testpass123")
         self.app = App.objects.create(name="Drop-Off App", user=self.user)
+        # Reading an app's data takes its signed-in owner, never the app key alone.
+        self.client.force_login(self.user)
         self.app_key = str(self.app.id)
 
         # Create another app to test app isolation
@@ -3382,6 +3394,8 @@ class EventCorrelationViewTestCase(APITestCase):
         """Set up test data with converters and non-converters with various event patterns"""
         self.user = User.objects.create_user(username="correlationuser", password="testpass123")
         self.app = App.objects.create(name="Correlation App", user=self.user)
+        # Reading an app's data takes its signed-in owner, never the app key alone.
+        self.client.force_login(self.user)
         self.app_key = str(self.app.id)
 
         # Create another app to test isolation
@@ -4141,6 +4155,8 @@ class SegmentComparisonViewTestCase(APITestCase):
         """Set up test data with multiple platforms, countries, and user types"""
         self.user = User.objects.create_user(username="testuser", password="testpass123")
         self.app = App.objects.create(name="Test App", user=self.user)
+        # Reading an app's data takes its signed-in owner, never the app key alone.
+        self.client.force_login(self.user)
         self.app_key = str(self.app.id)
 
         # Create another app to test app isolation

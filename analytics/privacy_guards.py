@@ -79,6 +79,9 @@ ALLOWED_FIELDS = frozenset(
         # Optional behavioral context
         "screen",  # Current screen/page name - DEPRECATED: accepted but not stored
         "session_id",  # Ephemeral session ID - see validate_session_id()
+        # Declared properties: kept only where an app declared them, with a declared value or
+        # a number's band (respectlytics.com, properties/declared.py); dropped everywhere else
+        "properties",
     }
 )
 
@@ -99,6 +102,7 @@ STORED_FIELDS = frozenset(
         "platform",  # ios, android, web, other
         "country",  # 2-letter ISO code (derived from IP, IP discarded)
         "session_id",  # Ephemeral session ID (hashed server-side with daily rotation)
+        "properties",  # Declared ones only (properties/declared.py), never the raw request's
     }
 )
 
@@ -113,6 +117,16 @@ DEPRECATED_FIELDS = ALLOWED_FIELDS - STORED_FIELDS
 # Session ID constraints
 SESSION_ID_MIN_LENGTH = 16  # Minimum for adequate entropy
 SESSION_ID_MAX_LENGTH = 128  # Reasonable upper limit
+
+# What every refusal tells the developer to send instead. It must name a format the
+# patterns below accept: any UUID with dashes is refused, because device and vendor
+# identifiers are UUIDs (test_privacy_guards: the advice's example is accepted).
+SESSION_ID_EXAMPLE = "3f9c2a7e5b1d4c8fa06e9b2d7c4a1f53"
+SESSION_ID_ADVICE = (
+    "Use a random string generated fresh for each app session, without dashes: "
+    f"for example 32 random hex characters, such as {SESSION_ID_EXAMPLE} "
+    "(a UUID v4 with its dashes removed)."
+)
 
 # Patterns that indicate misuse of session_id as a tracking identifier
 SESSION_ID_FORBIDDEN_PATTERNS = [
@@ -152,8 +166,7 @@ def validate_session_id(session_id: str) -> None:
         raise PrivacyValidationError(
             code="INVALID_SESSION_ID",
             reason=f"session_id must be at least {SESSION_ID_MIN_LENGTH} characters. "
-            f"Use a random string (e.g., UUID v4 lowercase, base64, or hex) "
-            f"generated fresh for each app session.",
+            f"{SESSION_ID_ADVICE}",
             field="session_id",
         )
 
@@ -170,8 +183,7 @@ def validate_session_id(session_id: str) -> None:
             raise PrivacyValidationError(
                 code="INVALID_SESSION_ID",
                 reason="session_id appears to be a device identifier or predictable pattern. "
-                "Use a random string generated fresh for each app session. "
-                "Example: lowercase UUID v4, random hex, or base64 string.",
+                f"{SESSION_ID_ADVICE}",
                 field="session_id",
             )
 

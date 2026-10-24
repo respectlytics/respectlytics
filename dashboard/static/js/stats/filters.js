@@ -170,113 +170,59 @@ function setCustomDateRange(fromValue, toValue, options = {}) {
 }
 
 /**
- * Update the active state of date preset buttons
- * @param {string} activePreset - The currently active preset
+ * Mark the range in use in the bar's range control: a preset, or the calendar button for days
+ * chosen by hand (it then names them, updateFilterSummary).
+ * @param {string} activePreset - today, 7d, 30d, 90d or custom
  */
 function updateDatePresetButtons(activePreset) {
-    document.querySelectorAll('.pill-tab[data-preset]').forEach(btn => {
-        const isActive = btn.dataset.preset === activePreset;
-        
-        if (isActive) {
-            btn.classList.add('active', 'bg-white', 'shadow-sm', 'text-brand-600');
-            btn.classList.remove('text-gray-600', 'hover:bg-gray-200');
-        } else {
-            btn.classList.remove('active', 'bg-white', 'shadow-sm', 'text-brand-600');
-            btn.classList.add('text-gray-600', 'hover:bg-gray-200');
-        }
-    });
-    
-    document.querySelectorAll('.date-preset-btn[data-preset]').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.preset === activePreset);
+    document.querySelectorAll('#datePresetPills [data-preset]').forEach(btn => {
+        btn.setAttribute('aria-pressed', btn.dataset.preset === activePreset ? 'true' : 'false');
     });
 }
 
 /**
- * Update the filter summary chips and all scope badges
+ * Say the range once, in the bar: the preset is lit, or the calendar button names the days chosen
+ * by hand ("Oct 3-Oct 9"). The live line on the Overview shows only on Today, the one range it
+ * belongs to.
  */
 function updateFilterSummary() {
-    let dateLabelText = 'All time';
-    if (dateRange.from && dateRange.to) {
-        const fromDate = new Date(dateRange.from);
-        const toDate = new Date(dateRange.to);
-        const options = { month: 'short', day: 'numeric' };
-        
-        if (currentDatePreset === 'today') {
-            dateLabelText = 'Today';
-        } else if (currentDatePreset === '7d') {
-            dateLabelText = 'Last 7 days';
-        } else if (currentDatePreset === '30d') {
-            dateLabelText = 'Last 30 days';
-        } else if (currentDatePreset === '90d') {
-            dateLabelText = 'Last 90 days';
-        } else {
-            dateLabelText = `${fromDate.toLocaleDateString('en-US', options)}-${toDate.toLocaleDateString('en-US', options)}`;
+    const custom = document.getElementById('customRangeLabel');
+    if (custom) {
+        let text = '';
+        if (currentDatePreset === 'custom' && dateRange.from && dateRange.to) {
+            const day = (iso) => StatsApp.utils.formatPeriod(iso);
+            text = dateRange.from === dateRange.to ? day(dateRange.from) : `${day(dateRange.from)}-${day(dateRange.to)}`;
+            if (StatsApp.utils.linkedTimezone && StatsApp.utils.linkedTimezone()) text += ', UTC';
         }
+        custom.textContent = text;
+        custom.hidden = !text;
     }
-    
-    const dateLabel = document.getElementById('dateFilterLabel');
-    if (dateLabel) {
-        dateLabel.textContent = dateLabelText;
-    }
-    
-    const isRealtime = currentDatePreset === 'today';
-    const badgeIcon = isRealtime ? '⚡' : '📅';
-    const badgeClasses = isRealtime 
-        ? 'bg-green-100 text-green-700' 
-        : 'bg-blue-100 text-blue-700';
-    
-    const dateBadgeIds = ['scopeBadgeGlobe', 'scopeBadgeMetrics', 'scopeBadgeChart', 'scopeBadgeDAU', 'scopeBadgeSegments'];
-    dateBadgeIds.forEach(id => {
-        const badge = document.getElementById(id);
-        if (badge) {
-            badge.textContent = `${badgeIcon} ${dateLabelText}`;
-            badge.className = `px-3 py-1 text-xs font-medium rounded-full ${badgeClasses}`;
-        }
-    });
-    
-    const combinedBadgeIds = ['scopeBadgeConversion', 'scopeBadgeBehavior'];
-    combinedBadgeIds.forEach(id => {
-        const badge = document.getElementById(id);
-        if (badge) {
-            badge.textContent = `📅 ${dateLabelText} • 🎯 Conversion events`;
-        }
-    });
-    
-    const conversionChip = document.getElementById('conversionFilterChip');
-    const conversionLabel = document.getElementById('conversionFilterLabel');
-    if (conversionChip && conversionLabel) {
-        if (selectedConversionEvents && selectedConversionEvents.length > 0) {
-            conversionChip.style.display = 'inline-flex';
-            if (selectedConversionEvents.length === 1) {
-                conversionLabel.textContent = selectedConversionEvents[0];
-            } else {
-                conversionLabel.textContent = `${selectedConversionEvents.length} events`;
-            }
-        } else {
-            conversionChip.style.display = 'none';
-        }
-    }
+    const live = document.getElementById('last30Section');
+    if (live) live.hidden = currentDatePreset !== 'today';
 }
 
 /**
- * Toggle the event status popover
+ * Open or close the conversion events panel under the bar's conversion control
  */
 function toggleEventPopover() {
     const popover = document.getElementById('eventStatusPopover');
     if (!popover) return;
-
     popover.classList.toggle('active');
+    const open = popover.classList.contains('active');
+    const badge = document.getElementById('eventStatusBadge');
+    if (badge) badge.setAttribute('aria-expanded', open ? 'true' : 'false');
 
-    if (popover.classList.contains('active')) {
-        // Avoid stacking listeners across open/close cycles.
-        // Defer to avoid the opening click immediately closing the popover.
-        setTimeout(() => {
-            document.removeEventListener('click', closeEventPopoverOnClickOutside);
-            document.addEventListener('click', closeEventPopoverOnClickOutside);
-        }, 0);
-    } else {
-        // If the popover is closed via toggling (badge/CTA), clean up the listener.
-        document.removeEventListener('click', closeEventPopoverOnClickOutside);
+    document.removeEventListener('click', closeEventPopoverOnClickOutside);
+    if (open) {
+        // one panel at a time: the event groups one closes
+        const groups = document.getElementById('eventGroupsPanel');
+        if (groups && !groups.hidden) document.getElementById('eventGroupsClose').click();
+        // Deferred so the opening click does not close it again
+        setTimeout(() => document.addEventListener('click', closeEventPopoverOnClickOutside), 0);
+        const first = popover.querySelector('input:not([disabled]), button');
+        if (first) first.focus();
+    } else if (badge && popover.contains(document.activeElement)) {
+        badge.focus();
     }
 }
 
@@ -287,32 +233,33 @@ function closeEventPopoverOnClickOutside(e) {
         document.removeEventListener('click', closeEventPopoverOnClickOutside);
         return;
     }
-
-    const clickedInsidePopover = popover.contains(e.target);
-    const clickedInsideBadge = badge ? badge.contains(e.target) : false;
-
-    if (!clickedInsidePopover && !clickedInsideBadge) {
-        popover.classList.remove('active');
-        document.removeEventListener('click', closeEventPopoverOnClickOutside);
-    }
+    if (!popover.contains(e.target) && !(badge && badge.contains(e.target))) toggleEventPopover();
 }
 
+document.addEventListener('keydown', (e) => {
+    const popover = document.getElementById('eventStatusPopover');
+    if (e.key === 'Escape' && popover && popover.classList.contains('active')) toggleEventPopover();
+});
+
 /**
- * Update the event status badge based on selected events
+ * The bar's conversion control says which events count: "Converts on: purchase", or
+ * "purchase +1" for more than one (a group whose every event is chosen reads as the group).
  */
 function updateEventStatusBadge() {
-    const badge = document.getElementById('eventStatusBadge');
+    const prefix = document.getElementById('eventStatusPrefix');
     const label = document.getElementById('eventStatusLabel');
-    const selectedCount = selectedConversionEvents.length;
-    
-    if (badge && label) {
-        if (selectedCount > 0) {
-            badge.classList.remove('event-status-badge--inactive');
-            label.textContent = `Events: ${selectedCount} Active`;
-        } else {
-            badge.classList.add('event-status-badge--inactive');
-            label.textContent = '🎯 Select Events';
-        }
+    const badge = document.getElementById('eventStatusBadge');
+    if (!label) return;
+    const shown = window.EventGroups ? EventGroups.compress(selectedConversionEvents) : selectedConversionEvents;
+    if (prefix) prefix.hidden = shown.length === 0;
+    label.textContent = shown.length === 0
+        ? 'Choose conversions'
+        : shown.length === 1 ? shown[0] : `${shown[0]} +${shown.length - 1}`;
+    if (badge) {
+        badge.title = shown.join(', ');
+        badge.setAttribute('aria-label', shown.length
+            ? `Converts on ${shown.join(', ')}. Change the conversion events`
+            : 'Choose the events that count as conversions');
     }
 }
 
@@ -333,6 +280,7 @@ function populateGlobalConversionDropdown(eventTypes) {
     
     // Store known events for visual distinction
     knownEventTypes = eventTypes || [];
+    conversionListDrawn = true;
     
     // Populate datalist for autocomplete
     if (datalist) {
@@ -354,28 +302,94 @@ function populateGlobalConversionDropdown(eventTypes) {
     
     eventList.parentElement.style.display = 'block';
     if (emptyHint) emptyHint.style.display = 'none';
-    
-    eventList.innerHTML = allEvents.map(eventType => {
+
+    const esc = StatsApp.utils.escapeHtml;
+    const row = (eventType, indent) => {
         const isSelected = selectedConversionEvents.includes(eventType);
-        const isPending = !knownEventTypes.includes(eventType);
-        const escaped = StatsApp.utils.escapeHtml(eventType);
-        
-        // Visual distinction: pending events have dashed border and amber styling
-        const pendingClasses = isPending ? 'border-l-2 border-dashed border-amber-500/50' : '';
-        const pendingBadge = isPending ? '<span class="ml-auto text-xs text-amber-400 font-medium">pending</span>' : '';
-        
+        const isPending = !knownEventTypes.includes(eventType) && !(window.EventGroups && EventGroups.groupOf(eventType));
+        const escaped = esc(eventType);
+
+        const pendingBadge = isPending ? '<span class="ml-auto flex-none text-xs text-amber-300">Not sent yet</span>' : '';
+
         return `
-            <label class="flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-slate-700/50 transition-colors ${isSelected ? 'bg-indigo-500/10' : ''} ${pendingClasses}">
-                <input type="checkbox" value="${escaped}" ${isSelected ? 'checked' : ''} 
+            <label class="flex items-center gap-3 ${indent ? 'pl-11' : 'px-4'} pr-4 py-2.5 cursor-pointer hover:bg-slate-700/50 transition-colors ${isSelected ? 'bg-indigo-500/10' : ''}">
+                <input type="checkbox" value="${escaped}" ${isSelected ? 'checked' : ''}
                        onchange="handleConversionCheckboxChange(this)"
-                       class="w-4 h-4 rounded border-slate-600 text-indigo-600 focus:ring-indigo-500 bg-slate-700">
-                <span class="text-sm text-slate-200">${escaped}</span>
+                       class="w-4 h-4 flex-none rounded border-slate-600 text-indigo-600 focus:ring-indigo-500 bg-slate-700">
+                <span class="min-w-0 truncate text-sm text-slate-200 ${indent ? 'font-mono' : ''}">${escaped}</span>
                 ${pendingBadge}
             </label>
         `;
-    }).join('');
-    
+    };
+
+    // Each group first, chosen whole with one box or event by event below it (event-groups.js)
+    const groups = window.EventGroups ? EventGroups.state.groups : [];
+    const grouped = new Set(groups.flatMap(g => g.events));
+    const groupsHtml = groups.map(group => `
+        <div class="border-b border-white/5" role="group" aria-label="${esc(group.name)}, a group of ${group.events.length} events">
+            <label class="flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-slate-700/50 transition-colors">
+                <input type="checkbox" data-conversion-group="${esc(group.name)}"
+                       onchange="handleConversionGroupChange(this)"
+                       class="w-4 h-4 flex-none rounded border-slate-600 text-indigo-600 focus:ring-indigo-500 bg-slate-700">
+                ${EventGroups.name(group.name, { plain: true, mono: true })}
+                <span class="ml-auto flex-none text-xs text-slate-400" data-conversion-group-count="${esc(group.name)}"></span>
+            </label>
+            ${group.events.map(e => row(e, true)).join('')}
+        </div>
+    `).join('');
+
+    eventList.innerHTML = groupsHtml + allEvents.filter(e => !grouped.has(e)).map(e => row(e, false)).join('');
+    syncConversionGroups();
     updateEventStatusBadge();
+}
+
+/**
+ * Each group's box in the conversion list: ticked when all its events are chosen, half when some
+ * are, with how many beside it.
+ */
+function syncConversionGroups() {
+    if (!window.EventGroups) return;
+    document.querySelectorAll('#conversionEventList input[data-conversion-group]').forEach(box => {
+        const group = EventGroups.group(box.dataset.conversionGroup);
+        if (!group) return;
+        const chosen = group.events.filter(e => selectedConversionEvents.includes(e)).length;
+        box.checked = chosen === group.events.length;
+        box.indeterminate = chosen > 0 && chosen < group.events.length;
+        const count = [...document.querySelectorAll('#conversionEventList [data-conversion-group-count]')]
+            .find(el => el.dataset.conversionGroupCount === group.name);
+        if (count) count.textContent = box.indeterminate ? `${chosen} of ${group.events.length}` : '';
+    });
+}
+
+/**
+ * A group's box: choose or clear all its events at once.
+ * @param {HTMLInputElement} box - The group's checkbox
+ */
+function handleConversionGroupChange(box) {
+    const group = EventGroups.group(box.dataset.conversionGroup);
+    if (!group) return;
+    const events = new Set(group.events);
+    selectedConversionEvents = selectedConversionEvents.filter(e => !events.has(e));
+    if (box.checked) selectedConversionEvents.push(...group.events);
+    box.closest('[role=group]').querySelectorAll('input[value]').forEach(input => {
+        input.checked = box.checked;
+        input.closest('label').classList.toggle('bg-indigo-500/10', box.checked);
+    });
+    syncConversionGroups();
+    updateEventStatusBadge();
+    updateFilterSummary();
+    if (StatsApp.tabDataCache) {
+        Object.keys(StatsApp.tabDataCache).forEach(key => delete StatsApp.tabDataCache[key]);
+    }
+}
+
+// The list follows the groups: drawn again once they load and after every change
+let conversionListDrawn = false;
+if (window.EventGroups) {
+    EventGroups.onChange(() => {
+        if (conversionListDrawn) populateGlobalConversionDropdown(knownEventTypes);
+        updateFilterSummary();
+    });
 }
 
 /**
@@ -396,46 +410,13 @@ function handleConversionCheckboxChange(checkbox) {
         label.classList.remove('bg-indigo-500/10');
     }
     
+    syncConversionGroups();
     updateEventStatusBadge();
     updateFilterSummary();
     
     // Clear tab data cache so tabs reload with new conversion events
     if (StatsApp.tabDataCache) {
         Object.keys(StatsApp.tabDataCache).forEach(key => delete StatsApp.tabDataCache[key]);
-    }
-}
-
-/**
- * Update the conversion select button label
- */
-function updateConversionSelectLabel() {
-    const label = document.getElementById('conversionSelectLabel');
-    const btn = document.getElementById('conversionSelectBtn');
-    
-    if (!label || !btn) return;
-    
-    if (selectedConversionEvents.length === 0) {
-        label.textContent = 'Select events...';
-        btn.classList.remove('has-selection');
-    } else if (selectedConversionEvents.length === 1) {
-        label.textContent = selectedConversionEvents[0];
-        btn.classList.add('has-selection');
-    } else {
-        label.textContent = `${selectedConversionEvents.length} events selected`;
-        btn.classList.add('has-selection');
-    }
-    
-    updateEventStatusBadge();
-}
-
-/**
- * Update the last updated timestamp in the filter bar
- */
-function updateGlobalLastUpdated() {
-    const el = document.getElementById('globalLastUpdated');
-    if (el) {
-        const now = new Date();
-        el.textContent = `Updated ${now.toLocaleTimeString()}`;
     }
 }
 
@@ -457,7 +438,7 @@ function addCustomConversionEvent() {
     // Validation: max length 255 chars
     if (eventName.length > 255) {
         if (typeof showToast === 'function') {
-            showToast('Event name must be 255 characters or less.', 'error');
+            showToast('An event name has at most 255 characters.', 'error');
         }
         return;
     }
@@ -467,7 +448,7 @@ function addCustomConversionEvent() {
     const safePattern = /^[a-zA-Z0-9_\-\.\s:$]+$/;
     if (!safePattern.test(eventName)) {
         if (typeof showToast === 'function') {
-            showToast('Event name can only contain letters, numbers, underscores, hyphens, dots, spaces, colons, and dollar signs.', 'warning');
+            showToast('An event name can hold letters, numbers, spaces, underscores, hyphens, dots, colons and dollar signs.', 'warning');
         }
         return;
     }
@@ -475,7 +456,7 @@ function addCustomConversionEvent() {
     // Check for duplicates
     if (selectedConversionEvents.includes(eventName)) {
         if (typeof showToast === 'function') {
-            showToast('This event is already selected.', 'warning');
+            showToast('That event is already chosen.', 'warning');
         }
         input.value = '';
         return;
@@ -493,7 +474,7 @@ function addCustomConversionEvent() {
     // Show feedback
     const isPending = !knownEventTypes.includes(eventName);
     if (isPending && typeof showToast === 'function') {
-        showToast(`Added "${eventName}". It will match when events are tracked.`, 'success');
+        showToast(`Added ${eventName}. It counts once your app sends it.`, 'success');
     }
     
     // Clear tab cache
@@ -512,6 +493,4 @@ window.closeEventPopoverOnClickOutside = closeEventPopoverOnClickOutside;
 window.updateEventStatusBadge = updateEventStatusBadge;
 window.populateGlobalConversionDropdown = populateGlobalConversionDropdown;
 window.handleConversionCheckboxChange = handleConversionCheckboxChange;
-window.updateConversionSelectLabel = updateConversionSelectLabel;
-window.updateGlobalLastUpdated = updateGlobalLastUpdated;
 window.addCustomConversionEvent = addCustomConversionEvent;

@@ -5,6 +5,8 @@
 
 window.StatsApp = window.StatsApp || {};
 
+const ESCAPES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+
 StatsApp.utils = {
     /**
      * Get the user's timezone name (IANA format).
@@ -12,7 +14,22 @@ StatsApp.utils = {
      * so that "Today" and other date ranges are interpreted correctly.
      * @returns {string} - IANA timezone name (e.g., 'America/New_York', 'Europe/Stockholm')
      */
+    /**
+     * The timezone a link asked for: the weekly email opens its week in UTC (?tz=UTC), so the
+     * figures match the email's. Null when the page was opened any other way.
+     * @returns {string|null}
+     */
+    linkedTimezone: function() {
+        try {
+            return new URLSearchParams(window.location.search).get('tz') === 'UTC' ? 'UTC' : null;
+        } catch (e) {
+            return null;
+        }
+    },
+
     getUserTimezone: function() {
+        const linked = StatsApp.utils.linkedTimezone();
+        if (linked) return linked;
         try {
             return Intl.DateTimeFormat().resolvedOptions().timeZone;
         } catch (e) {
@@ -52,26 +69,104 @@ StatsApp.utils = {
      * @returns {string} - Escaped text safe for HTML insertion
      */
     escapeHtml: function(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
+        // Quotes as well as markup: event names are written by every copy of an app, anyone who
+        // pulls the app key out of one can send any name, and names land in attributes
+        // (title="...", value="..."), where a bare quote would end the attribute.
+        if (text === null || text === undefined) return '';
+        return String(text).replace(/[&<>"']/g, c => ESCAPES[c]);
     },
 
     /**
-     * Get the flag emoji for a country code
+     * The English name of a country from its ISO 3166-1 alpha-2 code, read from the browser
+     * (Intl.DisplayNames), so every screen names countries the same way; getCountryFlag below
+     * draws the flag beside it.
      * @param {string} countryCode - ISO 3166-1 alpha-2 country code
-     * @returns {string} - Flag emoji or placeholder
+     * @returns {string} - The country's name, the code itself if the browser has none, or 'Unknown'
+     */
+    getCountryName: function(countryCode) {
+        if (!countryCode) return 'Unknown';
+        try {
+            const names = new Intl.DisplayNames(['en'], { type: 'region' });
+            return names.of(countryCode.toUpperCase()) || countryCode;
+        } catch (e) {
+            return countryCode;
+        }
+    },
+
+    /**
+     * The country's flag, drawn by the system from its two-letter code, for beside its name
+     * (owner, 2026-10-24: flags stay wherever a country is named), or '' without a code.
+     * @param {string} countryCode - ISO 3166-1 alpha-2 country code
+     * @returns {string} - The flag, or ''
      */
     getCountryFlag: function(countryCode) {
-        if (!countryCode || countryCode.length !== 2) {
-            return '🌍';
+        if (!countryCode || countryCode.length !== 2) return '';
+        return String.fromCodePoint(...countryCode.toUpperCase().split('').map(c => 127397 + c.charCodeAt(0)));
+    },
+
+    /**
+     * The one way a period is written on this page, in charts, tables and labels: a day as
+     * "Oct 3", a week by its first day ("Oct 3", or with `long` its days, "Oct 3-9"), a month as
+     * "Oct 2026", a quarter as "Q4 2026". Read from the period's own shape (2026-10-03,
+     * 2026-W40, 2026-10, 2026-Q4), so a label never depends on which control asked for it.
+     * @param {string} period - The period as the API writes it
+     * @param {{long?: boolean}} options
+     * @returns {string}
+     */
+    formatPeriod: function(period, { long = false } = {}) {
+        if (!period) return '';
+        const text = String(period);
+        const short = (d) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        let m = text.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (m) return short(new Date(+m[1], +m[2] - 1, +m[3]));
+        m = text.match(/^(\d{4})-W(\d{2})$/);
+        if (m) {
+            // ISO weeks: week 1 holds 4 January, and a week starts on Monday
+            const jan4 = new Date(+m[1], 0, 4);
+            const start = new Date(+m[1], 0, 4 - ((jan4.getDay() + 6) % 7) + (+m[2] - 1) * 7);
+            if (!long) return short(start);
+            const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6);
+            return start.getMonth() === end.getMonth()
+                ? `${short(start)}-${end.getDate()}`
+                : `${short(start)}-${short(end)}`;
         }
-        // Convert country code to regional indicator symbols
-        const codePoints = countryCode
-            .toUpperCase()
-            .split('')
-            .map(char => 127397 + char.charCodeAt(0));
-        return String.fromCodePoint(...codePoints);
+        m = text.match(/^(\d{4})-(\d{2})$/);
+        if (m) return new Date(+m[1], +m[2] - 1, 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+        m = text.match(/^(\d{4})-Q(\d)$/);
+        if (m) return `Q${m[2]} ${m[1]}`;
+        return text;
+    },
+
+    /**
+     * A segment's name as people write it: iOS, Android, Web and Unknown for a platform, the
+     * country's name for a country (getCountryName), the value itself otherwise. Plain text:
+     * the caller escapes it.
+     * @param {string} segment - The segment as the API names it
+     * @param {string} type - platform, country, depth, hour or property:<name>
+     * @returns {string}
+     */
+    segmentName: function(segment, type) {
+        const value = segment === null || segment === undefined ? '' : String(segment);
+        if (type === 'platform') {
+            const known = { ios: 'iOS', android: 'Android', web: 'Web', macos: 'macOS', unknown: 'Unknown', '': 'Unknown' };
+            return known[value.toLowerCase()] || value;
+        }
+        if (type === 'country') return value && value !== 'Unknown' ? StatsApp.utils.getCountryName(value) : 'Unknown';
+        if (type === 'depth') return `${value} ${value === '1' ? 'event' : 'events'}`;
+        return value || 'Unknown';
+    },
+
+    /**
+     * A share as a percentage with as many decimals as a small one needs: 12.3%, 0.45%, 0.012%.
+     * @param {number} rate - Between 0 and 1
+     * @returns {string}
+     */
+    formatRate: function(rate) {
+        const pct = (rate || 0) * 100;
+        if (pct >= 1) return pct.toFixed(1) + '%';
+        if (pct >= 0.1) return pct.toFixed(2) + '%';
+        if (pct > 0) return pct.toFixed(3) + '%';
+        return '0%';
     },
 
     /**
@@ -183,18 +278,6 @@ StatsApp.utils = {
     },
 
     /**
-     * Generate a cohort cell class based on retention value
-     * @param {number} value - Retention percentage 0-100
-     * @returns {string} - CSS class name
-     */
-    getCohortCellClass: function(value) {
-        if (value === null || value === undefined) return 'cohort-cell--none';
-        if (value >= 50) return 'cohort-cell--high';
-        if (value >= 20) return 'cohort-cell--medium';
-        return 'cohort-cell--low';
-    },
-
-    /**
      * Build a storage key for persisting date filters per app.
      * @returns {string|null}
      */
@@ -216,6 +299,8 @@ StatsApp.utils = {
     saveDateFilterState: function(state) {
         try {
             if (typeof window === 'undefined' || !window.localStorage) return;
+            // The public demo keeps nothing in a visitor's browser: its range is always 30 days
+            if (typeof StatsConfig !== 'undefined' && StatsConfig.demo) return;
             const key = StatsApp.utils.getDateFilterStorageKey();
             if (!key) return;
             const payload = {
@@ -251,5 +336,6 @@ StatsApp.utils = {
 // Expose commonly used functions globally for backward compatibility
 window.formatLocalDate = StatsApp.utils.formatLocalDate;
 window.escapeHtml = StatsApp.utils.escapeHtml;
+window.getCountryName = StatsApp.utils.getCountryName;
 window.getCountryFlag = StatsApp.utils.getCountryFlag;
 window.getCsrfToken = StatsApp.utils.getCsrfToken;

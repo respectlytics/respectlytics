@@ -1,100 +1,66 @@
 {% extends 'users/account/base.html' %}
 
+{% block title %}Profile | Respectlytics{% endblock %}
+
 {% block account_content %}
-<div class="space-y-5">
-  
-  <!-- Messages -->
-  {% if messages %}
-  <div class="space-y-2">
-    {% for message in messages %}
-    <div class="p-3 rounded-lg text-sm {% if message.tags == 'success' %}bg-emerald-500/10 border border-emerald-500/20 text-emerald-400{% else %}bg-red-500/10 border border-red-500/20 text-red-400{% endif %}">
-      {{ message }}
+<h1 class="app-title">Profile</h1>
+{% include 'users/account/_messages.html' %}
+
+{# Whether the address is confirmed comes from the account (users/views.py), never from the template #}
+<section class="card" aria-labelledby="emailTitle">
+  <div class="flex flex-wrap items-start gap-x-4 gap-y-3">
+    <div class="min-w-0 flex-1">
+      <h2 id="emailTitle" class="card-title">Email address</h2>
+      <p class="mt-1.5 break-all text-[0.9375rem] text-slate-100">{{ user.email }}</p>
+      {% if email_unconfirmed %}
+      <div class="mt-2 flex items-start gap-1.5 text-sm text-amber-300">
+        <span class="mt-0.5 flex-none">{% include 'partials/icon.html' with name='alert' size='h-4 w-4' %}</span>
+        <p>Not confirmed yet. The link is in the email we sent you. <button type="submit" form="resendForm" class="font-semibold text-amber-200 underline underline-offset-2 hover:text-amber-100">Send it again</button></p>
+      </div>
+      <form id="resendForm" method="post" action="{% url 'resend_verification' %}" hidden>{% csrf_token %}<input type="hidden" name="from" value="profile"></form>
+      {% else %}
+      <p class="mt-2 flex items-center gap-1.5 text-sm text-emerald-300">{% include 'partials/icon.html' with name='check' size='h-4 w-4' %}Confirmed</p>
+      {% endif %}
+      {% if pending_change %}
+      <p class="mt-3 text-sm text-slate-300">Changing to <span class="break-all font-medium text-slate-100">{{ pending_change.new_email }}</span> once you open the link we sent there, by {{ pending_change.expires_at|date:"j F, H:i" }} UTC. <button type="submit" form="cancelChangeForm" class="font-medium text-brand-300 underline underline-offset-2 hover:text-brand-200">Cancel the change</button></p>
+      <form id="cancelChangeForm" method="post" action="{% url 'cancel_email_change' %}" hidden>{% csrf_token %}</form>
+      {% endif %}
     </div>
-    {% endfor %}
+    <button type="button" id="emailEditButton" class="btn-secondary" aria-expanded="{% if email_form.errors %}true{% else %}false{% endif %}" aria-controls="emailForm">Change</button>
   </div>
-  {% endif %}
-  
-  <!-- Account Information Section -->
-  <div>
-    <h2 class="text-lg font-bold text-slate-50 mb-3">Account Information</h2>
-    
-    <div class="space-y-3">
-      <!-- Email -->
-      <div class="p-3 bg-slate-800/50 rounded-lg border border-white/5">
-        <div class="flex items-start justify-between mb-2">
-          <div class="flex-1">
-            <div class="text-xs font-medium text-slate-400 mb-0.5">Email Address</div>
-            <div class="text-sm text-slate-50">{{ user.email }}</div>
-          </div>
-          <button onclick="toggleEmailEdit()" class="text-xs text-purple-400 hover:text-purple-300 transition-colors">
-            Edit
-          </button>
-        </div>
-        
-        <!-- Email Edit Form (Hidden by default) -->
-        <div id="email-edit-form" class="hidden mt-3 pt-3 border-t border-white/5">
-          <form method="post">
-            {% csrf_token %}
-            
-            {% if email_form.errors %}
-            <div class="mb-2 p-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs">
-              {% for field, errors in email_form.errors.items %}
-                {% for error in errors %}
-                  <div>{{ error }}</div>
-                {% endfor %}
-              {% endfor %}
-            </div>
-            {% endif %}
-            
-            <div class="mb-2">
-              <label class="block text-xs font-medium text-slate-300 mb-1.5">New Email Address</label>
-              {{ email_form.email }}
-            </div>
-            
-            <div class="flex gap-2">
-              <button type="submit" class="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-xs font-medium rounded-lg transition-colors">
-                Save Email
-              </button>
-              <button type="button" onclick="toggleEmailEdit()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white text-xs font-medium rounded-lg transition-colors">
-                Cancel
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-      
-      <!-- Account Created -->
-      <div class="p-3 bg-slate-800/50 rounded-lg border border-white/5">
-        <div class="text-xs font-medium text-slate-400 mb-0.5">Member Since</div>
-        <div class="text-sm text-slate-50">{{ user.date_joined|date:"F j, Y" }}</div>
-      </div>
-      
-      <!-- Account Status -->
-      <div class="p-3 bg-slate-800/50 rounded-lg border border-white/5">
-        <div class="text-xs font-medium text-slate-400 mb-0.5">Account Status</div>
-        <div class="flex items-center gap-2">
-          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-            Active
-          </span>
-          <span class="text-xs text-slate-400">Email verified</span>
-        </div>
-      </div>
+
+  <form id="emailForm" method="post" class="mt-5 border-t border-white/10 pt-5"{% if not email_form.errors %} hidden{% endif %}>
+    {% csrf_token %}
+    <label for="{{ email_form.email.id_for_label }}" class="field-label">New email address</label>
+    <div class="max-w-md">{{ email_form.email }}</div>
+    {% for error in email_form.email.errors %}<p class="mt-2 text-sm text-rose-300">{{ error }}</p>{% endfor %}
+    <label for="{{ email_form.password.id_for_label }}" class="field-label mt-4">Current password</label>
+    <div class="max-w-md">{{ email_form.password }}</div>
+    {% for error in email_form.password.errors %}<p class="mt-2 text-sm text-rose-300">{{ error }}</p>{% endfor %}
+    {% url 'cancel_email_change' as confirms_change %}
+    {% if confirms_change %}<p class="mt-3 text-sm text-slate-400">We send a link to the new address. Your address changes when you open it.</p>{% endif %}
+    {% for error in email_form.non_field_errors %}<p class="mt-2 text-sm text-rose-300">{{ error }}</p>{% endfor %}
+    <div class="mt-4 flex flex-wrap gap-3">
+      <button type="submit" class="btn-primary">{% if confirms_change %}Send the link{% else %}Save email address{% endif %}</button>
+      <button type="button" id="emailEditCancel" class="btn-quiet">Cancel</button>
     </div>
-  </div>
-  
-</div>
+  </form>
+</section>
 
 <script>
-function toggleEmailEdit() {
-  const form = document.getElementById('email-edit-form');
-  form.classList.toggle('hidden');
-}
-
-// Auto-show form if there are errors
-{% if email_form.errors %}
-document.addEventListener('DOMContentLoaded', function() {
-  toggleEmailEdit();
-});
-{% endif %}
+(function () {
+  const button = document.getElementById('emailEditButton');
+  const form = document.getElementById('emailForm');
+  const cancel = document.getElementById('emailEditCancel');
+  function show(open) {
+    form.hidden = !open;
+    button.setAttribute('aria-expanded', String(open));
+    if (open) form.querySelector('input[type=email]').focus();
+    else button.focus();
+  }
+  button.addEventListener('click', () => show(form.hidden));
+  cancel.addEventListener('click', () => show(false));
+  form.addEventListener('keydown', (e) => { if (e.key === 'Escape') show(false); });
+})();
 </script>
 {% endblock %}

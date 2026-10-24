@@ -37,6 +37,20 @@ class Command(BaseCommand):
 
         email_lower = email.lower()
 
+        # respectlytics.com locks sign-ins with django-axes (users/lockout.py); the community
+        # edition keeps the per-email lockout below.
+        from django.apps import apps
+
+        if apps.is_installed("axes"):
+            from users.lockout import unlock
+
+            lifted = unlock(username=email_lower)
+            if lifted:
+                self.stdout.write(self.style.SUCCESS(f"Lifted {lifted} lockout(s) of {email}"))
+            else:
+                self.stdout.write(self.style.WARNING(f"Account {email} is not locked."))
+            return
+
         # Check current status
         is_locked = cache.get(f"account_locked:{email_lower}", False)
         failed_attempts = cache.get(f"login_failures:{email_lower}", 0)

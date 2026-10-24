@@ -17,70 +17,32 @@ let currentCountriesData = [];
 let countryPaths = [];
 
 /**
- * Toggle map fullscreen mode
+ * Toggle map fullscreen mode: the map fills the window on the page's own surface (stats.css);
+ * the SVG scales with its box, so nothing is drawn again
  */
 function toggleGlobeFullscreen() {
     const mapSection = document.getElementById('globeSection');
-    const mapViz = document.getElementById('globeViz');
-    const btn = document.getElementById('globeFullscreenBtn');
-    
-    if (!mapSection || !mapViz || !btn) return;
-    
-    if (!mapSection.classList.contains('map-fullscreen')) {
-        // Enter fullscreen
-        mapSection.classList.add('map-fullscreen');
-        mapSection.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            z-index: 9999;
-            margin: 0;
-            border-radius: 0;
-            padding: 12px;
-            background: linear-gradient(180deg, #0a0e27 0%, #1a1f3a 100%);
-        `;
-        mapViz.style.height = 'calc(100vh - 24px)';
-        btn.textContent = '✕';
-        btn.title = 'Exit Fullscreen';
-        
-        // Redraw map at new size
-        setTimeout(() => {
-            mapInitialized = false;
-            render2DMap(currentCountriesData);
-        }, 50);
-        
-        // Add escape key listener
-        document.addEventListener('keydown', handleMapEscape);
-    } else {
+    if (!mapSection) return;
+    if (mapSection.classList.contains('map-fullscreen')) {
         exitGlobeFullscreen();
+        return;
     }
+    mapSection.classList.add('map-fullscreen');
+    document.addEventListener('keydown', handleMapEscape);
+    const close = document.getElementById('globeCloseBtn');
+    if (close) close.focus();
 }
 
 /**
- * Exit map fullscreen mode
+ * Exit map fullscreen mode, giving the focus back to the button that opened it
  */
 function exitGlobeFullscreen() {
     const mapSection = document.getElementById('globeSection');
-    const mapViz = document.getElementById('globeViz');
-    const btn = document.getElementById('globeFullscreenBtn');
-    
-    if (!mapSection || !mapViz || !btn) return;
-    
+    if (!mapSection || !mapSection.classList.contains('map-fullscreen')) return;
     mapSection.classList.remove('map-fullscreen');
-    mapSection.style.cssText = 'padding: 8px; position: relative;';
-    mapViz.style.height = '380px';
-    btn.textContent = '⛶';
-    btn.title = 'Toggle Fullscreen';
-    
-    // Redraw map at normal size
-    setTimeout(() => {
-        mapInitialized = false;
-        render2DMap(currentCountriesData);
-    }, 50);
-    
     document.removeEventListener('keydown', handleMapEscape);
+    const open = document.getElementById('globeFullscreenBtn');
+    if (open) open.focus();
 }
 
 /**
@@ -97,27 +59,6 @@ function handleGlobeEscape(e) {
     handleMapEscape(e);
 }
 
-/**
- * Get flag emoji from 2-letter country code
- */
-function getFlagEmoji(countryCode) {
-    if (!countryCode || countryCode.length !== 2) return '🌍';
-    const codePoints = countryCode
-        .toUpperCase()
-        .split('')
-        .map(char => 127397 + char.charCodeAt(0));
-    return String.fromCodePoint(...codePoints);
-}
-
-/**
- * Get conversion rate color (green = good, yellow = ok, red = low)
- */
-function getConversionRateColor(rate) {
-    if (rate === 0) return '#64748b';
-    if (rate >= 0.05) return '#34d399';
-    if (rate >= 0.02) return '#fcd34d';
-    return '#fb7185';
-}
 
 /**
  * Remove any active tooltip
@@ -137,63 +78,23 @@ function removeTooltip() {
 function showTooltip(e, name, iso, data) {
     removeTooltip();
     
-    const flagEmoji = getFlagEmoji(iso);
     const tooltip = document.createElement('div');
     tooltip.id = 'mapTooltip';
-    tooltip.style.cssText = `
-        position: fixed;
-        background: #1e293b;
-        border: 1px solid rgba(255, 255, 255, 0.15);
-        padding: 12px 16px;
-        border-radius: 10px;
-        color: white;
-        pointer-events: none;
-        z-index: 10000;
-        font-size: 14px;
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-        min-width: 220px;
-        backdrop-filter: blur(8px);
-    `;
-    
+    tooltip.className = 'fixed z-[10000] min-w-[12rem] rounded-lg border border-white/15 bg-[#0f172a] px-3.5 py-3 text-sm text-slate-200 shadow-2xl pointer-events-none';
+    const esc = StatsApp.utils.escapeHtml;
+    const row = (label, value) => `<div class="flex justify-between gap-6"><span class="text-slate-400">${label}</span><span class="text-slate-50">${value}</span></div>`;
+    const title = `<div class="mb-1.5 font-semibold text-slate-50">${getCountryFlag(iso)} ${esc(name)}</div>`;
     if (!data || data.count === 0) {
-        tooltip.innerHTML = `
-            <div style="font-weight: 600; margin-bottom: 4px;">${flagEmoji} ${name}</div>
-            <div style="color: #64748b; font-size: 13px;">No data</div>
-        `;
+        tooltip.innerHTML = `${title}<div class="text-slate-400">No sessions</div>`;
     } else {
-        const convRatePercent = data.conversion_rate.toFixed(1);
-        const convRateColor = getConversionRateColor(data.conversion_rate / 100);
-        
-        let metricsHTML = `
-            <div style="font-weight: 600; margin-bottom: 8px; font-size: 15px;">${flagEmoji} ${name}</div>
-            <div style="display: flex; flex-direction: column; gap: 5px; font-size: 13px;">
-                <div style="display: flex; justify-content: space-between;">
-                    <span style="color: #94a3b8;">Events:</span>
-                    <span style="color: #f8fafc; font-weight: 500;">${(data.count || 0).toLocaleString()}</span>
-                </div>
-                <div style="display: flex; justify-content: space-between;">
-                    <span style="color: #94a3b8;">Sessions:</span>
-                    <span style="color: #f8fafc; font-weight: 500;">${(data.sessions || 0).toLocaleString()}</span>
-                </div>
-        `;
-        
-        if (data.conversions > 0) {
-            metricsHTML += `
-                <div style="display: flex; justify-content: space-between;">
-                    <span style="color: #94a3b8;">Conversions:</span>
-                    <span style="color: #f8fafc; font-weight: 500;">${(data.conversions || 0).toLocaleString()}</span>
-                </div>
-                <div style="display: flex; justify-content: space-between; margin-top: 4px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.1);">
-                    <span style="color: #94a3b8;">Conv. Rate:</span>
-                    <span style="color: ${convRateColor}; font-weight: 600;">${convRatePercent}%</span>
-                </div>
-            `;
-        }
-        
-        metricsHTML += `</div>`;
-        tooltip.innerHTML = metricsHTML;
+        tooltip.innerHTML = title
+            + row('Sessions', (data.sessions || 0).toLocaleString())
+            + row('Events', (data.count || 0).toLocaleString())
+            + (data.conversions > 0
+                ? row('Conversions', (data.conversions || 0).toLocaleString()) + row('Conversion rate', `${data.conversion_rate.toFixed(1)}%`)
+                : '');
     }
-    
+
     document.body.appendChild(tooltip);
     activeTooltip = tooltip;
     
@@ -273,31 +174,22 @@ async function render2DMap(countriesData) {
         // Find max count for color scaling
         const maxCount = Math.max(...(countriesData || []).map(c => c.count || c.events || 0), 1);
         
-        // Color scale function - teal/cyan for data
+        // Land without sessions in a quiet slate; with them, brand tints by how many
         const getCountryColor = (data) => {
             const count = data ? data.count : 0;
-            if (!count || count === 0) return '#2d4a5e'; // Muted blue-gray for no data
-            const intensity = Math.min(count / maxCount, 1);
-            // Teal/cyan gradient
-            const r = Math.round(30 + (100 * intensity));
-            const g = Math.round(160 + (90 * intensity));
-            const b = Math.round(180 + (75 * intensity));
-            return `rgb(${r}, ${g}, ${b})`;
+            if (!count) return '#334155';
+            const t = Math.sqrt(Math.min(count / maxCount, 1));
+            const mix = (a, b) => Math.round(a + (b - a) * t);
+            // from brand-800 (#3730a3) to brand-400 (#818cf8)
+            return `rgb(${mix(55, 129)}, ${mix(48, 140)}, ${mix(163, 248)})`;
         };
-        
+
         // Create SVG with fixed dimensions for proper world map aspect ratio
         const mapWidth = 800;
         const mapHeight = 400;
         
         container.innerHTML = `
-            <svg id="mapSvg" width="100%" height="100%" viewBox="0 0 ${mapWidth} ${mapHeight}" preserveAspectRatio="xMidYMid meet" style="background: linear-gradient(180deg, #0f172a 0%, #1e3a5f 50%, #0f172a 100%); border-radius: 8px;">
-                <defs>
-                    <radialGradient id="oceanGradient" cx="50%" cy="50%" r="70%">
-                        <stop offset="0%" style="stop-color:#1e4976;stop-opacity:1" />
-                        <stop offset="100%" style="stop-color:#0a1628;stop-opacity:1" />
-                    </radialGradient>
-                </defs>
-                <rect width="100%" height="100%" fill="url(#oceanGradient)"/>
+            <svg id="mapSvg" width="100%" height="100%" viewBox="0 0 ${mapWidth} ${mapHeight}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Map of sessions by country">
                 <g id="mapGroup"></g>
             </svg>
         `;
@@ -343,7 +235,7 @@ async function render2DMap(countriesData) {
             const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
             path.setAttribute('d', pathData);
             path.setAttribute('fill', baseColor);
-            path.setAttribute('stroke', '#0a1628');
+            path.setAttribute('stroke', '#1e293b');
             path.setAttribute('stroke-width', '0.5');
             path.style.cursor = 'pointer';
             path.style.transition = 'fill 0.15s ease';
@@ -382,7 +274,7 @@ async function render2DMap(countriesData) {
                 // Highlight all paths for this country
                 countryPaths.forEach(cp => {
                     if (cp.iso === iso) {
-                        cp.path.setAttribute('fill', '#ff6b6b');
+                        cp.path.setAttribute('fill', '#c7d2fe');
                     }
                 });
                 showTooltip(e, name, iso, data);
@@ -410,7 +302,7 @@ async function render2DMap(countriesData) {
                 e.preventDefault();
                 countryPaths.forEach(cp => {
                     if (cp.iso === iso) {
-                        cp.path.setAttribute('fill', '#ff6b6b');
+                        cp.path.setAttribute('fill', '#c7d2fe');
                     }
                 });
                 showTooltip(e, name, iso, data);
@@ -428,23 +320,10 @@ async function render2DMap(countriesData) {
             });
         });
         
-        // Update last updated timestamp
-        const now = new Date();
-        const lastUpdatedEl = document.getElementById('globeLastUpdated');
-        if (lastUpdatedEl) {
-            lastUpdatedEl.textContent = `Updated: ${now.toLocaleTimeString()}`;
-        }
-        
         mapInitialized = true;
         
     } catch (error) {
-        container.innerHTML = `
-            <div style="padding: 4rem 2rem; text-align: center; color: rgba(255,255,255,0.7); background: rgba(0,0,0,0.3); border-radius: 12px;">
-                <div style="font-size: 3rem; margin-bottom: 1rem;">🗺️</div>
-                <div style="font-size: 1.2rem; margin-bottom: 0.5rem;">Unable to load map</div>
-                <div style="font-size: 0.9rem; opacity: 0.7;">Map data could not be loaded. Please try refreshing the page.</div>
-            </div>
-        `;
+        container.innerHTML = '<p class="flex h-full items-center justify-center text-sm text-slate-400">The map could not be loaded. Reload the page to try again.</p>';
     }
 }
 
