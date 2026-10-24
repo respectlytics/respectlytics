@@ -21,9 +21,9 @@
 
 ## What is Respectlytics?
 
-Respectlytics helps developers avoid collecting personal data in the first place. Our motto is **Return of Avoidance (ROA)** — we believe the best way to handle sensitive data is to never collect it.
+Respectlytics helps developers avoid collecting personal data in the first place. Our motto is **Return of Avoidance (ROA)**: we believe the best way to handle sensitive data is to never collect it.
 
-We use anonymized identifiers stored only in device memory (RAM) that rotate automatically every two hours or upon app restart. IP addresses are processed transiently for approximate country lookup and immediately discarded — no personal data is ever persisted.
+We use anonymized identifiers stored only in device memory (RAM) that rotate automatically every two hours or upon app restart. IP addresses are processed transiently for approximate country lookup and then discarded; it is never stored.
 
 **Only 5 fields are stored per event:**
 
@@ -61,7 +61,7 @@ docker compose up -d
 docker compose exec web python manage.py createsuperuser
 ```
 
-Open [http://localhost:8080](http://localhost:8080) — you're ready to go.
+Open [http://localhost:8080](http://localhost:8080) and you're ready to go.
 
 ---
 
@@ -88,7 +88,7 @@ pip install -r requirements.txt
 
 # Configure environment
 cp .env.example .env
-# Edit .env — set DATABASE_URL and SECRET_KEY at minimum
+# Edit .env: set DATABASE_URL and SECRET_KEY at minimum
 
 # Run migrations
 python manage.py migrate
@@ -214,17 +214,17 @@ Official SDKs for mobile platforms:
 | React Native | [respectlytics-react-native](https://github.com/respectlytics/respectlytics-react-native) |
 | Kotlin (Android) | [respectlytics-kotlin](https://github.com/respectlytics/respectlytics-kotlin) |
 
-SDK documentation: [https://respectlytics.com/sdk/](https://respectlytics.com/sdk/)
+SDK documentation: [https://respectlytics.com/sdk/](https://respectlytics.com/sdk/?ref=respectlytics-github)
 
 ### SDK Public API
 
 ```
-configure(appKey, serverUrl)  — Initialize the SDK
-track(eventName)              — Track an analytics event
-flush()                       — Force send queued events
+configure(appKey, serverUrl)  # initialize the SDK
+track(eventName)              # track an analytics event
+flush()                       # send queued events now
 ```
 
-> **Note:** There is no `identify()` or `reset()` method. Respectlytics uses session-based analytics only — no persistent user tracking.
+> **Note:** There is no `identify()` or `reset()` method. Respectlytics uses session-based analytics only, with no persistent user tracking.
 
 ---
 
@@ -270,7 +270,7 @@ Respectlytics helps developers avoid collecting personal data in the first place
 | `timestamp` | Time-series analysis | Yes |
 | `platform` | Platform breakdown | Yes |
 | `country` | Geographic distribution | Yes (approximate, from IP) |
-| IP address | Country lookup only | **No** — processed transiently, immediately discarded |
+| IP address | Country lookup only | **No**: processed transiently, then discarded |
 
 ### What We Don't Collect
 
@@ -340,7 +340,7 @@ If you modify the software and provide it as a network service, you must make yo
 
 ## Managed Version
 
-Don't want to self-host? **[Respectlytics Cloud](https://respectlytics.com)** offers:
+Don't want to self-host? **[Respectlytics Cloud](https://respectlytics.com/?ref=respectlytics-github)** offers:
 
 - Fully managed infrastructure
 - Automatic GeoIP updates
@@ -348,7 +348,7 @@ Don't want to self-host? **[Respectlytics Cloud](https://respectlytics.com)** of
 - Priority support
 - No server maintenance
 
-[Start free →](https://respectlytics.com)
+[Start free](https://respectlytics.com/?ref=respectlytics-github)
 
 ---
 
