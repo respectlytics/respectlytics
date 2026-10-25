@@ -2,6 +2,7 @@
  * The signed-in screens' menus and help (partials/app_bar.html, partials/help.html): a button
  * with data-popover opens the element its aria-controls names on a click or a key, and Esc, a
  * click elsewhere or opening another closes it, giving focus back to its button. One at a time.
+ * A short hint shown on hover or focus (.tooltip-trigger) closes on Esc too.
  *
  * And "Email us" on every page (partials/email_menu.html, the loheden-design skill, Contact): a
  * link to /email/ opens a small menu with Open in Mail and Copy address; the address is fetched
@@ -44,6 +45,18 @@
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && open) close(true);
     });
+
+    // A hint shown on hover or focus (.tooltip-trigger) hides on Esc, and comes back once the
+    // pointer or the focus has left it (WCAG 1.4.13)
+    document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape') return;
+        document.querySelectorAll('.tooltip-trigger:hover, .tooltip-trigger:focus-within')
+            .forEach((tip) => tip.setAttribute('data-dismissed', ''));
+    });
+    ['mouseout', 'focusout'].forEach((type) => document.addEventListener(type, (e) => {
+        const tip = e.target.closest && e.target.closest('.tooltip-trigger[data-dismissed]');
+        if (tip && !tip.contains(e.relatedTarget)) tip.removeAttribute('data-dismissed');
+    }));
 
     // ===== Email us =====
     const mailMenu = document.getElementById('email-menu');

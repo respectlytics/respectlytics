@@ -2,12 +2,13 @@
 The Overview (stats.html loads it, stats/charts.js and stats/tables.js draw it): the range's
 figures, last week's findings, the trend, where sessions come from, which events they send and
 the figures by day. Each card shows its own skeleton while it loads (stats.css, .is-loading).
+Each figure has its own colour, on its tile and its chart alike (stats/charts.js, SERIES).
 {% endcomment %}
 <div class="space-y-6">
     {# Today only: what arrived in the last half hour #}
     <div id="last30Section" hidden class="relative">
         <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-            <span class="h-2 w-2 flex-none rounded-full bg-emerald-400" aria-hidden="true"></span>
+            <span id="last30Dot" class="live-dot-off" aria-hidden="true"></span>
             <p class="text-slate-300"><span id="last30Events" class="font-semibold text-slate-50">0</span> <span id="last30Unit">events</span> in the last 30 minutes</p>
             <button type="button" id="viewActivityBtn" onclick="toggleActivityPopover()" aria-expanded="false" aria-controls="activityPopover" hidden
                     class="rounded-md font-medium text-brand-300 underline-offset-2 hover:text-brand-200 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-400">See them</button>
@@ -28,20 +29,20 @@ the figures by day. Each card shows its own skeleton while it loads (stats.css, 
     <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 md:gap-4">
         <div class="card p-4 md:p-5">
             <div class="flex min-h-6 items-center justify-between gap-2">
-                <p class="text-sm font-medium text-slate-400">Events</p>
+                <p class="flex items-center gap-2 text-sm font-medium text-slate-400"><span class="icon-chip h-7 w-7 rounded-lg bg-indigo-400/10 text-indigo-300 ring-indigo-300/25">{% include 'partials/icon.html' with name='bars' size='h-4 w-4' %}</span>Events</p>
             </div>
             <p class="loads mt-2 text-[1.625rem] font-semibold leading-tight tracking-tight text-slate-50" id="totalEvents">-</p>
         </div>
         <div class="card p-4 md:p-5">
             <div class="flex min-h-6 items-center justify-between gap-2">
-                <p class="text-sm font-medium text-slate-400">Sessions</p>
+                <p class="flex items-center gap-2 text-sm font-medium text-slate-400"><span class="icon-chip h-7 w-7 rounded-lg bg-sky-400/10 text-sky-300 ring-sky-300/25">{% include 'partials/icon.html' with name='phone' size='h-4 w-4' %}</span>Sessions</p>
                 {% include 'partials/help.html' with id="helpSessions" label="About sessions" align="right-0" text="The sessions with at least one event in this range. A session lasts at most 2 hours, and each one is counted on its own." %}
             </div>
             <p class="loads mt-2 text-[1.625rem] font-semibold leading-tight tracking-tight text-slate-50" id="activeSessions">-</p>
         </div>
         <div class="card col-span-2 p-4 sm:col-span-1 md:p-5">
             <div class="flex min-h-6 items-center justify-between gap-2">
-                <p class="text-sm font-medium text-slate-400">Average session</p>
+                <p class="flex items-center gap-2 text-sm font-medium text-slate-400"><span class="icon-chip h-7 w-7 rounded-lg bg-violet-400/10 text-violet-300 ring-violet-300/25">{% include 'partials/icon.html' with name='clock' size='h-4 w-4' %}</span>Average session</p>
                 {% include 'partials/help.html' with id="helpAvgSession" label="About the average session" align="right-0" text="The time from a session's first event to its last, averaged over the sessions with more than one event." %}
             </div>
             <p class="loads mt-2 text-[1.625rem] font-semibold leading-tight tracking-tight text-slate-50" id="avgSessionLength">-</p>
@@ -53,8 +54,8 @@ the figures by day. Each card shows its own skeleton while it loads (stats.css, 
     {# Last week: the weekly email's findings for this app (conversion/insight_cards.py), at a glance. #}
     {# Shown once there is a week to read; only on respectlytics.com, where the URL resolves. #}
     <section id="insightsCard" data-url="{{ insights_url }}" hidden aria-labelledby="insightsTitle" class="card">
-        <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-            <h3 id="insightsTitle" class="card-title">Last week</h3>
+        <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+            <div class="flex items-center gap-2.5"><span class="icon-chip h-8 w-8 rounded-lg bg-fuchsia-400/10 text-fuchsia-300 ring-fuchsia-300/25">{% include 'partials/icon.html' with name='spark' size='h-4 w-4' %}</span><h3 id="insightsTitle" class="card-title">Last week</h3></div>
             <p id="insightsWeek" class="text-sm text-slate-400"></p>
         </div>
         <ul id="insightsList" class="mt-3 divide-y divide-white/10"></ul>
@@ -75,7 +76,8 @@ the figures by day. Each card shows its own skeleton while it loads (stats.css, 
     {# The trend: events, sessions and the average session, one chart each #}
     <section class="card" aria-labelledby="overTimeTitle">
         <div class="flex flex-wrap items-center justify-between gap-3">
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2.5">
+                <span class="icon-chip h-8 w-8 rounded-lg bg-indigo-400/10 text-indigo-300 ring-indigo-300/25">{% include 'partials/icon.html' with name='rise' size='h-4 w-4' %}</span>
                 <h3 id="overTimeTitle" class="card-title">Over time</h3>
                 {% include 'partials/help.html' with id="helpOverTime" label="About these charts" text="Each point is a day, a week or a month of the range. A point's average session is left out when it has fewer than 10 sessions." %}
             </div>
@@ -88,15 +90,15 @@ the figures by day. Each card shows its own skeleton while it loads (stats.css, 
         <div id="overTimeCharts" class="loads mt-5">
             <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
                 <div>
-                    <h4 class="text-sm font-medium text-slate-300">Events</h4>
+                    <h4 class="flex items-center gap-2 text-sm font-medium text-slate-300"><span class="h-2 w-2 rounded-full bg-indigo-400" aria-hidden="true"></span>Events</h4>
                     <div class="chart-box mt-3"><canvas id="eventsChart" role="img" aria-label="Events over time"></canvas></div>
                 </div>
                 <div>
-                    <h4 class="text-sm font-medium text-slate-300">Sessions</h4>
+                    <h4 class="flex items-center gap-2 text-sm font-medium text-slate-300"><span class="h-2 w-2 rounded-full bg-sky-400" aria-hidden="true"></span>Sessions</h4>
                     <div class="chart-box mt-3"><canvas id="dauChart" role="img" aria-label="Sessions over time"></canvas></div>
                 </div>
                 <div>
-                    <h4 class="text-sm font-medium text-slate-300">Average session</h4>
+                    <h4 class="flex items-center gap-2 text-sm font-medium text-slate-300"><span class="h-2 w-2 rounded-full bg-violet-400" aria-hidden="true"></span>Average session</h4>
                     <div class="chart-box mt-3"><canvas id="durationChart" role="img" aria-label="Average session over time"></canvas></div>
                     <div id="durationEmpty" hidden class="chart-box mt-3">
                         <p class="flex h-full items-center justify-center text-center text-sm text-slate-400">Too few sessions to average yet.</p>
@@ -115,7 +117,8 @@ the figures by day. Each card shows its own skeleton while it loads (stats.css, 
     {# Where sessions come from: the map and the countries ranked by sessions #}
     <section class="card" aria-labelledby="countriesTitle">
         <div class="flex items-center justify-between gap-3">
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2.5">
+                <span class="icon-chip h-8 w-8 rounded-lg bg-sky-400/10 text-sky-300 ring-sky-300/25">{% include 'partials/icon.html' with name='globe' size='h-4 w-4' %}</span>
                 <h3 id="countriesTitle" class="card-title">Countries</h3>
                 {% include 'partials/help.html' with id="helpCountries" label="About countries" text="Sessions by the country their events were sent from. The conversion rate is the share of a country's sessions with a conversion event." %}
             </div>
@@ -128,7 +131,7 @@ the figures by day. Each card shows its own skeleton while it loads (stats.css, 
                 <div id="globeViz" class="loads"></div>
             </div>
             <div class="lg:col-span-2">
-                <div class="loads">
+                <div id="countriesBox" class="loads">
                     <table class="stats-table">
                         <thead>
                             <tr>
@@ -148,7 +151,8 @@ the figures by day. Each card shows its own skeleton while it loads (stats.css, 
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-start">
         {# Which events the app sends, groups counted together #}
         <section class="card" aria-labelledby="eventsTypeTitle">
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2.5">
+                <span class="icon-chip h-8 w-8 rounded-lg bg-indigo-400/10 text-indigo-300 ring-indigo-300/25">{% include 'partials/icon.html' with name='layers' size='h-4 w-4' %}</span>
                 <h3 id="eventsTypeTitle" class="card-title">Events by type</h3>
                 {% include 'partials/help.html' with id="helpEventsType" label="About events by type" text="Your 10 most sent events, each with its share of every event in the range. Events named as kinds of one event, such as purchase_light and purchase_pro, count together as purchase. See and change the groups in Event groups." %}
             </div>
@@ -157,7 +161,7 @@ the figures by day. Each card shows its own skeleton while it loads (stats.css, 
 
         {# The figures by day, week or month, with the change from the one before #}
         <section class="card" aria-labelledby="periodBreakdownTitle">
-            <h3 id="periodBreakdownTitle" class="card-title">By day</h3>
+            <div class="flex items-center gap-2.5"><span class="icon-chip h-8 w-8 rounded-lg bg-indigo-400/10 text-indigo-300 ring-indigo-300/25">{% include 'partials/icon.html' with name='bars' size='h-4 w-4' %}</span><h3 id="periodBreakdownTitle" class="card-title">By day</h3></div>
             <div class="loads mt-4 overflow-x-auto"><div id="dailyTable"></div></div>
             <button type="button" id="dailyTableMore" hidden onclick="togglePeriodDetails()" aria-controls="dailyTable" class="btn-quiet -ml-3 mt-2">Show all</button>
         </section>

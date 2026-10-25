@@ -80,7 +80,10 @@ body[data-tab="experiments"] [data-page-filter] { display: none !important; }
 .event-status-popover.active { display: block !important; }
 
 /* ==========================================================================
-   Ranked data as a list of bars: full names, the figure beside them, one colour
+   Ranked data as a list of bars: full names, the figure beside them, and the
+   colour of what they measure: events indigo (the default), time violet,
+   converting emerald, sessions lost rose, and in Segments each segment its own
+   hue (stats.html, SEGMENT_HUES)
    ========================================================================== */
 
 .bar-track {
@@ -99,6 +102,10 @@ body[data-tab="experiments"] [data-page-filter] { display: none !important; }
 }
 .bar-fill + .bar-fill { box-shadow: inset 2px 0 0 #1e293b; }  /* a hairline between a group's events */
 .bar-fill.is-quiet { background: #475569; }
+.bar-fill.is-time { background: #a78bfa; }     /* violet-400 */
+.bar-fill.is-convert { background: #34d399; }  /* emerald-400 */
+.bar-fill.is-lost { background: #fb7185; }     /* rose-400 */
+.bar-fill.is-without { background: #64748b; }  /* slate-500: the sessions without an event */
 
 /* ==========================================================================
    Waiting: each card shows its own skeleton while it loads

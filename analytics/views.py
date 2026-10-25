@@ -38,7 +38,12 @@ from rest_framework.views import APIView
 from . import event_groups
 from .authentication import APP_OWNER, AppKeyAuthentication
 from .client_ip import get_client_ip
-from .date_utils import freshness_mark, get_cache_key_with_timezone, parse_date_range
+from .date_utils import (
+    _get_timezone_safe,
+    freshness_mark,
+    get_cache_key_with_timezone,
+    parse_date_range,
+)
 from .event_groups import with_groups
 from .geolocation import get_location_from_ip
 from .models import App, DeletionLog, Event
@@ -506,7 +511,7 @@ class EventSummaryView(APIView):
 
         # Events by day (include unique_buckets for JS compatibility)
         events_by_day = list(
-            events.annotate(date=TruncDate("timestamp"))
+            events.annotate(date=TruncDate("timestamp", tzinfo=_get_timezone_safe(tz_name)))
             .values("date")
             .annotate(count=Count("id"), unique_buckets=Count("session_id", distinct=True))
             .order_by("date")

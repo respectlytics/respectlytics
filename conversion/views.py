@@ -23,6 +23,7 @@ import logging
 import re
 from collections import defaultdict
 from datetime import datetime, timedelta
+from functools import partial
 
 from dateutil.relativedelta import relativedelta
 from django.db.models import Count
@@ -36,7 +37,12 @@ from rest_framework.views import APIView
 
 from analytics import event_groups
 from analytics.authentication import APP_OWNER
-from analytics.date_utils import freshness_mark, get_cache_key_with_timezone, parse_date_range
+from analytics.date_utils import (
+    _get_timezone_safe,
+    freshness_mark,
+    get_cache_key_with_timezone,
+    parse_date_range,
+)
 
 # Import from analytics app (shared models, auth, permissions)
 from analytics.models import Event
@@ -302,13 +308,17 @@ This provides usage metrics without requiring user consent for tracking.
             "year": TruncYear,
         }
         trunc_func = trunc_functions[granularity]
+        # Periods are the reader's own days, weeks and months, as the range is: until 2026-10-25
+        # they were cut in UTC, so a reader east of UTC got a first day of a few hours and each
+        # day shifted by the offset (conversion/test_timezones.py)
+        zone = _get_timezone_safe(tz_name)
 
         # Calculate active sessions per period
         # A "session" is a unique session_id (in-memory, max 2 hours)
         period_data = (
             events.filter(session_id__isnull=False)
             .exclude(session_id="")
-            .annotate(period=trunc_func("timestamp"))
+            .annotate(period=trunc_func("timestamp", tzinfo=zone))
             .values("period")
             .annotate(unique_sessions=Count("session_id", distinct=True), total_events=Count("id"))
             .order_by("-period")
@@ -316,7 +326,9 @@ This provides usage metrics without requiring user consent for tracking.
 
         # Calculate average session length per period
         # Uses raw SQL for efficiency - calculates time between first and last event per session
-        session_lengths = self._calculate_session_lengths(app.id, from_date, to_date, granularity)
+        session_lengths = self._calculate_session_lengths(
+            app.id, from_date, to_date, granularity, zone
+        )
 
         # Format period labels based on granularity
         active_sessions = []
@@ -453,7 +465,7 @@ This provides usage metrics without requiring user consent for tracking.
             return period_start + relativedelta(years=1)
         return period_start + timedelta(days=1)
 
-    def _calculate_session_lengths(self, app_id, from_date, to_date, granularity):
+    def _calculate_session_lengths(self, app_id, from_date, to_date, granularity, zone):
         """
         Calculate average session length per period using raw SQL.
 
@@ -466,6 +478,7 @@ This provides usage metrics without requiring user consent for tracking.
             from_date: Start datetime for the query
             to_date: End datetime for the query
             granularity: Time period grouping (day, week, month, quarter, year)
+            zone: the reader's time zone, whose periods these are
 
         Returns:
             Dict mapping period labels to {avg_duration, session_count}
@@ -474,17 +487,17 @@ This provides usage metrics without requiring user consent for tracking.
 
         # Determine truncation SQL based on granularity
         trunc_sql_map = {
-            "day": "DATE_TRUNC('day', MIN(timestamp))",
-            "week": "DATE_TRUNC('week', MIN(timestamp))",
-            "month": "DATE_TRUNC('month', MIN(timestamp))",
-            "quarter": "DATE_TRUNC('quarter', MIN(timestamp))",
-            "year": "DATE_TRUNC('year', MIN(timestamp))",
+            "day": "DATE_TRUNC('day', MIN(timestamp) AT TIME ZONE %s)",
+            "week": "DATE_TRUNC('week', MIN(timestamp) AT TIME ZONE %s)",
+            "month": "DATE_TRUNC('month', MIN(timestamp) AT TIME ZONE %s)",
+            "quarter": "DATE_TRUNC('quarter', MIN(timestamp) AT TIME ZONE %s)",
+            "year": "DATE_TRUNC('year', MIN(timestamp) AT TIME ZONE %s)",
         }
         trunc_sql = trunc_sql_map.get(granularity, trunc_sql_map["day"])
 
-        # Build date filter
+        # Build date filter; the zone's placeholder comes first in the query, so its value too
         date_filter = ""
-        params = [str(app_id)]
+        params = [zone.key, str(app_id)]
         if from_date:
             date_filter += " AND timestamp >= %s"
             params.append(from_date)
@@ -817,12 +830,13 @@ A session is a unique app usage period (max 2 hours), identified by session_id.
             "year": TruncYear,
         }
         trunc_func = trunc_functions[granularity]
+        zone = _get_timezone_safe(tz_name)  # the reader's own periods, as in DAUView
 
         # Calculate active sessions per period (same logic as DAUView)
         active_sessions_data = (
             events.filter(session_id__isnull=False)
             .exclude(session_id="")
-            .annotate(period=trunc_func("timestamp"))
+            .annotate(period=trunc_func("timestamp", tzinfo=zone))
             .values("period")
             .annotate(unique_sessions=Count("session_id", distinct=True))
         )
@@ -838,7 +852,7 @@ A session is a unique app usage period (max 2 hours), identified by session_id.
         conversion_data = (
             events.filter(event_name__in=conversion_events, session_id__isnull=False)
             .exclude(session_id="")
-            .annotate(period=trunc_func("timestamp"))
+            .annotate(period=trunc_func("timestamp", tzinfo=zone))
             .values("period")
             .annotate(conversions=Count("session_id", distinct=True))
             .order_by("-period")
@@ -4140,7 +4154,9 @@ are exposed. Country data comes from request headers only - no IP geolocation.
             "quarter": TruncQuarter,
             "year": TruncYear,
         }
-        trunc_func = trunc_functions[granularity]
+        # The reader's own periods, as in DAUView
+        zone = _get_timezone_safe(tz_name)
+        trunc_func = partial(trunc_functions[granularity], tzinfo=zone)
 
         # Calculate segment data based on segment_by type
         if prop is not None:
@@ -4151,7 +4167,7 @@ are exposed. Country data comes from request headers only - no IP geolocation.
         elif segment_by == "depth":
             # Session depth segmentation (events per session)
             segments_data = self._calculate_depth_segments(
-                app.id, from_datetime, to_datetime, conversion_events, trunc_func
+                app.id, from_datetime, to_datetime, conversion_events, granularity, zone
             )
         elif segment_by == "hour":
             # Hourly session patterns (hour of day 0-23)
@@ -4339,7 +4355,9 @@ are exposed. Country data comes from request headers only - no IP geolocation.
             rows = [{"period": p, "value": v, **c} for (p, v), c in merged.items()]
         return self._segments_from(rows, "value")
 
-    def _calculate_depth_segments(self, app_id, from_date, to_date, conversion_events, trunc_func):
+    def _calculate_depth_segments(
+        self, app_id, from_date, to_date, conversion_events, granularity, zone
+    ):
         """
         Calculate segment data based on session depth (events per session).
 
@@ -4353,7 +4371,8 @@ are exposed. Country data comes from request headers only - no IP geolocation.
             from_date: Start datetime for the query
             to_date: End datetime for the query
             conversion_events: List of event names to count as conversions
-            trunc_func: Django truncation function (TruncDay, TruncWeek, etc.)
+            granularity: day, week, month, quarter or year
+            zone: the reader's time zone, whose periods these are
 
         Returns list of segment dicts with summary and periods.
         """
@@ -4361,18 +4380,9 @@ are exposed. Country data comes from request headers only - no IP geolocation.
 
         from django.db import connection
 
-        # Determine the truncation SQL based on trunc_func
-        trunc_name = trunc_func.__name__.replace("Trunc", "").lower()
-        if trunc_name == "day":
-            trunc_sql = "DATE_TRUNC('day', MIN(timestamp))"
-        elif trunc_name == "week":
-            trunc_sql = "DATE_TRUNC('week', MIN(timestamp))"
-        elif trunc_name == "month":
-            trunc_sql = "DATE_TRUNC('month', MIN(timestamp))"
-        elif trunc_name == "quarter":
-            trunc_sql = "DATE_TRUNC('quarter', MIN(timestamp))"
-        else:  # year
-            trunc_sql = "DATE_TRUNC('year', MIN(timestamp))"
+        # The period in the reader's zone: the unit is one of five known words, never the caller's
+        unit = granularity if granularity in ("day", "week", "month", "quarter") else "year"
+        trunc_sql = f"DATE_TRUNC('{unit}', MIN(timestamp) AT TIME ZONE %s)"
 
         # The conversion events as placeholders, never as text in the SQL: a name is whatever the
         # caller sent, and the placeholders come first in the query, so their values do too
@@ -4380,7 +4390,7 @@ are exposed. Country data comes from request headers only - no IP geolocation.
 
         # Build date filter SQL
         date_filter = ""
-        params = [*conversion_events, str(app_id)]
+        params = [zone.key, *conversion_events, str(app_id)]  # in the order the query asks
         if from_date:
             date_filter += " AND timestamp >= %s"
             params.append(from_date)

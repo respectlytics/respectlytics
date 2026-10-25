@@ -11,7 +11,8 @@ and those whose sessions convert less often, than sessions without them.
 
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-start">
         <section class="card" aria-labelledby="boostersTitle">
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2.5">
+                <span class="icon-chip h-8 w-8 rounded-lg bg-emerald-400/10 text-emerald-300 ring-emerald-300/25">{% include 'partials/icon.html' with name='rise' size='h-4 w-4' %}</span>
                 <h3 id="boostersTitle" class="card-title">More likely to convert</h3>
                 {% include 'partials/help.html' with id="helpBoosters" label="About these events" text="Sessions with the event against sessions without it. An event is shown when at least 10 sessions sent it and their rate is at least 10% higher. Each session is counted on its own, not each person, and an event that goes with converting does not have to be its cause." %}
             </div>
@@ -25,7 +26,8 @@ and those whose sessions convert less often, than sessions without them.
         </section>
 
         <section class="card" aria-labelledby="blockersTitle">
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2.5">
+                <span class="icon-chip h-8 w-8 rounded-lg bg-rose-400/10 text-rose-300 ring-rose-300/25">{% include 'partials/icon.html' with name='drop' size='h-4 w-4' %}</span>
                 <h3 id="blockersTitle" class="card-title">Less likely to convert</h3>
                 {% include 'partials/help.html' with id="helpBlockers" label="About these events" text="Sessions with the event against sessions without it. An event is shown when at least 10 sessions sent it and their rate is at least 10% lower. Each session is counted on its own, not each person." %}
             </div>

@@ -7,6 +7,9 @@
 <div class="min-h-screen bg-slate-950 py-6">
   <div class="max-w-5xl mx-auto px-4">
     
+    <!-- The way back to the app list -->
+    <a href="{% url 'dashboard:main' %}" class="mb-4 inline-flex min-h-10 items-center gap-1.5 rounded-lg text-sm font-medium text-brand-300 hover:text-brand-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-400">{% include 'partials/icon.html' with name='chevron-left' size='h-4 w-4' %}All apps</a>
+
     <!-- Page Header -->
     <div class="mb-6">
       <h1 class="text-2xl font-bold text-slate-50 mb-1">Account Settings</h1>

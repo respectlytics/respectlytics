@@ -1,12 +1,16 @@
 {% comment %}
 An app's views, the same on each of its pages (a sidebar on a desktop, a row on a phone,
 app-nav.css): its tabs, Funnels and, where the Settings page exists (respectlytics.com),
-Settings; else, for the owner, Delete events. The app itself is chosen in the top bar.
+Settings; else, for the owner, Delete events. The app itself is chosen in the top bar, and on a
+desktop All apps above the views leads back to the app list.
 `here` is "stats", "funnel" or "settings": on the stats page the tabs switch in place, on the
 others they lead back to it, to the app's own pages, a share link's or the demo's. Seen from
 outside the account (`outside`: a share link, the demo) it has no app list and no settings.
 {% endcomment %}
 {% url 'teams:app_settings' app_slug as settings_url %}
+{% if not outside %}
+<a href="{% url 'dashboard:main' %}" class="sidebar-back">{% include 'partials/icon.html' with name='chevron-left' size='h-4 w-4' %}All apps</a>
+{% endif %}
 {% if outside %}
 <div class="sidebar-app-name"><span class="flex h-7 w-7 flex-none items-center justify-center rounded-lg bg-brand-600 text-xs font-bold text-white" aria-hidden="true">{{ app_name|slice:":1"|upper }}</span><span class="truncate">{{ app_name }}</span></div>
 {% endif %}

@@ -4,6 +4,7 @@ the apps the person may open, the account menu holds every account page, and an 
 are one list with no floating button. A page a visitor sees without signing in (the demo, a
 share link) keeps the website's bar."""
 
+import re
 from unittest import skipUnless
 
 from django.apps import apps
@@ -51,15 +52,39 @@ class AppShellTest(TestCase):
 
     def test_the_account_menu(self):
         html = self.page("/dashboard/")
+        menu = html[html.index('id="accountMenu"') :]
         for href, label in (
             ("/account/profile/", "Account settings"),
             ("/billing/manage/", "Plan and billing"),
             ("/account/team/", "Team"),
             ("/account/api-keys/", "Secret keys"),
         ):
-            self.assertIn(f'href="{href}" class="menu-item">{label}</a>', html)
-        self.assertIn(">Sign out</a>", html)
-        self.assertIn("owner@example.com", html)
+            # each with its icon, so a row reads as a place to go
+            self.assertRegex(
+                menu, rf'href="{href}" class="menu-item"><svg[^>]*>.*?</svg>\s*{label}</a>'
+            )
+        self.assertRegex(menu, r"</svg>\s*Sign out</a>")
+        self.assertIn("owner@example.com", menu)
+
+    def test_the_docs_are_one_click_from_every_signed_in_page(self):
+        settings = f"/dashboard/apps/{self.app.slug}/settings/"
+        for url in ("/dashboard/", settings, "/account/api-keys/"):
+            html = self.page(url)
+            docs = html[html.index('id="docsMenu"') : html.index('id="accountMenu"')]
+            self.assertIn('href="/sdk/"', docs, url)
+            self.assertIn('href="/api/v1/reference/"', docs, url)
+
+    def test_every_account_and_app_page_leads_back_to_the_apps(self):
+        """Until 2026-10-25 only the logo led back to the app list (owner, 2026-10-25)."""
+        back = re.compile(r'<a href="/dashboard/" class="[^"]*"><svg[^>]*>.*?</svg>\s*All apps</a>')
+        for url in (
+            "/account/profile/",
+            "/account/billing/",
+            "/account/api-keys/",
+            f"/dashboard/stats/{self.app.slug}/",
+            f"/dashboard/apps/{self.app.slug}/settings/",
+        ):
+            self.assertRegex(self.page(url), back, url)
 
     def test_the_app_switcher_lists_every_app_on_an_apps_pages_only(self):
         html = self.page(f"/dashboard/stats/{self.app.slug}/")

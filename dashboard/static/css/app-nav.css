@@ -33,12 +33,29 @@
     color: #f8fafc;  /* Slate 50 */
 }
 
-/* Where you are: a quiet pill in the heading colour, since the accent means "you can act" */
+/* Where you are: a quiet pill in the heading colour, its icon in indigo */
 .sidebar-nav-item.active {
     background: rgba(148, 163, 184, 0.14);
     color: #f8fafc;
     font-weight: 600;
 }
+.sidebar-nav-item.active .sidebar-nav-icon { color: #a5b4fc; }  /* brand-300 */
+
+/* All apps, above an app's views on a desktop: the way back to the app list */
+.sidebar-back {
+    display: none;
+    align-items: center;
+    gap: 0.375rem;
+    min-height: 2.25rem;
+    margin: 0 0 0.75rem;
+    padding: 0 0.75rem;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #a5b4fc;  /* brand-300 */
+}
+.sidebar-back:hover { color: #c7d2fe; background: rgba(129, 140, 248, 0.08); }
+.sidebar-back:focus-visible { outline: 2px solid #818cf8; outline-offset: 2px; }
 
 .sidebar-nav-icon {
     width: 1.25rem;  /* 20px */
@@ -110,6 +127,7 @@
     }
     .app-sidebar .sidebar-divider { display: block; }
     .app-sidebar .sidebar-app-name { display: flex; }
+    .app-sidebar .sidebar-back { display: flex; }
 }
 
 /* The app a share link or the demo shows, named above its views (no switcher: one app) */

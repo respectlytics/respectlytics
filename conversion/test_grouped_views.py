@@ -171,7 +171,9 @@ class ConversionRatesCountSessionsTest(APITestCase):
         self.app = App.objects.create(name="Shop", user=user)
         self.client.force_login(user)
         self.client.credentials(HTTP_X_APP_KEY=str(self.app.id))
-        start = timezone.now() - timedelta(hours=1)
+        # Just after midnight today (UTC), so the events are in today's range at any hour: until
+        # 2026-10-25 they were an hour ago, which is yesterday for the first hour of each day
+        start = timezone.now().replace(hour=0, minute=1, second=0, microsecond=0)
         sessions = {"a": ["app_open", "purchase", "purchase"], "b": ["app_open"]}
         for session, names in sessions.items():
             for i, name in enumerate(names):

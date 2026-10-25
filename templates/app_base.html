@@ -4,5 +4,6 @@ Every signed-in page's frame: the app's own top bar (partials/app_bar.html) in p
 website's, and no website footer, on one background. A page a visitor sees without signing in
 (the demo, a share link) keeps the website's bar and footer.
 {% endcomment %}
+{% block html_class %}app{% endblock %}
 {% block site_header %}{% if user.is_authenticated and not demo and not share_token %}{% include 'partials/app_bar.html' %}{% else %}{{ block.super }}{% endif %}{% endblock %}
 {% block site_footer %}{% if user.is_authenticated and not demo and not share_token %}{% else %}{{ block.super }}{% endif %}{% endblock %}

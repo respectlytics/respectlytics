@@ -1,6 +1,7 @@
 {% comment %}
-One entry in the account area's list (users/account/base.html): url, label, name (the URL name
-it is current on, and `also` for a second one), and danger for Delete account. A 48 px row on a
-phone, a 40 px row beside the cards on a desktop.
+One entry in the account area's list (users/account/base.html): url, label, icon, name (the URL
+name it is current on, and `also` for a second one), and danger for Delete account. A 48 px row
+on a phone, a 40 px row beside the cards on a desktop. Its icon says it is a place to go, which
+the list's title above it is not; on the page you are on it turns indigo.
 {% endcomment %}<li><a href="{{ url }}"{% if here == name or also and here == also %} aria-current="page"{% endif %}
-   class="flex min-h-12 items-center rounded-lg px-3 text-[0.9375rem] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-400 lg:min-h-10 lg:text-sm {% if here == name or also and here == also %}bg-slate-400/[0.14] font-semibold {% if danger %}text-rose-200{% else %}text-slate-50{% endif %}{% elif danger %}font-medium text-rose-300 hover:bg-rose-500/10 hover:text-rose-200{% else %}font-medium text-slate-300 hover:bg-white/5 hover:text-slate-50{% endif %}">{{ label }}</a></li>
+   class="group flex min-h-12 items-center gap-3 rounded-lg px-3 text-[0.9375rem] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-400 lg:min-h-10 lg:text-sm {% if here == name or also and here == also %}bg-slate-400/[0.14] font-semibold {% if danger %}text-rose-200{% else %}text-slate-50{% endif %}{% elif danger %}font-medium text-rose-300 hover:bg-rose-500/10 hover:text-rose-200{% else %}font-medium text-slate-300 hover:bg-white/5 hover:text-slate-50{% endif %}"><span class="flex-none {% if danger %}text-rose-300{% elif here == name or also and here == also %}text-brand-300{% else %}text-slate-400 group-hover:text-slate-200{% endif %}">{% include 'partials/icon.html' with name=icon size='h-[1.125rem] w-[1.125rem]' %}</span>{{ label }}</a></li>

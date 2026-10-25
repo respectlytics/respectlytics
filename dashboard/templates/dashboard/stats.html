@@ -664,6 +664,9 @@ async function loadLast30Minutes() {
         }
         const n = data.total_in_range || 0;
         count.textContent = n === 0 ? 'No' : n.toLocaleString();
+        // green only while events are arriving
+        const dot = document.getElementById('last30Dot');
+        if (dot) dot.className = n === 0 ? 'live-dot-off' : 'live-dot-on';
         unit.textContent = n === 1 ? 'event' : 'events';
         window.recentActivityData = data.event_preview || [];
         button.hidden = n === 0;
@@ -864,7 +867,7 @@ function updateDropoffTable(data) {
         return StatsApp.barRow({
             name: EventGroups.name(point.event || point.event_name || point.last_event || ''),
             value: `${sessions.toLocaleString()} <span class="ml-1 text-slate-400">${share}%</span>`,
-            parts: [{ pct: (sessions / largest) * 100 }]
+            parts: [{ pct: (sessions / largest) * 100, color: '#fb7185' }]  // rose: sessions lost
         });
     }).join('');
 }
@@ -977,7 +980,10 @@ const CORRELATION_ROWS = 6;
 
 /**
  * One event that goes with converting more or less often: its name and how many times more or
- * less likely, then the two rates with the counts behind the first.
+ * less likely, then the two rates as two bars from 0 to 100% (sessions with it in the card's
+ * colour, sessions without in slate) with the counts behind the first. Where no session without
+ * it converted, the ratio has no number, so it says that every conversion had it instead of a
+ * percentage that only looked exact (until 2026-10-25 it read "1000% more likely").
  */
 function correlationRow(item, positive) {
     const rate = StatsApp.utils.formatRate;
@@ -987,22 +993,30 @@ function correlationRow(item, positive) {
     const converted = item.converts_with || 0;
     const lift = item.lift_percent || 0;
     let verdict;
-    if (positive) {
-        const times = rateWithout > 0 ? rateWith / rateWithout : null;
-        verdict = times && times >= 1.5 ? `${times.toFixed(1)}× more likely` : `${Math.round(Math.abs(lift))}% more likely`;
+    if (positive && rateWithout === 0) {
+        verdict = 'Every conversion had it';
+    } else if (positive) {
+        const times = rateWith / rateWithout;
+        verdict = times >= 1.5 ? `${times.toFixed(1)}× more likely` : `${Math.round(Math.abs(lift))}% more likely`;
     } else if (rateWith === 0) {
         verdict = 'Never converted';
     } else {
-        const times = rateWith > 0 ? rateWithout / rateWith : null;
-        verdict = times && times >= 1.5 ? `${times.toFixed(1)}× less likely` : `${Math.round(Math.abs(lift))}% less likely`;
+        const times = rateWithout / rateWith;
+        verdict = times >= 1.5 ? `${times.toFixed(1)}× less likely` : `${Math.round(Math.abs(lift))}% less likely`;
     }
     const name = item.event || item.event_name;
-    return `<li class="py-3 first:pt-0 last:pb-0">
+    // rates are percentages, so the bars share one scale, from 0 to 100%, in every row
+    const bar = (value, tone) => `<span class="bar-track" aria-hidden="true"><span class="bar-fill ${tone}" style="width:${value > 0 ? Math.max(1.5, Math.min(100, value)).toFixed(1) : 0}%"></span></span>`;
+    return `<li class="py-3.5 first:pt-0 last:pb-0">
         <div class="flex items-baseline justify-between gap-4">
             <span class="min-w-0 break-words text-sm font-medium text-slate-50">${EventGroups.name(name)}</span>
-            <span class="flex-none text-sm font-semibold ${positive ? 'text-emerald-300' : 'text-rose-300'}">${verdict}</span>
+            <span class="flex-none rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ring-inset ${positive ? 'bg-emerald-400/10 text-emerald-300 ring-emerald-300/25' : 'bg-rose-400/10 text-rose-300 ring-rose-300/25'}">${verdict}</span>
         </div>
-        <p class="mt-1 text-sm text-slate-400">${rate(rateWith)} with it (${converted.toLocaleString()} of ${sessions.toLocaleString()} sessions), ${rate(rateWithout)} without</p>
+        <div class="mt-2.5 grid grid-cols-[4.25rem_minmax(0,1fr)_3.25rem] items-center gap-x-3 gap-y-1.5 text-xs">
+            <span class="text-slate-300">With it</span>${bar(rateWith, positive ? 'is-convert' : 'is-lost')}<span class="text-right font-semibold text-slate-50">${rate(rateWith)}</span>
+            <span class="text-slate-400">Without</span>${bar(rateWithout, 'is-without')}<span class="text-right text-slate-300">${rate(rateWithout)}</span>
+        </div>
+        <p class="mt-1.5 text-xs text-slate-450">${converted.toLocaleString()} of ${sessions.toLocaleString()} sessions with it converted</p>
     </li>`;
 }
 
@@ -1436,6 +1450,14 @@ function updateSegmentsSummary(data) {
 }
 
 const SEGMENT_ROWS = 8;
+// Each segment's own hue, chosen by its name so iOS keeps its colour from one range to the next;
+// none is emerald or rose, which say converting and losing here (stats.css)
+const SEGMENT_HUES = ['#818cf8', '#38bdf8', '#a78bfa', '#f472b6', '#2dd4bf', '#fb923c', '#60a5fa', '#e879f9'];
+function segmentHue(name) {
+    let h = 0;
+    for (const c of String(name)) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+    return SEGMENT_HUES[h % SEGMENT_HUES.length];
+}
 
 /**
  * The bars: each segment's conversion rate with its sessions beside it. Hours stand as 24
@@ -1468,7 +1490,7 @@ function updateSegmentsChart(data) {
         container.innerHTML = `
             <div class="flex h-48 items-end gap-0.5 pt-6 sm:gap-1" role="img" aria-label="Conversion rate by hour, highest at ${hourLabel(peak.segment)} with ${rate(rateOf(peak))}">
                 ${hours.map(s => `<div class="flex h-full min-w-0 flex-1 flex-col justify-end" title="${hourLabel(s.segment)}: ${rate(rateOf(s))}, ${sessionsOf(s).toLocaleString()} sessions">
-                    <span class="relative block rounded-t ${sessionsOf(s) < 5 ? 'bg-slate-600' : 'bg-brand-500'}" style="height:${Math.max(2, (rateOf(s) / max) * 100).toFixed(1)}%">${s === peak ? `<span class="absolute bottom-full left-1/2 mb-1 -translate-x-1/2 whitespace-nowrap text-xs font-semibold text-slate-50">${rate(rateOf(s))}</span>` : ''}</span>
+                    <span class="relative block rounded-t ${sessionsOf(s) < 5 ? 'bg-slate-600' : s === peak ? 'bg-emerald-400' : 'bg-brand-500'}" style="height:${Math.max(2, (rateOf(s) / max) * 100).toFixed(1)}%">${s === peak ? `<span class="absolute bottom-full left-1/2 mb-1 -translate-x-1/2 whitespace-nowrap text-xs font-semibold text-slate-50">${rate(rateOf(s))}</span>` : ''}</span>
                 </div>`).join('')}
             </div>
             <div class="mt-1.5 flex gap-0.5 text-xs text-slate-400 sm:gap-1" aria-hidden="true">
@@ -1499,7 +1521,7 @@ function updateSegmentsChart(data) {
             value: few
                 ? `<span class="text-slate-400">${rate(rateOf(s))}, ${sessionsOf(s)} ${sessionsOf(s) === 1 ? 'session' : 'sessions'}</span>`
                 : `${rate(rateOf(s))} <span class="ml-1 text-slate-400">${sessionsOf(s).toLocaleString()} sessions</span>`,
-            parts: [{ pct: (rateOf(s) / max) * 100 }],
+            parts: [{ pct: (rateOf(s) / max) * 100, color: segmentHue(s.segment) }],
             quiet: few
         });
     }).join('')}</ul>`;
@@ -1583,7 +1605,7 @@ function updateSegmentsTable(data) {
             return `<td class="text-right">${rate(r)}</td>`;
         }).join('');
         return `<tr>
-            <th scope="row">${segmentLabel(segment)}</th>
+            <th scope="row"><span class="inline-flex items-center gap-2">${currentSegmentType === 'hour' ? '' : `<span class="h-2 w-2 flex-none rounded-full" style="background:${segmentHue(segment.segment)}" aria-hidden="true"></span>`}${segmentLabel(segment)}</span></th>
             <td class="text-right">${(segment.summary?.total_active_sessions || 0).toLocaleString()}</td>
             <td class="text-right">${(segment.summary?.total_conversions || 0).toLocaleString()}</td>
             <td class="text-right font-semibold text-slate-50">${rate(own)}</td>

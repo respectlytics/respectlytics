@@ -1,13 +1,47 @@
 {% extends 'users/account/base.html' %}
+{% comment %}
+Secret keys (users/secret_keys.py), in both editions. Who comes here: someone who wants their
+data in their own code, and who already has an app key from setup. So the page first says which
+key is which, in the one amber note it has (owner, 2026-10-25: the difference was nowhere), then
+the keys and the one action that makes one, then how a request carries both, with the API
+reference beside it. The app key is sky and the secret key violet wherever they are drawn.
+{% endcomment %}
 
 {% block title %}Secret keys | Respectlytics{% endblock %}
 
 {% block account_content %}
+{% url 'teams:app_settings' example_app.slug as example_settings_url %}
 <div>
-  <h1 class="app-title">Secret keys</h1>
-  <p class="app-lead">A secret key reads, exports and deletes your data through the API.</p>
+  <div class="flex items-center gap-2">
+    <h1 class="app-title">Secret keys</h1>
+    {% include 'partials/help.html' with id="secretKeysHelp" label="About secret keys" text="A secret key works like a password for the API. Send it from your own server or script, together with the app key of the app you want to read. Anyone who has it can read and delete your data, so keep it out of your app and revoke a key you no longer use." %}
+  </div>
+  <p class="app-lead">Read, export and delete your data through the API.</p>
 </div>
 {% include 'users/account/_messages.html' %}
+
+<section class="callout-amber" aria-labelledby="whichKeyTitle">
+  <h2 id="whichKeyTitle" class="flex items-center gap-2 text-[1.0625rem] font-semibold text-amber-100"><span class="text-amber-300">{% include 'partials/icon.html' with name='info' size='h-5 w-5' %}</span>App key or secret key?</h2>
+  <div class="mt-4 grid gap-3 sm:grid-cols-2">
+    <div class="rounded-xl bg-[#0f172a]/70 p-4 ring-1 ring-inset ring-white/10">
+      <h3 class="flex items-center gap-2.5 font-semibold text-slate-50"><span class="icon-chip h-8 w-8 bg-sky-400/10 text-sky-300 ring-sky-300/25">{% include 'partials/icon.html' with name='phone' size='h-4 w-4' %}</span>App key</h3>
+      <ul class="mt-3 space-y-2 text-sm text-slate-300">
+        <li class="flex gap-2"><span class="mt-0.5 flex-none text-sky-300">{% include 'partials/icon.html' with name='check' size='h-4 w-4' %}</span>Goes inside your app</li>
+        <li class="flex gap-2"><span class="mt-0.5 flex-none text-sky-300">{% include 'partials/icon.html' with name='check' size='h-4 w-4' %}</span>Sends events and can do nothing else</li>
+        <li class="flex gap-2"><span class="mt-0.5 flex-none text-sky-300">{% include 'partials/icon.html' with name='check' size='h-4 w-4' %}</span>{% if example_settings_url %}One per app, in <a href="{{ example_settings_url }}#key" class="text-link underline">its Settings</a>{% else %}One per app, on the app list{% endif %}</li>
+      </ul>
+    </div>
+    <div class="rounded-xl bg-[#0f172a]/70 p-4 ring-1 ring-inset ring-white/10">
+      <h3 class="flex items-center gap-2.5 font-semibold text-slate-50"><span class="icon-chip h-8 w-8 bg-violet-400/10 text-violet-300 ring-violet-300/25">{% include 'partials/icon.html' with name='key' size='h-4 w-4' %}</span>Secret key</h3>
+      <ul class="mt-3 space-y-2 text-sm text-slate-300">
+        <li class="flex gap-2"><span class="mt-0.5 flex-none text-violet-300">{% include 'partials/icon.html' with name='lock' size='h-4 w-4' %}</span>Stays on your server, never in an app</li>
+        <li class="flex gap-2"><span class="mt-0.5 flex-none text-violet-300">{% include 'partials/icon.html' with name='check' size='h-4 w-4' %}</span>Reads, exports and deletes your data</li>
+        <li class="flex gap-2"><span class="mt-0.5 flex-none text-violet-300">{% include 'partials/icon.html' with name='check' size='h-4 w-4' %}</span>Made here, for your whole account</li>
+      </ul>
+    </div>
+  </div>
+  <p class="mt-4 text-sm text-amber-100/90">Every request to the API sends both: the secret key says it is you, the app key says which app.</p>
+</section>
 
 {% if new_key %}
 <section class="card border-emerald-400/30" aria-labelledby="newKeyTitle" data-testid="new-secret-key">
@@ -21,7 +55,10 @@
 {% endif %}
 
 <section class="card" aria-labelledby="keysTitle">
-  <h2 id="keysTitle" class="card-title">Your keys</h2>
+  <div class="flex items-center gap-3">
+    <span class="icon-chip bg-violet-400/10 text-violet-300 ring-violet-300/25">{% include 'partials/icon.html' with name='key' size='h-[1.125rem] w-[1.125rem]' %}</span>
+    <h2 id="keysTitle" class="card-title">Your secret keys</h2>
+  </div>
   {% if keys %}
   <ul class="mt-3 divide-y divide-white/10">
     {% for key in keys %}
@@ -44,7 +81,7 @@
     {% endfor %}
   </ul>
   {% else %}
-  <p class="card-lead">No secret keys yet.</p>
+  <p class="mt-3 text-sm text-slate-400">No secret keys yet. You need one only to read your data from your own code.</p>
   {% endif %}
 
   <form method="post" class="mt-5">
@@ -52,22 +89,30 @@
     {% if at_limit %}
     <p class="text-sm text-slate-400">You have {{ limit }} keys. Revoke one to make another.</p>
     {% else %}
-    <button type="submit" class="{% if new_key %}btn-secondary{% else %}btn-primary{% endif %}">Create secret key</button>
+    <button type="submit" class="{% if new_key %}btn-secondary{% else %}btn-primary{% endif %}">{% include 'partials/icon.html' with name='plus' size='h-4 w-4' %}Create secret key</button>
     {% endif %}
   </form>
 </section>
 
 <section class="card" aria-labelledby="usingTitle">
-  <h2 id="usingTitle" class="card-title">Using a key</h2>
-  <p class="card-lead">Send it with the <a href="{% url 'dashboard:main' %}" class="text-link underline">app key</a> of the app you want to read. The <a href="{% url 'public-schema-redoc' %}" class="text-link underline">API reference</a> lists what you can ask for.</p>
-  <div class="code-card mt-4">
+  <div class="flex flex-wrap items-start justify-between gap-3">
+    <div class="flex items-center gap-3">
+      <span class="icon-chip bg-brand-400/10 text-brand-300 ring-brand-300/25">{% include 'partials/icon.html' with name='code' size='h-[1.125rem] w-[1.125rem]' %}</span>
+      <div>
+        <h2 id="usingTitle" class="card-title">Using a key</h2>
+        <p class="text-sm text-slate-400">Send both keys with every request.</p>
+      </div>
+    </div>
+    <a href="{% url 'public-schema-redoc' %}" class="btn-secondary">{% include 'partials/icon.html' with name='book' size='h-4 w-4' %}API reference</a>
+  </div>
+  <div class="code-card mt-5">
     <div class="code-card-head">
-      <span>Example</span>
+      <span>Your events by type and by day</span>
       <button type="button" data-copy="secretKeyExample" class="code-copy">Copy</button>
     </div>
     <pre id="secretKeyExample" class="text-slate-200">curl {{ example_url }} \
-  -H "Authorization: Bearer {{ example_secret }}" \
-  -H "X-App-Key: {{ example_app_key }}"</pre>
+  -H "Authorization: Bearer <span class="text-violet-300">{{ example_secret }}</span>" \
+  -H "X-App-Key: <span class="text-sky-300">{{ example_app_key }}</span>"</pre>
   </div>
 </section>
 

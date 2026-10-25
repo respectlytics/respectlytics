@@ -6,7 +6,8 @@ country, number of events per session, hour of the day or value of a declared pr
 <div id="segments-content" class="hidden space-y-6">
     <section class="card" aria-labelledby="segmentsTitle">
         <div class="flex flex-wrap items-center justify-between gap-3">
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2.5">
+                <span class="icon-chip h-8 w-8 rounded-lg bg-sky-400/10 text-sky-300 ring-sky-300/25">{% include 'partials/icon.html' with name='grid' size='h-4 w-4' %}</span>
                 <h3 id="segmentsTitle" class="card-title">Conversion rate by segment</h3>
                 {% include 'partials/help.html' with id="helpSegments" label="About these rates" text="Each rate is the share of a segment's sessions with a conversion event. Each session is counted on its own, as nothing follows a person from one session to the next, so rates can read lower than in tools that count people. A segment with fewer than 5 sessions is shown but not ranked." %}
             </div>
@@ -35,7 +36,7 @@ country, number of events per session, hour of the day or value of a declared pr
             <div id="segmentsSummary" class="flex flex-wrap gap-x-10 gap-y-3">
                 <div>
                     <p class="text-sm text-slate-400">Overall</p>
-                    <p class="mt-1 text-[1.625rem] font-semibold leading-tight tracking-tight text-slate-50" id="segmentsOverallRate">-</p>
+                    <p class="mt-1 text-[1.625rem] font-semibold leading-tight tracking-tight text-emerald-300" id="segmentsOverallRate">-</p>
                 </div>
                 <div class="min-w-0">
                     <p class="text-sm text-slate-400">Converts best</p>
@@ -55,7 +56,8 @@ country, number of events per session, hour of the day or value of a declared pr
 
     <section class="card" aria-labelledby="tableBreakdownTitle">
         <div class="flex flex-wrap items-center justify-between gap-3">
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2.5">
+                <span class="icon-chip h-8 w-8 rounded-lg bg-indigo-400/10 text-indigo-300 ring-indigo-300/25">{% include 'partials/icon.html' with name='bars' size='h-4 w-4' %}</span>
                 <h3 id="tableBreakdownTitle" class="card-title">Over time</h3>
                 {% include 'partials/help.html' with id="helpSegmentsTable" label="About this table" text="Each row's sessions, conversions and rate for the range, then its rate in each period. A period's rate is marked &#9650; when it is at least 10% above the row's own rate and &#9660; when at least 10% below." %}
             </div>

@@ -109,6 +109,8 @@ function renderPeriodDetailsTable() {
             </tbody>
         </table>`;
 
+    // Every row scrolls inside the card, its header in view, rather than lengthening the page
+    container.classList.toggle('scroll-box', Boolean(StatsApp.periodDetailsAll));
     const more = document.getElementById('dailyTableMore');
     if (more) {
         more.hidden = rows.length <= PERIOD_ROWS;

@@ -6,7 +6,8 @@ control names. Each card shows its own skeleton until its answer arrives.
 <div id="conversion-content" class="hidden space-y-6">
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-start">
         <section class="card" aria-labelledby="ttcTitle">
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2.5">
+                <span class="icon-chip h-8 w-8 rounded-lg bg-violet-400/10 text-violet-300 ring-violet-300/25">{% include 'partials/icon.html' with name='clock' size='h-4 w-4' %}</span>
                 <h3 id="ttcTitle" class="card-title">Time to conversion</h3>
                 {% include 'partials/help.html' with id="helpTtc" label="About time to conversion" text="From a session's first event to its first conversion. A session lasts at most 2 hours, so nothing takes longer. The median is the middle session; the mean, which slow sessions pull up, is <span id='ttcMean' class='font-semibold text-slate-100'>-</span>." %}
             </div>
@@ -20,25 +21,26 @@ control names. Each card shows its own skeleton until its answer arrives.
                 <div id="timeConversionStats" class="flex flex-wrap gap-x-10 gap-y-3">
                     <div>
                         <p class="text-sm text-slate-400">Median</p>
-                        <p class="mt-1 text-[1.625rem] font-semibold leading-tight tracking-tight text-slate-50" id="ttcMedian">-</p>
+                        <p class="mt-1 text-[1.625rem] font-semibold leading-tight tracking-tight text-violet-300" id="ttcMedian">-</p>
                     </div>
                     <div>
                         <p class="text-sm text-slate-400">Sessions that converted</p>
-                        <p class="mt-1 text-[1.625rem] font-semibold leading-tight tracking-tight text-slate-50" id="ttcSessions">-</p>
+                        <p class="mt-1 text-[1.625rem] font-semibold leading-tight tracking-tight text-emerald-300" id="ttcSessions">-</p>
                     </div>
                 </div>
                 <p id="ttcSmallSampleWarning" hidden class="mt-4 flex items-start gap-2 text-sm text-amber-200"></p>
                 <ul id="timeDistribution" class="mt-5 space-y-3">
-                    <li class="grid grid-cols-[7.5rem_1fr_auto] items-center gap-3 text-sm"><span class="text-slate-300">Under 5 min</span><span class="bar-track"><span class="bar-fill" id="timeBucket1" style="width:0%"></span></span><span class="w-20 text-right text-slate-50" id="timeBucket1Pct">-</span></li>
-                    <li class="grid grid-cols-[7.5rem_1fr_auto] items-center gap-3 text-sm"><span class="text-slate-300">5 to 15 min</span><span class="bar-track"><span class="bar-fill" id="timeBucket2" style="width:0%"></span></span><span class="w-20 text-right text-slate-50" id="timeBucket2Pct">-</span></li>
-                    <li class="grid grid-cols-[7.5rem_1fr_auto] items-center gap-3 text-sm"><span class="text-slate-300">15 to 60 min</span><span class="bar-track"><span class="bar-fill" id="timeBucket3" style="width:0%"></span></span><span class="w-20 text-right text-slate-50" id="timeBucket3Pct">-</span></li>
-                    <li class="grid grid-cols-[7.5rem_1fr_auto] items-center gap-3 text-sm"><span class="text-slate-300">1 to 2 hours</span><span class="bar-track"><span class="bar-fill" id="timeBucket4" style="width:0%"></span></span><span class="w-20 text-right text-slate-50" id="timeBucket4Pct">-</span></li>
+                    <li class="grid grid-cols-[7.5rem_1fr_auto] items-center gap-3 text-sm"><span class="text-slate-300">Under 5 min</span><span class="bar-track"><span class="bar-fill is-time" id="timeBucket1" style="width:0%"></span></span><span class="w-20 text-right text-slate-50" id="timeBucket1Pct">-</span></li>
+                    <li class="grid grid-cols-[7.5rem_1fr_auto] items-center gap-3 text-sm"><span class="text-slate-300">5 to 15 min</span><span class="bar-track"><span class="bar-fill is-time" id="timeBucket2" style="width:0%"></span></span><span class="w-20 text-right text-slate-50" id="timeBucket2Pct">-</span></li>
+                    <li class="grid grid-cols-[7.5rem_1fr_auto] items-center gap-3 text-sm"><span class="text-slate-300">15 to 60 min</span><span class="bar-track"><span class="bar-fill is-time" id="timeBucket3" style="width:0%"></span></span><span class="w-20 text-right text-slate-50" id="timeBucket3Pct">-</span></li>
+                    <li class="grid grid-cols-[7.5rem_1fr_auto] items-center gap-3 text-sm"><span class="text-slate-300">1 to 2 hours</span><span class="bar-track"><span class="bar-fill is-time" id="timeBucket4" style="width:0%"></span></span><span class="w-20 text-right text-slate-50" id="timeBucket4Pct">-</span></li>
                 </ul>
             </div>
         </section>
 
         <section class="card" aria-labelledby="pathsTitle">
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2.5">
+                <span class="icon-chip h-8 w-8 rounded-lg bg-emerald-400/10 text-emerald-300 ring-emerald-300/25">{% include 'partials/icon.html' with name='paths' size='h-4 w-4' %}</span>
                 <h3 id="pathsTitle" class="card-title">Top conversion paths</h3>
                 {% include 'partials/help.html' with id="helpPaths" label="About conversion paths" text="The events a converting session sent, in order, from its first event to its first conversion. Grouped events count as their group." %}
             </div>
@@ -54,7 +56,8 @@ control names. Each card shows its own skeleton until its answer arrives.
     </div>
 
     <section class="card" aria-labelledby="dropoffTitle">
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2.5">
+            <span class="icon-chip h-8 w-8 rounded-lg bg-rose-400/10 text-rose-300 ring-rose-300/25">{% include 'partials/icon.html' with name='drop' size='h-4 w-4' %}</span>
             <h3 id="dropoffTitle" class="card-title">Drop-off points</h3>
             {% include 'partials/help.html' with id="helpDropoff" label="About drop-off points" text="The last event a session sent before it ended without converting, ranked by how many sessions ended there. The share is of every session that ended without converting." %}
         </div>

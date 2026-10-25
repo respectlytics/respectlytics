@@ -43,7 +43,7 @@
 
     <section class="card" aria-labelledby="stepsTitle">
         <div class="flex min-h-9 items-center justify-between gap-3">
-            <h2 id="stepsTitle" class="card-title">Steps</h2>
+            <div class="flex items-center gap-2.5"><span class="icon-chip h-8 w-8 rounded-lg bg-indigo-400/10 text-indigo-300 ring-indigo-300/25">{% include 'partials/icon.html' with name='funnel' size='h-4 w-4' %}</span><h2 id="stepsTitle" class="card-title">Steps</h2></div>
             {% if not demo %}
             <button type="button" id="resetButton" onclick="resetFunnelPage()" hidden class="btn-quiet -my-2 -mr-3">Start over</button>
             {% endif %}
@@ -86,10 +86,10 @@
     <section class="card" aria-labelledby="filtersTitle">
         <button type="button" onclick="toggleFiltersSection()" id="filtersToggleBtn" aria-expanded="false" aria-controls="filtersContent"
                 class="-m-2 flex w-[calc(100%+1rem)] items-center justify-between gap-3 rounded-xl p-2 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-400">
-            <span class="min-w-0">
+            <span class="flex min-w-0 items-center gap-2.5"><span class="icon-chip h-8 w-8 rounded-lg bg-slate-400/10 text-slate-300 ring-white/15">{% include 'partials/icon.html' with name='layers' size='h-4 w-4' %}</span><span class="min-w-0">
                 <span id="filtersTitle" class="card-title block">Filters</span>
-                <span id="activeFiltersCount" class="card-lead block">All sessions</span>
-            </span>
+                <span id="activeFiltersCount" class="block text-sm text-slate-400">All sessions</span>
+            </span></span>
             <svg id="filtersChevron" class="h-5 w-5 flex-none text-slate-400 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                 <path d="M6 9l6 6 6-6"/>
             </svg>
@@ -155,7 +155,7 @@
 
     <section id="funnelResults" class="card hidden" aria-labelledby="resultsTitle">
         <div class="flex flex-wrap items-center justify-between gap-3">
-            <h2 id="resultsTitle" class="card-title">Results</h2>
+            <div class="flex items-center gap-2.5"><span class="icon-chip h-8 w-8 rounded-lg bg-indigo-400/10 text-indigo-300 ring-indigo-300/25">{% include 'partials/icon.html' with name='bars' size='h-4 w-4' %}</span><h2 id="resultsTitle" class="card-title">Results</h2></div>
             <div class="-mr-3 flex gap-1">
                 <button type="button" onclick="exportFunnelData('csv')" class="btn-quiet">{% include 'partials/icon.html' with name='download' size='h-4 w-4' %}CSV</button>
                 <button type="button" onclick="exportFunnelData('json')" class="btn-quiet">{% include 'partials/icon.html' with name='download' size='h-4 w-4' %}JSON</button>
@@ -172,11 +172,11 @@
                 </div>
                 <div>
                     <p class="text-sm text-slate-400">Reached the last step</p>
-                    <p class="mt-1 text-[1.625rem] font-semibold leading-tight tracking-tight text-slate-50" id="conversionRate">-</p>
+                    <p class="mt-1 text-[1.625rem] font-semibold leading-tight tracking-tight text-emerald-300" id="conversionRate">-</p>
                 </div>
                 <div>
                     <p class="text-sm text-slate-400">Left along the way</p>
-                    <p class="mt-1 text-[1.625rem] font-semibold leading-tight tracking-tight text-slate-50" id="totalDropOff">-</p>
+                    <p class="mt-1 text-[1.625rem] font-semibold leading-tight tracking-tight text-rose-300" id="totalDropOff">-</p>
                 </div>
             </div>
             <ol id="funnelVisualization" class="mt-6"></ol>
@@ -184,7 +184,8 @@
     </section>
 
     <section id="timingSection" class="card hidden" aria-labelledby="timingTitle">
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2.5">
+            <span class="icon-chip h-8 w-8 rounded-lg bg-violet-400/10 text-violet-300 ring-violet-300/25">{% include 'partials/icon.html' with name='clock' size='h-4 w-4' %}</span>
             <h2 id="timingTitle" class="card-title">Time between steps</h2>
             {% include 'partials/help.html' with id="helpTiming" label="About these times" text="Median: the middle session. Mean: the average, which slow sessions pull up. Quick: a quarter of the sessions took less. Slow: a quarter took longer." %}
         </div>
@@ -199,7 +200,7 @@
             <div class="flex flex-wrap gap-x-10 gap-y-3">
                 <div>
                     <p class="text-sm text-slate-400">Median, first to last step</p>
-                    <p class="mt-1 text-[1.625rem] font-semibold leading-tight tracking-tight text-slate-50" id="summaryMedianTime">-</p>
+                    <p class="mt-1 text-[1.625rem] font-semibold leading-tight tracking-tight text-violet-300" id="summaryMedianTime">-</p>
                 </div>
                 <div>
                     <p class="text-sm text-slate-400">Mean</p>
@@ -207,7 +208,7 @@
                 </div>
                 <div>
                     <p class="text-sm text-slate-400">Took every step</p>
-                    <p class="mt-1 text-[1.625rem] font-semibold leading-tight tracking-tight text-slate-50" id="summaryCompletionRate">-</p>
+                    <p class="mt-1 text-[1.625rem] font-semibold leading-tight tracking-tight text-emerald-300" id="summaryCompletionRate">-</p>
                 </div>
             </div>
             <div class="relative mt-6 overflow-x-auto">
@@ -226,7 +227,7 @@
                 </table>
             </div>
             <p id="timingInsight" class="hidden mt-5 flex items-start gap-2 text-sm text-slate-300">
-                <span class="mt-0.5 flex-none text-amber-300">{% include 'partials/icon.html' with name='clock' size='h-4 w-4' %}</span>
+                <span class="mt-0.5 flex-none text-violet-300">{% include 'partials/icon.html' with name='clock' size='h-4 w-4' %}</span>
                 <span id="timingInsightText"></span>
             </p>
         </div>
@@ -1065,7 +1066,7 @@ let currentTimingData = null;
 
 /**
  * The funnel: each step as a bar of the sessions that reached it, against the first step, with
- * how many left after the step before.
+ * the sessions lost since the step before drawn faint in rose beside it and written under it.
  */
 function renderFunnel(data) {
     const container = document.getElementById('funnelVisualization');
@@ -1082,6 +1083,9 @@ function renderFunnel(data) {
         const ofFirst = firstCount > 0 ? (step.count / firstCount) * 100 : 0;
         const ofPrevious = prevCount > 0 ? (step.count / prevCount) * 100 : 0;
         const left = prevCount - step.count;
+        // the share of the first step's sessions lost since the step before, drawn faint in rose
+        // beside what is kept
+        const lost = firstCount > 0 && index > 0 ? (left / firstCount) * 100 : 0;
         let line;
         if (index === 0) {
             line = 'Sessions that took the first step';
@@ -1096,13 +1100,13 @@ function renderFunnel(data) {
         return `<li class="border-t border-white/10 py-4 first:border-t-0 first:pt-0 last:pb-0">
             <div class="flex items-baseline justify-between gap-4">
                 <span class="flex min-w-0 items-baseline gap-3">
-                    <span class="w-5 flex-none text-sm text-slate-400">${index + 1}</span>
+                    <span class="flex h-6 w-6 flex-none items-center justify-center rounded-full bg-indigo-400/15 text-xs font-semibold text-indigo-200" aria-hidden="true">${index + 1}</span>
                     <span class="min-w-0 break-words font-medium text-slate-50">${EventGroups.name(step.step, { plain: true })}</span>
                 </span>
                 <span class="flex-none text-slate-50"><span class="font-semibold">${step.count.toLocaleString()}</span> <span class="ml-1 text-sm text-slate-400">${ofFirst.toFixed(1)}%</span></span>
             </div>
-            <div class="ml-8 mt-2">
-                <span class="bar-track" aria-hidden="true"><span class="bar-fill" style="width:${ofFirst.toFixed(2)}%"></span></span>
+            <div class="ml-9 mt-2">
+                <span class="bar-track" aria-hidden="true"><span class="bar-fill" style="width:${ofFirst.toFixed(2)}%"></span>${lost > 0 ? `<span class="bar-fill is-lost opacity-40" style="width:${lost.toFixed(2)}%"></span>` : ''}</span>
                 <p class="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-400"><span>${line}</span>${leftLine}</p>
             </div>
         </li>`;

@@ -1,8 +1,9 @@
 /**
  * The Overview's charts and ranked lists (partials/stats/_tab_overview.html).
  *
- * Over time is three small charts of one series each (events, sessions, average session), in the
- * brand's colour, with dates written "Oct 3" through StatsApp.utils.formatPeriod, lying flat and
+ * Over time is three small charts of one series each (events, sessions, average session), each in
+ * its figure's own colour, the same as its tile at the top of the Overview (indigo, sky, violet),
+ * with dates written "Oct 3" through StatsApp.utils.formatPeriod, lying flat and
  * thinned out to about 6 on a phone and 10 on a desktop. Ranked data (events by type, countries)
  * is a list of bars with each name written out in full and its figure beside it, so nothing is
  * cut off and nothing waits for the pointer. Dependencies: Chart.js (chart-theme.js sets its look).
@@ -11,7 +12,12 @@
 window.StatsApp = window.StatsApp || {};
 StatsApp.charts = {};
 
-const BRAND = '#6366f1';                 // brand-500, the one series colour
+// Each figure's colour, its tile's too (partials/stats/_tab_overview.html): [line, fill as r, g, b]
+const SERIES = {
+    events: ['#818cf8', '129, 140, 248'],   // indigo-400
+    sessions: ['#38bdf8', '56, 189, 248'],  // sky-400
+    duration: ['#a78bfa', '167, 139, 250']  // violet-400
+};
 const TINTS = ['#6366f1', '#818cf8', '#a5b4fc', '#c7d2fe'];  // a group's events, lighter in turn
 
 /** The x axis of a chart over time: dates flat, as many as fit. */
@@ -31,17 +37,18 @@ StatsApp.chartAxis = function(labels) {
 };
 
 /**
- * One series over time on a canvas, in the brand's colour. Points that are null (an average
- * from too few sessions) leave a gap rather than a spike.
+ * One series over time on a canvas, in its figure's colour (SERIES). Points that are null (an
+ * average from too few sessions) leave a gap rather than a spike.
  */
-function lineChart(id, labels, values, { format = (v) => (v || 0).toLocaleString(), tick = null, stepSize = undefined } = {}) {
+function lineChart(id, labels, values, { format = (v) => (v || 0).toLocaleString(), tick = null, stepSize = undefined, series = 'events' } = {}) {
+    const [color, rgb] = SERIES[series] || SERIES.events;
     const canvas = document.getElementById(id);
     if (!canvas) return;
     if (StatsApp.charts[id]) StatsApp.charts[id].destroy();
     const ctx = canvas.getContext('2d');
     const fill = ctx.createLinearGradient(0, 0, 0, 240);
-    fill.addColorStop(0, 'rgba(99, 102, 241, 0.22)');
-    fill.addColorStop(1, 'rgba(99, 102, 241, 0)');
+    fill.addColorStop(0, `rgba(${rgb}, 0.24)`);
+    fill.addColorStop(1, `rgba(${rgb}, 0)`);
     const few = labels.length <= 8;
     StatsApp.charts[id] = new Chart(ctx, {
         type: 'line',
@@ -49,16 +56,16 @@ function lineChart(id, labels, values, { format = (v) => (v || 0).toLocaleString
             labels,
             datasets: [{
                 data: values,
-                borderColor: BRAND,
+                borderColor: color,
                 backgroundColor: fill,
                 borderWidth: 2,
                 tension: 0.3,
                 fill: true,
                 spanGaps: false,
                 pointRadius: few ? 3 : 0,
-                pointBackgroundColor: BRAND,
+                pointBackgroundColor: color,
                 pointHoverRadius: 4,
-                pointHoverBackgroundColor: BRAND,
+                pointHoverBackgroundColor: color,
                 pointHoverBorderColor: '#f8fafc',
                 pointHoverBorderWidth: 2
             }]
@@ -133,7 +140,8 @@ function renderOverTime(points) {
         format: (v) => `${v.toLocaleString()} events`
     });
     lineChart('dauChart', labels, data.map(p => p.unique_sessions || 0), {
-        format: (v) => `${v.toLocaleString()} sessions`
+        format: (v) => `${v.toLocaleString()} sessions`,
+        series: 'sessions'
     });
     // An average from fewer than 10 sessions is left out rather than drawn as a spike
     const durations = data.map(p => {
@@ -152,7 +160,8 @@ function renderOverTime(points) {
         lineChart('durationChart', labels, durations, {
             format: (v) => `${shortDuration(v)} on average`,
             tick: (value) => (value ? shortDuration(value) : '0'),
-            stepSize
+            stepSize,
+            series: 'duration'
         });
     }
 }
@@ -227,7 +236,8 @@ function createEventsTypeChart(eventsByName, eventGroups) {
 /**
  * The Countries card's list: each country with its flag, its sessions and, where conversion
  * events are chosen, the share of its sessions that converted; the five with most sessions,
- * and every one behind Show all.
+ * and every one behind Show all, in a box that scrolls inside the card with its header in
+ * view, so a long list never makes the page long (owner, 2026-10-25).
  * @param {Array} countries - [{country, count, sessions, conversions, conversion_rate}], rate in percent
  */
 function renderCountriesList(countries) {
@@ -249,6 +259,8 @@ function renderCountriesList(countries) {
     }
     const open = list.dataset.all === '1';
     const shown = open ? rows : rows.slice(0, 5);
+    const box = document.getElementById('countriesBox');
+    if (box) box.classList.toggle('scroll-box', open);
     list.innerHTML = shown.map(c => `
         <tr>
             <td class="whitespace-normal">

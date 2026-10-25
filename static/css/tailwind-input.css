@@ -2,16 +2,21 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Custom gradient classes used in auth pages */
+/* A <picture> drawn as display:contents (partials/brand_mark.html) must not hand its <source>
+   elements to the flex or grid around it: each counted as an item and added a gap, so every logo
+   sat 20 px off its line until 2026-10-25 */
+picture.contents > source {
+    display: none;
+}
+
 @layer components {
-    .auth-gradient {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    }
+    /* The sign-in pages' main button (users/templates/users/auth/): the accent, solid. Until
+       2026-10-25 a purple gradient with a glow, which the loheden-design skill rules out. */
     .btn-gradient {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: #5558e8;
     }
     .btn-gradient:hover {
-        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        background: #4f46e5;
     }
 
     /* An on/off switch: <input type="checkbox" role="switch" class="switch">, a setting that
@@ -100,62 +105,211 @@
     }
     /* The signed-in top bar's menus (partials/app_bar.html) */
     .menu-panel {
-        @apply absolute z-50 mt-2 min-w-56 overflow-hidden rounded-xl border border-white/15 bg-[#1e293b] py-1.5 shadow-2xl;
+        @apply absolute z-50 mt-2 min-w-56 overflow-hidden rounded-2xl border border-white/10 bg-[#1b2538] py-1.5;
+        box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.05), 0 28px 60px -24px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(15, 23, 42, 0.6);
+    }
+    /* A menu or help panel opens and settles rather than jumping in */
+    .menu-panel:not([hidden]),
+    .help-panel:not([hidden]) {
+        animation: panel-in 0.16s cubic-bezier(0.2, 0.7, 0.2, 1);
+        transform-origin: top;
+    }
+    @keyframes panel-in {
+        from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+        to { opacity: 1; transform: none; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .menu-panel:not([hidden]), .help-panel:not([hidden]) { animation: none; }
     }
     .menu-item {
         @apply flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-slate-200 hover:bg-white/5 hover:text-slate-50;
     }
+    /* A menu row's icon: quiet until its row is pointed at or focused */
+    .menu-icon {
+        @apply h-4 w-4 flex-none text-slate-400 transition-colors;
+    }
+    .menu-item:hover .menu-icon,
+    .menu-item:focus-visible .menu-icon {
+        @apply text-brand-300;
+    }
 
-    /* The buyer pages (website/landing/) and the homepage share this system,
-       defined once. A page is a stack of section cards, each with a title, one
-       line that says what it is for, and its content.
+    /* Colour carries meaning on the signed-in screens, one meaning each (the loheden-design
+       skill, One colour, one meaning):
+         indigo (brand)  you can act on this, and where you are
+         amber           a larger plan: Upgrade, See plans, the chip of a plan that costs nothing
+         emerald         live, and a rise
+         rose            a fall, and what deletes
+       Each app also has its own hue (dashboard.views.APP_HUES) for its tile and its activity
+       line, so a list of apps reads at a glance; it means only "this app". */
+    .btn-upgrade {
+        @apply btn min-h-9 rounded-full border border-amber-300/45 bg-gradient-to-b from-amber-300/[0.18] to-amber-500/[0.08] px-3.5 text-amber-100 hover:border-amber-200/70 hover:from-amber-300/[0.26] hover:to-amber-500/[0.14] focus-visible:outline-amber-300;
+        box-shadow: inset 0 1px 0 0 rgba(253, 230, 138, 0.22), 0 8px 22px -12px rgba(245, 158, 11, 0.7);
+    }
+    .btn-plans {
+        @apply btn border border-amber-300/40 text-amber-200 hover:border-amber-200/60 hover:bg-amber-400/10 hover:text-amber-100 focus-visible:outline-amber-300;
+    }
+    .link-plans {
+        @apply inline-flex items-center gap-1 font-semibold text-amber-300 underline decoration-amber-300/40 underline-offset-4 hover:text-amber-200 hover:decoration-amber-200;
+    }
+    .plan-chip {
+        @apply inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ring-inset;
+    }
+    .plan-chip-free {
+        @apply plan-chip bg-amber-400/10 text-amber-200 ring-amber-300/30;
+    }
+    .plan-chip-paid {
+        @apply plan-chip bg-brand-400/10 text-brand-200 ring-brand-300/30;
+    }
+    /* A card's mark: its icon on a tint of its own colour, beside its title */
+    .icon-chip {
+        @apply grid h-9 w-9 flex-none place-items-center rounded-xl ring-1 ring-inset;
+    }
+    /* The one note a page needs read before anything else on it (Secret keys: which key is which) */
+    .callout-amber {
+        @apply rounded-2xl border border-amber-300/25 bg-amber-400/[0.06] p-5 md:p-6;
+    }
+    /* A long list opened in place scrolls inside its card, its header staying in view,
+       instead of making the page longer (the Overview's countries and days) */
+    .scroll-box {
+        @apply max-h-[26rem] overflow-y-auto overscroll-contain;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(148, 163, 184, 0.35) transparent;
+    }
+    .scroll-box thead th {
+        @apply sticky top-0 z-10 bg-[#1e293b];
+    }
 
-       Colour carries the hierarchy, from strongest to weakest:
-         white          page and section titles
-         slate-100      item titles, emphasis in body copy
-         brand-300      the one line that says what is different (taglines)
-         slate-300      body copy
-         slate-400      descriptions and leads
-         slate-450      labels, notes, breadcrumbs (the faintest tone that still reads)
-       Type stays modest: a headline is a statement, not a poster. */
+    /* The app list (dashboard/dashboard.html): each app's card rises in once, its activity line
+       draws itself and a live app's dot pings three times, all over within five seconds
+       (WCAG 2.2.2); with Reduce Motion everything shows at once. */
+    .app-card {
+        @apply relative flex flex-col rounded-2xl border border-white/10 bg-[#1e293b] p-5 transition duration-200 hover:-translate-y-0.5 hover:border-white/20 hover:bg-[#223047];
+        box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.04);
+        animation: app-rise 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+        animation-delay: calc(var(--i, 0) * 45ms);
+    }
+    .app-card:hover {
+        box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.05), 0 18px 40px -24px rgb(var(--app) / 0.55);
+    }
+    .app-tile {
+        @apply grid h-10 w-10 flex-none place-items-center rounded-xl text-base font-bold;
+        color: rgb(var(--app));
+        background: rgb(var(--app) / 0.14);
+        box-shadow: inset 0 0 0 1px rgb(var(--app) / 0.3);
+    }
+    .app-spark {
+        @apply block h-14 w-full;
+        color: rgb(var(--app));
+    }
+    /* The line and its area are uncovered left to right once, by a mask that grows (transform) */
+    .app-spark-reveal {
+        transform-box: fill-box;
+        transform-origin: left;
+        animation: spark-reveal 1.1s cubic-bezier(0.3, 0.6, 0.2, 1) backwards;
+        animation-delay: calc(var(--i, 0) * 45ms + 150ms);
+    }
+    .live-dot {
+        @apply relative inline-flex h-2 w-2 flex-none rounded-full;
+    }
+    .live-dot-on {
+        @apply live-dot bg-emerald-400;
+        box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.18);
+    }
+    .live-dot-on::after {
+        @apply absolute inset-0 rounded-full bg-emerald-400 content-[''];
+        animation: live-ping 1.5s cubic-bezier(0, 0, 0.2, 1) 3;
+        opacity: 0;
+    }
+    .live-dot-off {
+        @apply live-dot bg-slate-500;
+    }
+    @keyframes app-rise {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: none; }
+    }
+    @keyframes spark-reveal {
+        from { transform: scaleX(0); }
+        to { transform: none; }
+    }
+    @keyframes live-ping {
+        0% { transform: scale(1); opacity: 0.7; }
+        100% { transform: scale(2.6); opacity: 0; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .app-card, .app-spark-reveal, .live-dot-on::after {
+            animation: none;
+        }
+        .app-card { @apply transition-none hover:translate-y-0; }
+    }
+
+    /* The public website (templates/base.html and every page outside the signed-in app), built
+       to the loheden-design skill's website rules and their numbers (web.md, measured from
+       apple.com): a hero, then bands, one idea each, told apart by space and by the surface
+       changing under them, never by borders or shadows around content. Sizes are px, set once
+       here by role; base.html sets the site's root to 16 px and its body to 17 px.
+
+       Text, from strongest to weakest, each passing on both surfaces (#0f172a and #131c31):
+         white      titles and headlines, a bold lead phrase, the current nav item
+         slate-300  body
+         slate-400  leads, captions, footer links
+         slate-450  notes and breadcrumbs only
+       Until 2026-10-25 a page was a column of 56 rem of bordered cards with 22 px headlines,
+       and its grids rows of identical boxes (owner, 2026-10-25: "truly give the premium
+       feeling"). */
     /* w-full matters: <main> is a flex column, and a flex item centred with
        auto margins sizes to its widest unbreakable line (a long line of code)
        instead of the screen. */
     .page-stack {
-        @apply w-full max-w-4xl mx-auto px-4 md:px-6 pb-20 flex flex-col gap-5;
+        @apply mx-auto flex w-full flex-col px-5 sm:px-8;
+        max-width: calc(70rem + 4rem);
     }
+    /* A band. Every other one sits on the quiet alternate surface, painted across the whole
+       window by a shadow its clip lets through sideways, so the band's content keeps the page's
+       width and nothing can scroll sideways. */
     .section-card {
-        @apply rounded-2xl border border-white/[0.07] bg-[#121a2b] p-6 md:p-9;
-        box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.04);
+        @apply relative py-[72px] md:py-24 lg:py-28;
+    }
+    .page-stack > .section-card:nth-child(odd of .section-card),
+    .band-alt {
+        background: #131c31;
+        box-shadow: 0 0 0 100vmax #131c31;
+        clip-path: inset(0 -100vmax);
     }
     .section-title {
-        @apply text-[1.2rem] md:text-[1.35rem] font-semibold text-white tracking-[-0.01em] leading-snug;
+        @apply max-w-[46rem] text-[26px] font-semibold leading-[1.12] tracking-[-0.018em] text-white md:text-[30px] lg:text-[34px];
+        text-wrap: balance;
     }
     .section-lead {
-        @apply mt-2 max-w-2xl text-slate-400 leading-relaxed;
+        @apply mt-4 max-w-[40rem] text-[18px] leading-normal text-slate-400 md:text-[19px];
+        text-wrap: pretty;
     }
     .section-body {
-        @apply mt-7 text-slate-300 leading-relaxed;
+        @apply mt-10 text-[17px] leading-[1.6] text-slate-300 lg:mt-14;
     }
 
     .hero-h1 {
-        @apply text-[2.1rem] md:text-[2.9rem] font-semibold text-white tracking-[-0.03em] leading-[1.08];
+        @apply text-[34px] font-semibold leading-[1.08] tracking-[-0.022em] text-white md:text-[42px] lg:text-[48px];
+        text-wrap: balance;
     }
     .page-h1 {
-        @apply text-[1.8rem] md:text-[2.3rem] font-semibold text-white tracking-[-0.025em] leading-[1.15];
+        @apply text-[32px] font-semibold leading-[1.1] tracking-[-0.022em] text-white md:text-[38px] lg:text-[44px];
+        text-wrap: balance;
     }
     .page-lead {
-        @apply text-[1.05rem] md:text-[1.13rem] text-slate-400 leading-relaxed;
+        @apply text-[18px] leading-normal text-slate-400 md:text-[19px];
+        text-wrap: pretty;
     }
+    /* The second line of the home title: the brand's colour, solid (never gradient text) */
     .accent-text {
-        @apply bg-gradient-to-r from-brand-300 via-violet-300 to-fuchsia-300 bg-clip-text text-transparent;
+        @apply text-brand-300;
     }
 
     .item-title {
-        @apply font-semibold text-slate-100;
+        @apply text-[19px] font-semibold leading-[1.25] tracking-[-0.01em] text-white md:text-[21px] lg:text-[22px];
     }
     .item-text {
-        @apply mt-1 ml-0 text-slate-400 leading-relaxed;
+        @apply mt-2 ml-0 text-[17px] leading-[1.6] text-slate-400;
+        text-wrap: pretty;
     }
     .icon-tile {
         @apply grid h-10 w-10 flex-none place-items-center rounded-xl bg-brand-500/10 text-brand-300 ring-1 ring-inset ring-brand-400/20;
@@ -164,9 +318,10 @@
        pictures live in website/templates/website/illustrations/, inline SVG in
        the hero's language: phones, the five-dot event, the logo tile, indigo
        for what flows and rose for what is refused. Each is aria-hidden, since
-       the title and text beside it say the same thing in words. */
+       the title and text beside it say the same thing in words. Its frame is a
+       window onto the drawing, a deeper surface with no edge drawn round it. */
     .illo {
-        @apply block overflow-hidden rounded-xl bg-[#0c1322] ring-1 ring-inset ring-white/[0.06];
+        @apply block overflow-hidden rounded-[22px] bg-[#0b1222];
     }
     /* One frame shape for every picture, so cards in a row line up even when
        a drawing is narrower than 16:9 (it is centred in the frame). */
@@ -174,15 +329,50 @@
         @apply block aspect-video h-auto w-full;
     }
     .illo-grid {
-        @apply mt-7 grid gap-x-8 gap-y-10 sm:grid-cols-2;
+        @apply mt-10 grid gap-x-10 gap-y-14 sm:grid-cols-2 lg:mt-14;
     }
     .illo-grid .item-title {
-        @apply mt-5;
+        @apply mt-6;
     }
     /* A section's words beside one picture of them: side by side from md up,
        the picture first on a phone. */
     .illo-aside {
-        @apply mt-7 grid gap-8 text-slate-300 leading-relaxed md:grid-cols-2 md:items-center;
+        @apply mt-10 grid gap-10 text-[17px] leading-[1.6] text-slate-300 md:grid-cols-2 md:items-center lg:mt-14 lg:gap-16;
+    }
+    /* A link that stands alone: the accent, a small chevron that moves 3 px on hover, no arrow */
+    .chev-link {
+        @apply inline-flex items-center gap-1 font-medium text-brand-300 no-underline transition-colors duration-150 hover:text-brand-200;
+    }
+    .chev-link::after,
+    .cta-secondary::after {
+        content: '';
+        @apply inline-block h-[0.7em] w-[0.45em] flex-none bg-current transition-transform duration-150;
+        -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 14'%3E%3Cpath d='M1.5 1.5L6.5 7l-5 5.5' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
+        mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 14'%3E%3Cpath d='M1.5 1.5L6.5 7l-5 5.5' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
+    }
+    .chev-link:hover::after,
+    .cta-secondary:hover::after {
+        transform: translateX(3px);
+    }
+    /* A picture of the product (assets/masters, the image registry): the window's own edge is
+       a soft ring and a deep shadow, so it reads on either surface; the picture shows the part
+       of the screen its band talks about, at the product's own size */
+    .product-shot {
+        @apply block overflow-hidden rounded-[18px] bg-[#0f172a];
+        box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.16), 0 40px 90px -40px rgba(2, 6, 23, 0.95), 0 18px 40px -30px rgba(99, 102, 241, 0.35);
+    }
+    .product-shot img {
+        @apply block h-auto w-full;
+    }
+    /* A list of facts: hairlines between them, each with its icon in a soft disc of the accent */
+    .fact-list {
+        @apply divide-y divide-white/[0.08] border-y border-white/[0.08];
+    }
+    .fact-list > li {
+        @apply flex gap-4 py-5;
+    }
+    .fact-icon {
+        @apply grid h-10 w-10 flex-none place-items-center rounded-full bg-brand-400/10 text-brand-300;
     }
     .text-link {
         @apply font-medium text-brand-300 underline-offset-4 hover:text-brand-200 hover:underline;
@@ -205,16 +395,129 @@
         @apply rounded-md px-2 py-1 font-sans text-xs font-medium text-slate-400 transition-colors hover:bg-white/[0.06] hover:text-white;
     }
 
-    /* The website's calls to action (.cta-primary, .cta-secondary); the signed-in screens'
-       buttons are .btn-* above. Until 2026-10-24 these were .btn-primary and .btn-secondary
-       too, and the two sets restyled each other. #5558e8 rather than brand-500: white on
-       brand-500 is 4.46:1, just under the 4.5:1 that small text needs. */
+    /* The website's bar and its menus (templates/base.html). Links 15 px weight 500 as soft
+       pills on hover; the menu or page you are on in the accent at weight 600 on a tint of it */
+    .site-nav-link {
+        @apply inline-flex min-h-9 items-center gap-1 rounded-full px-3.5 text-[15px] font-medium text-slate-300 no-underline transition-colors duration-150 hover:bg-white/[0.06] hover:text-slate-50 focus-visible:outline focus-visible:outline-[3px] focus-visible:outline-offset-[3px] focus-visible:outline-brand-300;
+    }
+    .site-nav-link.is-current,
+    .site-nav-link[aria-expanded="true"] {
+        @apply bg-brand-400/[0.12] font-semibold text-brand-200;
+    }
+    .site-menu {
+        @apply menu-panel left-1/2 -ml-[11rem] w-[22rem] p-1.5;  /* centred by margin: its opening animation owns transform */
+    }
+    .site-menu-row {
+        @apply flex min-h-11 flex-col justify-center rounded-xl px-3.5 py-2.5 no-underline transition-colors duration-150 hover:bg-white/[0.05] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand-300;
+    }
+    .site-menu-name {
+        @apply text-[15px] font-medium text-slate-50;
+    }
+    .site-menu-line {
+        @apply mt-0.5 text-[13px] text-slate-400;
+    }
+    .site-sheet-row {
+        @apply flex min-h-11 items-center rounded-xl px-3 text-[16px] text-slate-200 no-underline hover:bg-white/[0.05];
+    }
+    .site-sheet-heading {
+        @apply mt-5 px-3 pb-1 text-[13px] font-semibold text-slate-450;
+    }
+    /* The footer: sentence-case headings, links in the muted tone */
+    .site-foot-heading {
+        @apply text-[14px] font-semibold text-slate-100;
+    }
+    .site-foot-list {
+        @apply m-0 mt-4 list-none space-y-3 p-0 text-[15px];
+    }
+    .site-foot-list a,
+    .site-foot-link {
+        @apply text-slate-400 no-underline transition-colors duration-150 hover:text-slate-50;
+    }
+    /* The footer's Pause animations: every looping picture holds still */
+    .animations-paused *,
+    .animations-paused *::before,
+    .animations-paused *::after {
+        animation-play-state: paused !important;
+    }
+
+    /* The website's calls to action. The main one is a filled pill, 44 px tall, one per band;
+       every other is a text link with a small chevron, as on apple.com (web.md, Buttons and
+       links). The signed-in screens' buttons are .btn-* above; until 2026-10-24 these were
+       .btn-primary and .btn-secondary too, and the two sets restyled each other. #5558e8
+       rather than brand-500: white on brand-500 is 4.46:1, just under the 4.5:1 small text
+       needs. */
     .cta-primary {
-        @apply inline-flex items-center justify-center gap-2 rounded-xl bg-[#5558e8] px-5 py-3 font-semibold text-white no-underline transition-colors hover:bg-brand-600;
-        box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.18), 0 10px 30px -12px rgba(99, 102, 241, 0.7);
+        @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-[#5558e8] px-[22px] py-2.5 text-[16px] font-semibold text-white no-underline transition-colors duration-150 hover:bg-brand-600 focus-visible:outline focus-visible:outline-[3px] focus-visible:outline-offset-[3px] focus-visible:outline-brand-300;
     }
     .cta-secondary {
-        @apply inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-5 py-3 font-semibold text-slate-100 no-underline transition-colors hover:bg-white/[0.07];
+        @apply inline-flex min-h-11 items-center justify-center gap-1.5 rounded-full px-2 text-[16px] font-medium text-brand-300 no-underline transition-colors duration-150 hover:text-brand-200 focus-visible:outline focus-visible:outline-[3px] focus-visible:outline-offset-[3px] focus-visible:outline-brand-300;
+    }
+    /* The small pill for tight places: the bar's Start free */
+    .cta-small {
+        @apply inline-flex min-h-9 items-center justify-center whitespace-nowrap rounded-full bg-[#5558e8] px-4 text-[15px] font-semibold text-white no-underline transition-colors duration-150 hover:bg-brand-600 focus-visible:outline focus-visible:outline-[3px] focus-visible:outline-offset-[3px] focus-visible:outline-brand-300;
+    }
+
+    /* What you see on the homepage (website/partials/home_features.html): the views as tabs
+       beside the product; the one shown has its name in the accent, its line open and its bar
+       filling while it waits for the next turn */
+    .feature-row {
+        @apply relative flex w-full flex-col items-start rounded-2xl py-4 pl-6 pr-4 text-left transition-colors duration-150 hover:bg-white/[0.03] focus-visible:outline focus-visible:outline-[3px] focus-visible:-outline-offset-[3px] focus-visible:outline-brand-300;
+    }
+    .feature-row[aria-selected="true"] {
+        @apply bg-white/[0.04];
+    }
+    .feature-name {
+        @apply text-[19px] font-semibold leading-snug text-slate-300 transition-colors duration-150;
+    }
+    .feature-row[aria-selected="true"] .feature-name {
+        @apply text-brand-200;
+    }
+    .feature-text {
+        @apply mt-1.5 hidden text-[16px] leading-relaxed text-slate-400;
+    }
+    .feature-row[aria-selected="true"] .feature-text {
+        @apply block;
+    }
+    .feature-progress {
+        @apply absolute bottom-4 left-2 top-4 w-[3px] overflow-hidden rounded-full bg-white/[0.08];
+    }
+    .feature-row[aria-selected="true"] .feature-progress::after {
+        @apply absolute inset-0 rounded-full bg-brand-400 content-[''];
+        transform-origin: top;
+    }
+    .is-turning .feature-row[aria-selected="true"] .feature-progress::after {
+        animation: feature-fill 7s linear both;
+    }
+    .feature-stage {
+        @apply grid;
+    }
+    .feature-panel {
+        @apply self-center;
+        grid-area: 1 / 1;
+        transition: opacity 0.45s cubic-bezier(0.22, 1, 0.36, 1), transform 0.45s cubic-bezier(0.22, 1, 0.36, 1), visibility 0.45s;
+    }
+    .feature-panel:not(.is-shown) {
+        @apply invisible opacity-0;
+        transform: translateY(8px);
+    }
+    @keyframes feature-fill {
+        from { transform: scaleY(0); }
+        to { transform: none; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .feature-panel { transition: none; }
+        .is-turning .feature-row[aria-selected="true"] .feature-progress::after { animation: none; }
+    }
+
+    /* Bands rise into view once, as their top passes 92% of the window (templates/base.html,
+       a scroll sweep); the hidden state exists only under the class the script adds when
+       motion is allowed, so without script or with Reduce Motion everything is simply there */
+    .motion .page-stack > .section-card {
+        transition: opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1), transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .motion .page-stack > .section-card:not(.is-in) {
+        opacity: 0;
+        transform: translateY(18px);
     }
 
     /* Long-form pages (the blog posts) are one reading column set by .article,
@@ -382,7 +685,8 @@
     }
 }
 
-/* The hint bubble on the calculators' field labels (tools/templates/tools).
+/* The hint bubble on the calculators' field labels (tools/templates/tools) and the app list's
+   trend chips (dashboard/dashboard.html), shown on hover and on focus.
    Hidden with display:none rather than visibility, so a bubble near the edge
    of a phone screen cannot widen the page while nobody is looking at it. */
 .tooltip-trigger { position: relative; cursor: help; }
@@ -408,6 +712,11 @@
 }
 .tooltip-trigger:hover .tooltip-content,
 .tooltip-trigger:focus-within .tooltip-content { display: block; }
+/* Esc hides it until the pointer or the focus leaves (WCAG 1.4.13; static/js/app-shell.js) */
+.tooltip-trigger[data-dismissed] .tooltip-content { display: none; }
+/* Lined up with the trigger's right edge, for a trigger near the right of its card */
+.tooltip-trigger .tooltip-content.tooltip-end { left: auto; right: 0; transform: none; }
+.tooltip-trigger .tooltip-content.tooltip-end::after { left: auto; right: 14px; transform: none; }
 .tooltip-trigger .tooltip-content::after {
     content: '';
     position: absolute;

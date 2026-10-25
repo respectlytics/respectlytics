@@ -35,6 +35,7 @@ def account_api_keys_view(request):
             "example_url": request.build_absolute_uri(reverse("analytics:event-summary")),
             "example_secret": new_key or "YOUR_SECRET_KEY",
             "example_app_key": str(app.id) if app else "YOUR_APP_KEY",
+            "example_app": app,
         },
     )
 

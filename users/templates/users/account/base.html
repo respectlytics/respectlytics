@@ -1,13 +1,15 @@
 {% extends 'app_base.html' %}
 {% load static %}
 {% comment %}
-The account area's frame (the loheden-design skill, a settings page): on a desktop a list of
-the account's pages beside the page's cards, on a phone the same list as rows behind one button
-(static/js/app-shell.js opens it). The page you are on is a quiet slate pill with
-aria-current, never the accent, which means "you can act"; it is found from the URL, so a view
-passes nothing for it. Delete account sits apart at the end. Each page writes its own title
-(.app-title) at the top of account_content. The withdrawal pages (billing/withdraw.html) show
-Billing as the page you are on, and nothing here names them.
+The account area's frame (the loheden-design skill, a settings page): All apps first, the way
+back to the app list (owner, 2026-10-25: nothing on these pages led back but the logo); then on a
+desktop a list of the account's pages beside the page's cards, under its title, and on a phone
+the same list as rows behind one button (static/js/app-shell.js opens it). Every page in the
+list has its icon, which the title above them has not, so the title never reads as one of them.
+The page you are on is a quiet slate pill with aria-current and its icon in indigo; it is found
+from the URL, so a view passes nothing for it. Delete account sits apart at the end. Each page
+writes its own title (.app-title) at the top of account_content. The withdrawal pages
+(billing/withdraw.html) show Billing as the page you are on, and nothing here names them.
 {% endcomment %}
 
 {% block title %}Account settings | Respectlytics{% endblock %}
@@ -18,26 +20,27 @@ Billing as the page you are on, and nothing here names them.
 <div class="px-4 py-6 md:px-6 md:py-8 lg:px-8 lg:py-10">
   <div class="mx-auto grid w-full max-w-6xl gap-6 lg:grid-cols-[13.5rem_minmax(0,48rem)] lg:gap-12">
     <div class="lg:sticky lg:top-24 lg:self-start">
+      <a href="{% url 'dashboard:main' %}" class="mb-4 inline-flex min-h-10 items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-brand-300 hover:text-brand-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-400 lg:mb-5">{% include 'partials/icon.html' with name='chevron-left' size='h-4 w-4' %}All apps</a>
       <button type="button" data-popover aria-expanded="false" aria-controls="accountPages"
               class="flex min-h-12 w-full items-center justify-between gap-3 rounded-xl border border-white/10 bg-[#1e293b] px-4 text-[0.9375rem] font-medium text-slate-100 hover:border-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400 lg:hidden">
         Account settings
         <svg class="h-4 w-4 flex-none text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
       </button>
-      <nav id="accountPages" aria-label="Account settings" hidden
+      <nav id="accountPages" aria-labelledby="accountPagesTitle" hidden
            class="mt-2 rounded-xl border border-white/10 bg-[#1e293b] p-1.5 lg:mt-0 lg:!block lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0">
-        <p class="mb-2 hidden px-3 text-sm font-semibold text-slate-200 lg:block">Account settings</p>
+        <h2 id="accountPagesTitle" class="mb-3 hidden px-3 text-lg font-semibold tracking-tight text-slate-50 lg:block">Account settings</h2>
         <ul class="space-y-0.5">
-          {% url 'account_profile' as url %}{% include 'users/account/_nav_link.html' with label='Profile' name='account_profile' %}
-          {% url 'account_billing' as url %}{% include 'users/account/_nav_link.html' with label='Billing' name='account_billing' also='withdraw' %}
-          {% url 'account_preferences' as url %}{% include 'users/account/_nav_link.html' with label='Emails' name='account_preferences' %}
-          {% url 'account_security' as url %}{% include 'users/account/_nav_link.html' with label='Password' name='account_security' %}
-          {% if team_url %}{% include 'users/account/_nav_link.html' with url=team_url label='Team' name='team' %}{% endif %}
-          {% url 'account_api_keys' as url %}{% include 'users/account/_nav_link.html' with label='Secret keys' name='account_api_keys' %}
-          {% url 'account_data_management' as url %}{% include 'users/account/_nav_link.html' with label='Deletion history' name='account_data_management' %}
+          {% url 'account_profile' as url %}{% include 'users/account/_nav_link.html' with label='Profile' icon='user' name='account_profile' %}
+          {% url 'account_billing' as url %}{% include 'users/account/_nav_link.html' with label='Billing' icon='card' name='account_billing' also='withdraw' %}
+          {% url 'account_preferences' as url %}{% include 'users/account/_nav_link.html' with label='Emails' icon='mail' name='account_preferences' %}
+          {% url 'account_security' as url %}{% include 'users/account/_nav_link.html' with label='Password' icon='lock' name='account_security' %}
+          {% if team_url %}{% include 'users/account/_nav_link.html' with url=team_url label='Team' icon='users' name='team' %}{% endif %}
+          {% url 'account_api_keys' as url %}{% include 'users/account/_nav_link.html' with label='Secret keys' icon='key' name='account_api_keys' %}
+          {% url 'account_data_management' as url %}{% include 'users/account/_nav_link.html' with label='Deletion history' icon='history' name='account_data_management' %}
         </ul>
         <div class="mx-3 my-2 border-t border-white/10"></div>
         <ul>
-          {% url 'account_delete' as url %}{% include 'users/account/_nav_link.html' with label='Delete account' name='account_delete' danger=True %}
+          {% url 'account_delete' as url %}{% include 'users/account/_nav_link.html' with label='Delete account' icon='trash' name='account_delete' danger=True %}
         </ul>
       </nav>
     </div>

@@ -44,9 +44,10 @@ HOSTED = apps.is_installed("teams") and apps.is_installed("billing")
 @skipUnless(HOSTED, "respectlytics.com's app list: the community edition has its own")
 class AppListTest(TestCase):
     """The app list (dashboard/dashboard.html): one card per app that opens its Overview, its
-    status from one query for every app, shared apps in the same list, one quiet line about the
-    plan and a card only when the plan needs something done, and a real empty state. Renaming,
-    the key and deleting are on the app's Settings page (teams/tests.py)."""
+    status and its last 14 days from two queries for every app, shared apps in the same list,
+    the plan with a meter of its events and a card only when the plan needs something done, and
+    a real empty state. Renaming, the key and deleting are on the app's Settings page
+    (teams/tests.py)."""
 
     def setUp(self):
         cache.clear()
@@ -97,25 +98,71 @@ class AppListTest(TestCase):
         app = App.objects.create(name="Busy", user=self.user)
         html = self.page()
         self.assertNotIn(str(app.id), html)
-        for gone in ("regenerate-key", "/delete/", "/update/", "Show</button>", "animation"):
+        for gone in ("regenerate-key", "/delete/", "/update/", "Show</button>"):
             self.assertNotIn(gone, html)
 
-    def test_the_last_events_are_one_query_however_many_apps(self):
-        App.objects.create(name="One", user=self.user)
-        with CaptureQueriesContext(connection) as one:
+    def test_the_last_events_and_the_activity_are_two_queries_however_many_apps(self):
+        App.objects.create(name="Quiet", user=self.user)  # never sent one: no activity to read
+        for name in ("One", "Two"):
+            self.event(App.objects.create(name=name, user=self.user), 1)
+        with CaptureQueriesContext(connection) as two:
             self.page()
-        for name in ("Two", "Three", "Four"):
+        for name in ("Three", "Four"):
             self.event(App.objects.create(name=name, user=self.user), 1)
         with CaptureQueriesContext(connection) as four:
             html = self.page()
-        self.assertEqual(html.count("Last event 1 minute ago"), 3)
-        self.assertEqual(len(four), len(one))
+        self.assertEqual(html.count("Last event 1 minute ago"), 4)
+        self.assertEqual(len(four), len(two))
         reads = [q["sql"] for q in four if '"analytics_event"' in q["sql"]]
-        self.assertEqual(len(reads), 1, reads)
+        self.assertEqual(len(reads), 2, reads)
         # One subquery per app row, by app and then the newest timestamp: Event's (app, timestamp)
         self.assertRegex(
             reads[0], r'WHERE "U0"\."app_id" = \("analytics_app"\."id"\) ORDER BY \S+ DESC LIMIT 1'
         )
+        # The 14 days of every app that sent an event, grouped in the database by app and day,
+        # filtered by app first so the (app, timestamp) index carries it
+        self.assertIn('WHERE ("analytics_event"."app_id" IN (', reads[1])
+        self.assertIn("GROUP BY", reads[1])
+        # and kept for five minutes: the next visit reads only the last events
+        with CaptureQueriesContext(connection) as again:
+            self.page()
+        self.assertEqual(len([q for q in again if '"analytics_event"' in q["sql"]]), 1)
+
+    def test_each_card_draws_its_last_14_days_and_its_week_against_the_one_before(self):
+        rising = App.objects.create(name="Rising", user=self.user)
+        for minutes in (5, 60 * 24 * 2, 60 * 24 * 3, 60 * 24 * 10):  # 3 this week, 1 before
+            self.event(rising, minutes)
+        falling = App.objects.create(name="Falling", user=self.user)
+        for minutes in (60 * 24 * 9, 60 * 24 * 11, 60 * 24 * 12, 60 * 24 * 13 - 1):
+            self.event(falling, minutes)
+        self.event(falling, 60 * 24 * 1)  # 1 this week, 4 before
+        new = App.objects.create(name="New", user=self.user)
+        self.event(new, 90)  # nothing before to compare with
+        html = self.page()
+
+        def card(name):
+            start = html.index(f">{name}</a>")
+            return html[start : html.index("</li>", start)]
+
+        self.assertIn(">3</span>", card("Rising"))
+        self.assertIn('200%<span class="sr-only"> more than the 7 days before', card("Rising"))
+        self.assertIn("live-dot-on", card("Rising"))  # an event 5 minutes ago
+        self.assertIn("live-dot-off", card("Falling"))  # a day ago
+        self.assertIn(">1</span>", card("Falling"))
+        self.assertIn('75%<span class="sr-only"> fewer than the 7 days before', card("Falling"))
+        self.assertNotIn("%<span", card("New"))
+        for name in ("Rising", "Falling", "New"):
+            self.assertIn('aria-label="Events each day over the last 14 days"', card(name))
+            self.assertIn("events in the last 7 days", card(name))
+
+    def test_an_apps_hue_is_its_own_and_never_changes(self):
+        from dashboard.views import APP_HUES
+
+        app = App.objects.create(name="Atlas", user=self.user)
+        hue = APP_HUES[app.pk.int % len(APP_HUES)]
+        self.assertIn(f'style="--app: {hue}; --i: 0"', self.page())
+        App.objects.create(name="Aardvark", user=self.user)  # comes first now
+        self.assertIn(f'style="--app: {hue}; --i: 1"', self.page())
 
     def test_shared_apps_are_in_the_same_list_after_the_persons_own(self):
         from teams.models import Membership
@@ -134,7 +181,9 @@ class AppListTest(TestCase):
     def test_one_quiet_line_about_the_plan_and_no_card_while_all_is_well(self):
         App.objects.create(name="Busy", user=self.user)
         html = self.page()
-        self.assertIn("Pro plan, 12,345 of 1,000,000 events this month", html)
+        self.assertIn('<span class="plan-chip-paid">Pro plan</span>', html)
+        self.assertIn(">12,345 of 1,000,000 events this month</span>", html)
+        self.assertIn('class="block h-full rounded-full bg-brand-400" style="width: 1%"', html)
         self.assertIn('href="/billing/manage/"', html)
         self.assertNotIn('aria-label="Your plan"', html)
 
