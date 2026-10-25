@@ -164,6 +164,33 @@ picture.contents > source {
     .icon-chip {
         @apply grid h-9 w-9 flex-none place-items-center rounded-xl ring-1 ring-inset;
     }
+    /* The plan shown beside the controls, on the pricing page and the plan page alike: lit from its
+       top edge in the brand's colour, so it reads as the thing being chosen (billing/_plan_finder.html) */
+    .plan-glow {
+        @apply relative border border-brand-400/30;
+        background-image: radial-gradient(120% 60% at 50% 0%, rgba(99, 102, 241, 0.16), transparent 70%);
+        box-shadow: inset 0 1px 0 0 rgba(165, 180, 252, 0.18), 0 24px 60px -30px rgba(99, 102, 241, 0.6);
+    }
+    .plan-line {
+        @apply flex items-start gap-3 text-sm leading-6 text-slate-200;
+    }
+    .plan-line-icon {
+        @apply grid h-6 w-6 flex-none place-items-center rounded-md bg-brand-400/10 text-brand-300;
+    }
+    /* This month's events against the plan's limit: amber where a larger plan is the answer, the
+       brand's colour otherwise, rose from nine tenths up */
+    .usage-meter {
+        @apply block h-2 w-full overflow-hidden rounded-full bg-white/10;
+    }
+    .usage-meter > span {
+        @apply block h-full min-w-[0.5rem] rounded-full bg-brand-400 transition-[width] duration-700;
+    }
+    .usage-meter.is-free > span {
+        @apply bg-gradient-to-r from-amber-300 to-amber-400;
+    }
+    .usage-meter.is-near > span {
+        @apply bg-rose-400;
+    }
     /* The one note a page needs read before anything else on it (Secret keys: which key is which) */
     .callout-amber {
         @apply rounded-2xl border border-amber-300/25 bg-amber-400/[0.06] p-5 md:p-6;
@@ -363,6 +390,16 @@ picture.contents > source {
     }
     .product-shot img {
         @apply block h-auto w-full;
+    }
+    /* A reason to choose the product, as a caption block: its point in the heading colour running
+       into the grey text that backs it, a hairline above each (landing/_reasons.html, the
+       comparisons' strengths). Words alone, no tile. */
+    .reason {
+        @apply border-t border-white/[0.08] py-6 text-[17px] leading-[1.6] text-slate-400;
+        text-wrap: pretty;
+    }
+    .reason > strong {
+        @apply font-semibold text-white;
     }
     /* A list of facts: hairlines between them, each with its icon in a soft disc of the accent */
     .fact-list {
