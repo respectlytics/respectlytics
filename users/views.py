@@ -391,9 +391,7 @@ def resend_verification_email(request):
 
     was_limited = getattr(request, "limited", False)
     if was_limited:
-        messages.error(
-            request, "Too many resend attempts. Please wait an hour before trying again."
-        )
+        messages.error(request, "Too many resend attempts. Please try again later.")
         return redirect("registration_complete")
 
     email = request.POST.get("email", "").strip()

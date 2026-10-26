@@ -3,7 +3,8 @@
 Django already hides every setting named like a secret; these also keep out the request's
 addresses, browser, cookies (a session cookie in a mail is a way into the account), form fields
 and the values of local variables, and name a signed-in person by number, since a username here
-is an email address.
+is an email address. JWT and ASSERTION catch the signed sign-in token an identity proxy sends as
+a request header, whose name matches none of Django's words.
 """
 
 import re
@@ -13,7 +14,7 @@ from django.views.debug import ExceptionReporter, SafeExceptionReporterFilter
 
 class PrivateExceptionReporterFilter(SafeExceptionReporterFilter):
     hidden_settings = re.compile(
-        "API|AUTH|TOKEN|KEY|SECRET|PASS|SIGNATURE|ADDR|_IP$|FORWARDED|COOKIE|USER_AGENT",
+        "API|AUTH|TOKEN|KEY|SECRET|PASS|SIGNATURE|ADDR|_IP$|FORWARDED|COOKIE|USER_AGENT|JWT|ASSERTION",
         flags=re.IGNORECASE,
     )
 

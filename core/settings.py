@@ -166,7 +166,9 @@ WSGI_APPLICATION = "core.wsgi.application"
 # PostgreSQL is REQUIRED. We use django.contrib.postgres aggregates (ArrayAgg).
 # SQLite is NOT supported and will crash.
 
-TEST_DATABASE_URL = env("DATABASE_URL_TEST", default=None)
+# Read only under test: a setting holding the URL outside a test run would print its password
+# in every error mail, since its name looks like no secret.
+TEST_DATABASE_URL = env("DATABASE_URL_TEST", default=None) if TESTING else None
 
 if TESTING and TEST_DATABASE_URL:
     DATABASES = {"default": env.db("DATABASE_URL_TEST")}

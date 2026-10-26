@@ -17,7 +17,6 @@ from .views import (
     RecentActivityView,
     api_root,
     health_check,
-    list_all_apps,
 )
 
 app_name = "analytics"
@@ -33,7 +32,6 @@ urlpatterns = [
         AppRegenerateKeyView.as_view(),
         name="app-regenerate-key",
     ),
-    path("apps/list-all/", list_all_apps, name="apps-list-all"),
     path("events/", EventCreateView.as_view(), name="event-create"),
     path("events/summary/", EventSummaryView.as_view(), name="event-summary"),
     path("events/count/", EventCountView.as_view(), name="event-count"),

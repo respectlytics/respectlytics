@@ -178,6 +178,14 @@ class AppAPITestCase(APITestCase):
         self.assertIn("My App 2", names)
         self.assertNotIn("Other App", names)
 
+    def test_the_list_all_route_is_gone(self):
+        """/api/v1/apps/list-all/ read request.user with no authentication, which is None here
+        (UNAUTHENTICATED_USER), so every call raised and mailed the owner; /api/v1/apps/ lists
+        the apps. Removed on 2026-10-25."""
+        self.assertEqual(self.client.get("/api/v1/apps/list-all/").status_code, 404)
+        self.client.force_login(self.user)
+        self.assertEqual(self.client.get("/api/v1/apps/list-all/").status_code, 404)
+
 
 class EventAPITestCase(APITestCase):
     """Test Event API endpoints"""

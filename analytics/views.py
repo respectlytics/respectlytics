@@ -4,7 +4,7 @@ Analytics API Views — Community Edition
 This module contains all API views for the analytics application.
 Organized into sections:
 1. Base/Utility Views (health_check, api_root)
-2. App Management Views (AppListCreateView, AppRegenerateKeyView, list_all_apps)
+2. App Management Views (AppListCreateView, AppRegenerateKeyView)
 3. Event Views (EventCreateView, EventSummaryView)
 4. Analytics Views (GeoSummaryView, FunnelAnalysisView, EventTypesView, FilterOptionsView)
 5. Export/Activity Views (ExportEventsView, RecentActivityView)
@@ -1333,21 +1333,6 @@ class FilterOptionsView(APIView):
         cache.set(cache_key, response_data, timeout=cache_ttl)
 
         return Response(response_data)
-
-
-# API endpoint for listing all apps (requires user authentication)
-# Internal endpoint - excluded from public API documentation
-@swagger_auto_schema(method="get", auto_schema=None)  # Exclude from Swagger/ReDoc
-@api_view(["GET"])
-@authentication_classes([])
-@permission_classes([AllowAny])
-def list_all_apps(request):
-    """Internal endpoint for web dashboard - List user's apps (requires user authentication)"""
-    if not request.user.is_authenticated:
-        return Response({"error": "Authentication required"}, status=status.HTTP_401_UNAUTHORIZED)
-    apps = App.objects.filter(user=request.user)
-    serializer = AppSerializer(apps, many=True)
-    return Response(serializer.data)
 
 
 # =============================================================================

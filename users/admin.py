@@ -10,6 +10,7 @@ from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.utils.html import format_html
+from django.utils.safestring import mark_safe
 
 from .models import UserPreferences
 
@@ -53,7 +54,7 @@ class CustomUserAdmin(BaseUserAdmin):
         failed_attempts = cache.get(f"login_failures:{email_lower}", 0)
 
         if is_locked:
-            return format_html('<span style="color: #dc2626; font-weight: bold;">LOCKED</span>')
+            return mark_safe('<span style="color: #dc2626; font-weight: bold;">LOCKED</span>')
         elif failed_attempts > 0:
             color = "#f59e0b" if failed_attempts >= 3 else "#6b7280"
             return format_html(
@@ -62,7 +63,7 @@ class CustomUserAdmin(BaseUserAdmin):
                 failed_attempts,
                 LOCKOUT_THRESHOLD,
             )
-        return format_html('<span style="color: #10b981;">OK</span>')
+        return mark_safe('<span style="color: #10b981;">OK</span>')
 
     get_lockout_status.short_description = "Login Status"
 

@@ -10,7 +10,7 @@ from django.apps import apps
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.test import TestCase, override_settings
-from django.urls import reverse
+from django.urls import URLResolver, get_resolver, reverse
 
 COMMUNITY = getattr(settings, "RESPECTLYTICS_EDITION", None) == "community"
 LOCMEM = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}}
@@ -51,6 +51,45 @@ class CommunityEditionTests(TestCase):
         offenders = [str(p) for p in files if "@loheden.com" in p.read_text(encoding="utf-8")]
 
         self.assertEqual(offenders, [])
+
+
+def admin_mounts(resolver=None, prefix=""):
+    """Every path prefix that serves an admin site (AdminSite.urls is named "admin")."""
+    for pattern in (resolver or get_resolver()).url_patterns:
+        if isinstance(pattern, URLResolver):
+            here = prefix + str(pattern.pattern)
+            if pattern.app_name == "admin":
+                yield here
+            else:
+                yield from admin_mounts(pattern, here)
+
+
+@override_settings(CACHES=LOCMEM)
+class AdminPathTests(TestCase):
+    """A server someone else runs keeps Django's own /admin/, the address its owner looks for,
+    and no other path serves the admin."""
+
+    @skipUnless(COMMUNITY, "community edition only")
+    def test_the_admin_is_at_admin_and_nowhere_else(self):
+        self.assertEqual(list(admin_mounts()), ["admin/"])
+        self.assertEqual(reverse("admin:index"), "/admin/")
+        response = self.client.get("/admin/login/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'name="password"')
+        self.assertEqual(self.client.get("/admin/").status_code, 302)
+
+    def test_the_walk_finds_every_mount(self):
+        from django.contrib import admin
+        from django.urls import include, path
+
+        class Nested:
+            urlpatterns = [path("deep/", admin.site.urls)]
+
+        urls = URLResolver(
+            get_resolver().pattern,
+            [path("admin/", admin.site.urls), path("outer/", include(Nested))],
+        )
+        self.assertEqual(list(admin_mounts(urls)), ["admin/", "outer/deep/"])
 
 
 class NoVisitCountingTests(TestCase):
