@@ -430,7 +430,7 @@ if (dashboardApps.length > 0) {
     async function pollDashboard() {
         for (const app of dashboardApps) {
             try {
-                const response = await fetch('/api/events/recent-activity/?time_range=1440&since=' + lastPollTime, {
+                const response = await fetch('/api/v1/events/recent-activity/?time_range=1440&since=' + lastPollTime, {
                     headers: { 'X-App-Key': app.id }
                 });
 

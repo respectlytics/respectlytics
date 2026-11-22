@@ -14,8 +14,7 @@ from django.urls import reverse
 
 from analytics.client_ip import get_client_ip
 from analytics.middleware import SCAN_LIMIT
-
-LOCMEM = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}}
+from core.testing import LOCMEM
 
 # What respectlytics.com trusts: Cloudflare's header, and nothing a client could
 # write. The tests name it themselves because they also run in the community
@@ -48,7 +47,7 @@ class EditionSettingsTests(SimpleTestCase):
 
 @override_settings(**HOSTED)
 class HostedClientIpTests(SimpleTestCase):
-    """respectlytics.com, reached only through Cloudflare's tunnel."""
+    """A server reached only through Cloudflare."""
 
     def ip(self, **meta):
         return get_client_ip(RequestFactory().get("/", **meta))
@@ -66,14 +65,14 @@ class HostedClientIpTests(SimpleTestCase):
             self.ip(REMOTE_ADDR="10.244.0.7", HTTP_CF_CONNECTING_IP="2001:db8::7"), "2001:db8::7"
         )
 
-    def test_cloudflare_outranks_a_do_connecting_ip_a_client_could_have_written(self):
-        """Cloudflare documents that it overwrites CF-Connecting-IP; DigitalOcean
-        does not say the same of do-connecting-ip."""
+    def test_cloudflare_outranks_an_x_real_ip_a_client_could_have_written(self):
+        """Cloudflare documents that it overwrites CF-Connecting-IP; no such promise
+        is made of X-Real-IP."""
         self.assertEqual(
             self.ip(
                 REMOTE_ADDR="10.244.0.7",
                 HTTP_CF_CONNECTING_IP="203.0.113.7",
-                HTTP_DO_CONNECTING_IP="198.51.100.1",
+                HTTP_X_REAL_IP="198.51.100.1",
             ),
             "203.0.113.7",
         )
@@ -90,12 +89,12 @@ class HostedClientIpTests(SimpleTestCase):
 
     def test_without_cloudflares_header_no_header_a_client_writes_names_anyone(self):
         """A ban must land on the visitor, so without CF-Connecting-IP the answer
-        is the connection itself, never the do-connecting-ip or X-Forwarded-For
+        is the connection itself, never the X-Real-IP or X-Forwarded-For
         a client could have sent."""
         self.assertEqual(
             self.ip(
                 REMOTE_ADDR="10.244.0.7",
-                HTTP_DO_CONNECTING_IP="198.51.100.1",
+                HTTP_X_REAL_IP="198.51.100.1",
                 HTTP_X_FORWARDED_FOR="198.51.100.2, 10.244.0.9",
             ),
             "10.244.0.7",
@@ -106,7 +105,7 @@ class HostedClientIpTests(SimpleTestCase):
             self.ip(
                 REMOTE_ADDR="10.244.0.7",
                 HTTP_CF_CONNECTING_IP="not-an-ip",
-                HTTP_DO_CONNECTING_IP="203.0.113.7",
+                HTTP_X_REAL_IP="203.0.113.7",
                 HTTP_X_FORWARDED_FOR="203.0.113.8",
             ),
             "10.244.0.7",
@@ -147,7 +146,7 @@ class SelfHostedClientIpTests(SimpleTestCase):
             self.ip(
                 REMOTE_ADDR="203.0.113.7",
                 HTTP_CF_CONNECTING_IP="198.51.100.1",
-                HTTP_DO_CONNECTING_IP="198.51.100.2",
+                HTTP_X_REAL_IP="198.51.100.2",
             ),
             "203.0.113.7",
         )
@@ -160,7 +159,7 @@ class SelfHostedClientIpTests(SimpleTestCase):
 class BansLandOnTheVisitorTests(TestCase):
     """The site-wide ban, driven through the middleware as a scanner would."""
 
-    APP_PLATFORM = "10.244.0.7"  # the proxy in front of the app: Caddy on the server
+    PROXY = "10.244.0.7"  # a proxy in front of the app, on a private network
     PAGE = "/login/"  # a plain page both editions serve
 
     def setUp(self):
@@ -168,9 +167,7 @@ class BansLandOnTheVisitorTests(TestCase):
         self.addCleanup(cache.clear)
 
     def get(self, path, visitor, **extra):
-        return self.client.get(
-            path, REMOTE_ADDR=self.APP_PLATFORM, HTTP_CF_CONNECTING_IP=visitor, **extra
-        )
+        return self.client.get(path, REMOTE_ADDR=self.PROXY, HTTP_CF_CONNECTING_IP=visitor, **extra)
 
     def probe(self, visitor, **extra):
         """One attack signal blocks at once."""
@@ -191,8 +188,8 @@ class BansLandOnTheVisitorTests(TestCase):
         for _ in range(3):
             self.client.get(
                 "/wp-admin/setup-config.php",
-                REMOTE_ADDR=self.APP_PLATFORM,
-                HTTP_DO_CONNECTING_IP="198.51.100.1",
+                REMOTE_ADDR=self.PROXY,
+                HTTP_X_REAL_IP="198.51.100.1",
                 HTTP_X_FORWARDED_FOR="198.51.100.1",
             )
 
@@ -251,7 +248,7 @@ class BansLandOnTheVisitorTests(TestCase):
             response = self.client.post(
                 reverse("analytics:event-create"),
                 {"event_name": "x"},
-                REMOTE_ADDR=self.APP_PLATFORM,
+                REMOTE_ADDR=self.PROXY,
                 HTTP_CF_CONNECTING_IP=CLOUDFLARE_WORKERS,
                 HTTP_X_APP_KEY="00000000-0000-0000-0000-000000000000",
             )
@@ -308,7 +305,7 @@ class EventsAreGeolocatedToTheSenderTests(TestCase):
         return self.Event.objects.get(id=response.json()["id"]).country
 
     @override_settings(**HOSTED)
-    def test_on_app_platform_the_country_is_the_senders(self):
+    def test_behind_cloudflare_the_country_is_the_senders(self):
         self.assertEqual(
             self.country(
                 REMOTE_ADDR="10.244.0.7",

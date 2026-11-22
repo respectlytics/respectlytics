@@ -15,13 +15,13 @@ from django.core.cache import cache
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
+from core.testing import LOCMEM
 from users.security_emails import (
     send_account_lockout_alert,
     send_ip_banned_alert,
     send_password_changed_notification,
 )
 
-LOCMEM = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}}
 SITE = "https://analytics.example.com"
 COMMUNITY = getattr(settings, "RESPECTLYTICS_EDITION", None) == "community"
 

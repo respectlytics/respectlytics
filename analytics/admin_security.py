@@ -13,6 +13,7 @@ from django.shortcuts import redirect
 from django.template.response import TemplateResponse
 from django.urls import path
 
+from .blocks import lift_by_hand
 from .security_dashboard import (
     get_banned_ips,
     get_locked_accounts,
@@ -106,9 +107,7 @@ class SecurityAdminSite(_BaseAdminSite):
             if not reached:
                 messages.warning(
                     request,
-                    "Cloudflare could not be reached, so it may still refuse this "
-                    "address: remove it from the block list in the Cloudflare dashboard "
-                    "(Manage Account, Configurations, Lists).",
+                    lift_by_hand(several=False),
                 )
 
         return redirect("admin:security-dashboard")

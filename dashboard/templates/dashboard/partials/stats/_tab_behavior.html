@@ -47,8 +47,4 @@ and those whose sessions convert less often, than sessions without them.
     <button type="button" class="btn-secondary mt-4" onclick="loadTabData('behavior')">Try again</button>
 </div>
 
-<div id="behavior-empty" class="card hidden">
-    <h3 class="card-title">Choose what counts as a conversion</h3>
-    <p class="card-lead">Then this tab shows which events go with converting.</p>
-    <button type="button" onclick="toggleEventPopover(); return false;" class="btn-primary mt-5">Choose conversions</button>
-</div>
+{% include "dashboard/partials/stats/_choose_conversions.html" with tab="behavior" lead="this tab shows which events go with converting." shot="drivers" %}

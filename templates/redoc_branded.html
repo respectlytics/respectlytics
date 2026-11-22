@@ -114,16 +114,27 @@
             font-family: 'Schibsted Grotesk', -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
             background: var(--slate-900);
             overflow: hidden;
+            /* The bar, then the reference filling the rest of the window and scrolling inside it,
+               whatever height the bar takes when its links wrap on a narrow screen */
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            height: 100dvh;
+        }
+
+        main {
+            flex: 1;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
         }
         
         .header {
             background: rgba(30, 41, 59, 0.95);
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
             padding: var(--space-4) 0;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
+            flex: none;
+            position: relative;
             z-index: 1000;
             backdrop-filter: blur(10px);
             box-shadow: 0 1px 3px rgba(0,0,0,0.3);
@@ -217,11 +228,8 @@
         }
         
         #redoc-container {
-            position: fixed;
-            top: 72px;
-            left: 0;
-            right: 0;
-            bottom: 0;
+            flex: 1;
+            min-height: 0;
             overflow: auto;
         }
         
@@ -451,6 +459,7 @@
         }
     </style>
     <script src="{% static 'vendor/redoc/redoc.standalone.js' %}"></script>
+    {% block reference_head %}{% endblock %}
 </head>
 <body>
     <header class="header">
@@ -480,6 +489,8 @@
         </div>
     </header>
     
+    <main>
+    {% block reference_trail %}{% endblock %}
     <div id="redoc-container">
         {% if not admin_mode %}
         <div id="redoc-fallback-content">
@@ -515,6 +526,7 @@
         </noscript>
         {% endif %}
     </div>
+    </main>
     
     <style>
         /* Enhanced ReDoc Styling */
@@ -1121,7 +1133,7 @@
 
             try {
                 Redoc.init('{{ spec_url|default:"/swagger.json" }}', {
-            scrollYOffset: 72,
+            scrollYOffset: 0,  // the reference scrolls in its own box, below the bar
             hideDownloadButton: true,
             expandResponses: '200,201',
             requiredPropsFirst: true,

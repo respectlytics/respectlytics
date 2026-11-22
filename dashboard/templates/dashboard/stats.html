@@ -160,6 +160,7 @@
 
 <!-- ===== Tab Content: Overview ===== -->
 <div id="tab-overview" class="tab-content active" role="tabpanel">
+    {% if overview_tip %}{{ overview_tip }}{% endif %}
     {% include "dashboard/partials/stats/_tab_overview.html" %}
 </div><!-- End: tab-overview -->
 
@@ -261,6 +262,7 @@
 <script src="{% static 'js/stats/tables.js' %}"></script>
 <script src="{% static 'js/stats/globe.js' %}"></script>
 <script src="{% static 'js/stats/groups.js' %}"></script>
+<script src="{% static 'js/poll.js' %}"></script>
 <script src="{% static 'js/stats/insights.js' %}"></script>
 <script>
 // ===== Configuration from Django =====
@@ -275,7 +277,10 @@ const StatsConfig = {
     // The public demo (demo/): the same page on sample data, showing every choice and changing none
     demo: {{ demo|yesno:"true,false" }},
     // Nothing on the page changes how the app is read: the demo, a share link, a viewer
-    readOnly: {{ read_only|yesno:"true,false" }} || {{ demo|yesno:"true,false" }}
+    readOnly: {{ read_only|yesno:"true,false" }} || {{ demo|yesno:"true,false" }},
+    // An app that has never sent an event: its first one shows within seconds, not at the next
+    // ten-minute poll, so a new developer never stares at zeros wondering if it works
+    waitingForFirstEvent: {{ waiting_for_first_event|yesno:"true,false" }}
 };
 
 // ===== Initialize StatsApp State with Django Configuration =====
@@ -399,6 +404,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initialize real-time poller (sample data has nothing new to arrive)
     if (!StatsConfig.demo) initializeRealtimePolling();
+    if (StatsConfig.waitingForFirstEvent && !StatsConfig.demo) watchForFirstEvent();
 
     // Fetch all available event types for conversion dropdown (independent of date filter)
     // This ensures users can see all events from last 90 days, not just those in the current date range
@@ -419,6 +425,22 @@ document.addEventListener('DOMContentLoaded', () => {
         updateLiveIndicator();
     }
 });
+
+// Until the app's first event: a light check of the last 30 minutes (empty and cheap for a new
+// app) on static/js/poll.js's schedule, often at first, less and less, never in a hidden tab and
+// for half an hour at most; the moment one arrives, every figure loads again and the ordinary
+// poll takes over
+function watchForFirstEvent() {
+    pollUntil(async () => {
+        const response = await StatsApp.utils.fetchJSON(`/api/v1/events/recent-activity/?app_key={{ app_key }}&time_range=30`);
+        const data = await response.json();
+        if (!response.ok || !(data.total_in_range > 0)) return false;
+        loadStats(true);
+        loadLast30Minutes();
+        fetchAllEventTypes();  // so the first event can be chosen as a conversion at once
+        return true;
+    });
+}
 
 // Initialize real-time polling system
 function initializeRealtimePolling() {
@@ -543,10 +565,17 @@ async function loadStats(silent = false) {
         }
         currentData = summaryData;
 
-        // No events in the range: one card says so, in place of the empty charts and lists
+        // No events in the range: one line says so over the dashboard, which stays in view; before
+        // the app's first event it says it is waiting for it
         const empty = !(summaryData.total_events > 0);
-        document.getElementById('overviewEmpty').hidden = !empty;
-        document.getElementById('overviewData').hidden = empty;
+        if (!empty && StatsConfig.waitingForFirstEvent) {
+            // The first event is in: every "send your first event" turns into what to do next
+            StatsConfig.waitingForFirstEvent = false;
+            document.querySelectorAll('[data-first-event="waiting"]').forEach(el => { el.hidden = true; });
+            document.querySelectorAll('[data-first-event="ready"]').forEach(el => { el.hidden = false; });
+        }
+        const waiting = empty && StatsConfig.waitingForFirstEvent;
+        document.getElementById('overviewEmpty').hidden = !empty || waiting;
         document.getElementById('overviewEmptyWider').hidden = currentDatePreset === '90d';
 
         // The range's figures

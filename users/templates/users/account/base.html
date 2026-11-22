@@ -36,6 +36,7 @@ writes its own title (.app-title) at the top of account_content. The withdrawal 
           {% url 'account_security' as url %}{% include 'users/account/_nav_link.html' with label='Password' icon='lock' name='account_security' %}
           {% if team_url %}{% include 'users/account/_nav_link.html' with url=team_url label='Team' icon='users' name='team' %}{% endif %}
           {% url 'account_api_keys' as url %}{% include 'users/account/_nav_link.html' with label='Secret keys' icon='key' name='account_api_keys' %}
+          {% for link in account_links %}{% include 'users/account/_nav_link.html' with url=link.url label=link.label icon=link.icon name=link.name %}{% endfor %}
           {% url 'account_data_management' as url %}{% include 'users/account/_nav_link.html' with label='Deletion history' icon='history' name='account_data_management' %}
         </ul>
         <div class="mx-3 my-2 border-t border-white/10"></div>

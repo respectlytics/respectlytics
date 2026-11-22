@@ -35,7 +35,7 @@ if DEBUG:
     # Disable preload on macOS dev - fork() crashes with threaded scheduler
     preload_app = False
 else:
-    # Production settings (DigitalOcean App Platform / 1 vCPU / 512MB RAM)
+    # Production settings, sized for 1 vCPU / 512MB RAM
     # 1 worker + 3 threads = 3 concurrent requests, low memory footprint
     # Scale workers when upgrading to 2+ vCPU / 1GB+ RAM
     bind = "0.0.0.0:8080"  # Accept connections from load balancer
@@ -45,15 +45,19 @@ else:
     loglevel = "warning"
     # Disable access log - use Django's middleware logging instead (has API key sanitization)
     accesslog = None
-    errorlog = "-"  # Log to stderr for App Platform log aggregation
+    errorlog = "-"  # Log to stderr, where the container's log collects it
     # Enable preload in production - scheduler runs once in master
     preload_app = True
-    # Required for DigitalOcean App Platform (Docker container temp dir issues)
+    # Heartbeat files in memory, which some container platforms need
     worker_tmp_dir = "/dev/shm"
 
 # Logging
 # Note: accesslog disabled in favor of Django's RequestLoggingMiddleware
 # which sanitizes API keys through SanitizeAppKeyFilter
+
+# No control socket: nothing here uses gunicornc, and the app's own user cannot write the
+# folder gunicorn would put it in
+control_socket_disable = True
 
 # Process Naming
 proc_name = "respectlytics"

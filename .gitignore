@@ -28,6 +28,7 @@ node_modules/
 # IDE
 .vscode/
 .idea/
+.codex/
 *.swp
 *.swo
 *~

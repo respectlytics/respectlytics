@@ -49,8 +49,32 @@ KEEP_AFTER_END = timedelta(days=30)
 # https://developers.cloudflare.com/fundamentals/reference/http-headers/
 SHARED_ADDRESSES = frozenset({"2a06:98c0:3600::103"})
 
+# Whole networks that many unrelated visitors share, beyond the address above, may be known to
+# an app installed beside this one, which registers a check here; the community edition
+# registers none. Asked only on the rare paths, never on every request: before
+# a block is made, while a missing page or a refused key is counted, and when a block is found.
+_shared_checks = []
+
+
+def register_shared(check) -> None:
+    if check not in _shared_checks:
+        _shared_checks.append(check)
+
+
+def shared(ip) -> bool:
+    """Whether a registered check says many visitors share this address. A check that fails
+    counts as no: the address is then treated as anyone's."""
+    for check in _shared_checks:
+        try:
+            if check(ip):
+                return True
+        except Exception:
+            logger.warning("[SECURITY] A shared-network check failed")
+    return False
+
+
 # Sent robustly, so a receiver's failure never reaches the request. Nothing in the community
-# edition listens; respectlytics.com's edge app lists blocked addresses at Cloudflare with them.
+# edition listens; an app installed beside this one may, to pass blocks on to an edge in front.
 #   address_banned(ip, until): a block was made or lengthened.
 #   banned_address_refused(ip, until): a blocked address came back and was refused.
 #   blocks_lifted(keys): the admin lifted these blocks (their codes).
@@ -91,12 +115,14 @@ def active_block(ip):
     if not blockable(ip):
         return None
     try:
-        return BlockedAddress.objects.filter(
+        row = BlockedAddress.objects.filter(
             key=address_key(str(ipaddress.ip_address(ip))), expires_at__gt=timezone.now()
         ).first()
     except Exception:
         logger.warning("[SECURITY] Blocks unreadable, failing open")
         return None
+    # A block made before its network was known to be shared stops applying at once
+    return None if row is not None and shared(ip) else row
 
 
 def refused(ip, row) -> None:
@@ -109,7 +135,7 @@ def block(ip, kind: str, reason: str):
     or None when the address may not be blocked."""
     from .models import BlockedAddress
 
-    if not blockable(ip):
+    if not blockable(ip) or shared(ip):
         logger.info("[SECURITY] Not blocking an address many visitors share: %s", reason)
         return None
     ip = str(ipaddress.ip_address(ip))
@@ -161,6 +187,18 @@ def lift(keys) -> tuple[int, bool]:
     return deleted, reached
 
 
+def lift_by_hand(several: bool) -> str:
+    """What the admin is told when a lift could not reach every listener: the block list in
+    front may still refuse the address. A site with such a list says where it is removed by hand
+    in settings.BLOCK_LIST_BY_HAND."""
+    where = getattr(settings, "BLOCK_LIST_BY_HAND", "")
+    subject, pronoun = ("these addresses", "them") if several else ("this address", "it")
+    return (
+        f"The block list in front of this site could not be told, so it may still refuse "
+        f"{subject}: remove {pronoun} from that list by hand{' ' + where if where else ''}."
+    )
+
+
 def delete_ended(now=None) -> int:
     """Blocks that ended more than 30 days ago (daily_jobs)."""
     from .models import BlockedAddress
@@ -172,8 +210,8 @@ def delete_ended(now=None) -> int:
 
 def block_attack_login(sender, credentials, request=None, **kwargs) -> None:
     """django.contrib.auth's user_login_failed: a login as admin, root or another name nobody
-    here uses is an attack signal. Only where settings.ATTACK_USERNAMES names them
-    (respectlytics.com): a self-hosted copy may well have an account called admin."""
+    here uses is an attack signal. Only where settings.ATTACK_USERNAMES names them, which the
+    community edition leaves empty: a self-hosted copy may well have an account called admin."""
     names = getattr(settings, "ATTACK_USERNAMES", ())
     username = str(credentials.get("username", "")).strip().lower()
     if request is not None and username in names:

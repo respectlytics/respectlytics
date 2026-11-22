@@ -26,8 +26,9 @@ from django.test import SimpleTestCase, TestCase, override_settings
 from django.urls import NoReverseMatch, URLPattern, resolve, reverse
 from django.utils import timezone
 
+from core.testing import LOCMEM
+
 COMMUNITY = getattr(settings, "RESPECTLYTICS_EDITION", None) == "community"
-LOCMEM = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}}
 
 # The admin's own URLs that are no page: logout takes a POST, autocomplete a widget's query.
 NOT_PAGES = {"logout", "autocomplete"}

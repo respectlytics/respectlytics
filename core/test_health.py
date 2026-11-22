@@ -9,8 +9,7 @@ from django.test import TestCase, override_settings
 from django.utils import timezone
 
 from analytics.middleware import HEALTH_CHECK_PATHS
-
-LOCMEM = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}}
+from core.testing import LOCMEM
 
 
 class HealthzTests(TestCase):

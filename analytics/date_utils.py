@@ -29,8 +29,10 @@ Usage:
 """
 
 import logging
-from datetime import datetime
+from datetime import UTC, datetime, time, timedelta
 from zoneinfo import ZoneInfo
+
+from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
@@ -147,8 +149,9 @@ def get_cache_key_with_timezone(
         >>> get_cache_key_with_timezone('funnel', 'abc-123', None, None, 'UTC', steps='a,b,c')
         'funnel:abc-123:all:all:UTC:steps=a,b,c'
     """
-    # Normalize timezone name for consistent cache keys
-    normalized_tz = tz_name if tz_name else "UTC"
+    # The time zone the answer was computed in: an unknown name is UTC there (_get_timezone_safe),
+    # so it is UTC here too, or every made-up name would write a cache row of its own.
+    normalized_tz = _get_timezone_safe(tz_name).key
 
     # Build base key
     parts = [prefix, str(app_id), from_date or "all", to_date or "all", normalized_tz]
@@ -197,3 +200,17 @@ def freshness_mark(app_id, to_date, ttl_seconds):
     if newest is None:
         return "none"
     return str(int(newest.timestamp()) // max(1, int(ttl_seconds)))
+
+
+def default_range(start, end, tz_name, days: int = 30):
+    """A view's range where it was given no start or no end: up to now, and from the reader's
+    midnight `days` days before its end. A range then always begins on a whole quarter hour,
+    as the session slices need (analytics.SessionSlice), and its first day is whole; until
+    2026-10-26 the default began at this moment 30 days ago, a naive server time."""
+    zone = _get_timezone_safe(tz_name)
+    if end is None:
+        end = timezone.now()
+    if start is None:
+        day = end.astimezone(zone).date() - timedelta(days=days)
+        start = datetime.combine(day, time.min, tzinfo=zone).astimezone(UTC)
+    return start, end

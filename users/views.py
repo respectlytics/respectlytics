@@ -19,7 +19,6 @@ from django.contrib.auth.forms import PasswordResetForm
 from django.contrib.auth.models import User
 from django.contrib.auth.tokens import default_token_generator
 from django.contrib.sites.shortcuts import get_current_site
-from django.core.cache import cache
 from django.core.mail import EmailMultiAlternatives
 from django.shortcuts import redirect, render
 from django.template.loader import render_to_string
@@ -30,12 +29,14 @@ from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 # SEC-002: Rate limiting imports
 from django_ratelimit.decorators import ratelimit
 
+from analytics import counters
 from analytics.client_ip import get_client_ip
 
 # SEC-010: Structured security event logger
 from analytics.security_logger import SecurityEvent, log_security_event
 
 from .forms import LoginForm, RegistrationForm
+from .secret_keys import end_all
 
 # SEC-007: Security alert emails
 from .security_emails import (
@@ -64,9 +65,8 @@ def track_failed_login(email, ip_address=None):
     Track failed login attempt and return lockout status.
     """
     email_lower = email.lower()
-    cache_key = f"login_failures:{email_lower}"
-    attempts = cache.get(cache_key, 0) + 1
-    cache.set(cache_key, attempts, ATTEMPT_WINDOW)
+    # analytics/counters.py: a table of its own, which the cache's clean-up cannot wipe
+    attempts = counters.hit(f"login_failures:{email_lower}", ATTEMPT_WINDOW)
 
     if attempts == WARNING_THRESHOLD:
         try:
@@ -81,7 +81,7 @@ def track_failed_login(email, ip_address=None):
             logger.error(f"[SECURITY_EMAIL] Failed to send warning email: {e}")
 
     if attempts >= LOCKOUT_THRESHOLD:
-        cache.set(f"account_locked:{email_lower}", True, LOCKOUT_DURATION)
+        counters.hit(f"account_locked:{email_lower}", LOCKOUT_DURATION)
         logger.warning(f"[SECURITY] Account locked after {attempts} failed attempts: {email_lower}")
 
         try:
@@ -100,28 +100,28 @@ def is_account_locked(email):
     """Check if account is locked due to failed attempts."""
     if not email:
         return False
-    return cache.get(f"account_locked:{email.lower()}", False)
+    return counters.peek(f"account_locked:{email.lower()}") > 0
 
 
 def clear_failed_attempts(email):
     """Clear failed attempts after successful login."""
     email_lower = email.lower()
-    cache.delete(f"login_failures:{email_lower}")
-    cache.delete(f"account_locked:{email_lower}")
+    counters.clear(f"login_failures:{email_lower}")
+    counters.clear(f"account_locked:{email_lower}")
 
 
 def get_failed_attempts(email):
     """Get current number of failed attempts for an email."""
     if not email:
         return 0
-    return cache.get(f"login_failures:{email.lower()}", 0)
+    return counters.peek(f"login_failures:{email.lower()}")
 
 
 def unlock_account(email):
     """Manually unlock an account (for admin use)."""
     email_lower = email.lower()
-    cache.delete(f"login_failures:{email_lower}")
-    cache.delete(f"account_locked:{email_lower}")
+    counters.clear(f"login_failures:{email_lower}")
+    counters.clear(f"account_locked:{email_lower}")
     logger.info(f"[SECURITY] Account manually unlocked: {email_lower}")
     return True
 
@@ -271,7 +271,7 @@ def login_view(request):
             "or reset your password.",
         )
         return render(
-            request, "users/auth/login.html", {"form": LoginForm(), "account_locked": True}
+            request, "users/auth/login.html", {"form": LoginForm(), "sign_in_paused": True}
         )
 
     rate_limited = False
@@ -348,7 +348,7 @@ def login_view(request):
                     return render(
                         request,
                         "users/auth/login.html",
-                        {"form": LoginForm(), "account_locked": True},
+                        {"form": LoginForm(), "sign_in_paused": True},
                     )
             messages.error(request, "Invalid email or password.")
     else:
@@ -700,6 +700,15 @@ class CustomPasswordResetConfirmView(auth_views.PasswordResetConfirmView):
                 user.save()
                 logger.info(
                     f"[SECURITY] Activated inactive account via password reset: {user.email}"
+                )
+
+            # A reset is how an account taken over is won back, so every secret key made
+            # before it stops with the old password (owner, 2026-10-26).
+            if end_all(user):
+                messages.info(
+                    self.request,
+                    "Your secret keys stopped working with the reset. Make new ones on the "
+                    "account page.",
                 )
 
         return response

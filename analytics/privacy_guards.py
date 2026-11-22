@@ -391,7 +391,7 @@ Respectlytics uses a strict allowlist for privacy protection. Only these fields 
 |-------|----------|-------------|
 | `event_name` | ✅ Yes | Name of the event (e.g., "app_open", "purchase") |
 | `timestamp` | No | ISO 8601 timestamp (defaults to server time) |
-| `platform` | No | Platform: "ios", "android", "web", "other" |
+| `platform` | No | "iOS", "Android", "macOS", "Web" or the like; anything else is "other" |
 | `app_version` | No | Your app version (e.g., "2.1.0") |
 | `os_version` | No | OS version (e.g., "iOS 17.1") |
 | `device_type` | No | Device model (e.g., "iPhone 15") - NOT a unique identifier |

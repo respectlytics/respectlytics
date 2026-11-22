@@ -9,15 +9,20 @@
 {% endblock %}
 
 {% block content %}
-{% if account_locked %}
-<div class="mb-6 p-4 bg-rose-500/10 border border-rose-500/30 rounded-lg">
+{% if account_locked or sign_in_paused %}
+<div class="mb-6 p-4 bg-rose-500/10 border border-rose-500/30 rounded-lg" role="alert">
     <div class="flex items-start gap-3">
-        <svg class="w-5 h-5 text-rose-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg class="w-5 h-5 text-rose-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
         </svg>
         <div>
+            {% if account_locked %}
+            <p class="text-rose-300 font-semibold">Account locked</p>
+            <p class="text-rose-400/80 text-sm mt-1">This account is locked after too many failed sign-ins. <a href="{% url 'password_reset' %}" class="underline hover:text-rose-300">Reset your password</a> to unlock it.</p>
+            {% else %}
             <p class="text-rose-300 font-semibold">Sign-in paused</p>
-            <p class="text-rose-400/80 text-sm mt-1">Too many failed attempts. <a href="{% url 'password_reset' %}" class="underline hover:text-rose-300">Reset your password</a> to sign in now, or try again later.</p>
+            <p class="text-rose-400/80 text-sm mt-1">Too many failed sign-ins, so sign-in is paused for now. <a href="{% url 'password_reset' %}" class="underline hover:text-rose-300">Reset your password</a> to sign in right away, or try again later.</p>
+            {% endif %}
         </div>
     </div>
 </div>
@@ -38,7 +43,9 @@
 {% if request.GET.expired %}
 <p role="status" class="mb-6 rounded-xl bg-slate-800/70 px-4 py-3 text-sm text-slate-200 ring-1 ring-inset ring-white/10">This page had been open a while, so we opened it again. Please try once more.</p>
 {% endif %}
-<form method="post" action="{% url 'login' %}" class="space-y-6">
+{% comment %}The page asked for before signing in (?next=) comes back after it: the login view sends the
+person there only when it is a page of this site.{% endcomment %}
+<form method="post" action="{% url 'login' %}{% if request.GET.next %}?next={{ request.GET.next|urlencode }}{% endif %}" class="space-y-6">
     {% csrf_token %}
     
     <div>

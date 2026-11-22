@@ -5,6 +5,7 @@ import uuid
 from datetime import timedelta
 
 from django.contrib.auth.models import User
+from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.utils import timezone
 
@@ -151,7 +152,7 @@ class SecretKey(models.Model):
         return hashlib.sha256(key.encode()).hexdigest()
 
     @classmethod
-    def make(cls, user) -> tuple["SecretKey", str]:
+    def make(cls, user) -> tuple[SecretKey, str]:
         """A new key for this account: the row, and the key, which nothing keeps."""
         key = cls.PREFIX + "".join(secrets.choice(cls.ALPHABET) for _ in range(cls.LENGTH))
         row = cls.objects.create(
@@ -189,7 +190,8 @@ class Event(models.Model):
     """
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    app = models.ForeignKey(App, on_delete=models.CASCADE, related_name="events")
+    # No index of its own: every index on Event starts with app (2026-10-26)
+    app = models.ForeignKey(App, on_delete=models.CASCADE, related_name="events", db_index=False)
     event_name = models.CharField(max_length=255)
     timestamp = models.DateTimeField()
 
@@ -228,10 +230,56 @@ class Event(models.Model):
             models.Index(fields=["app", "session_id", "timestamp"]),  # Session/funnel analysis
             models.Index(fields=["app", "timestamp", "country"]),  # Geo + time range queries
             models.Index(fields=["app", "session_id"]),  # Session lookups
+            # The countries and platforms an app's events carry, one probe per pair
+            # (analytics/filter_values.py)
+            models.Index(fields=["app", "country", "platform"]),
         ]
 
     def __str__(self):
         return f"{self.event_name} - {self.app.name} @ {self.timestamp}"
+
+
+class SessionSlice(models.Model):
+    """One session's events within one quarter of an hour (UTC), kept by Postgres itself.
+
+    Reads that count sessions (sessions per day, conversion rates, segments, drivers, drop-offs)
+    read these rows instead of the events: a session is one or two of them, against several
+    events (CLAUDE.md, Database work is the cheapest that answers; the session summary, owner
+    2026-10-26). A quarter of an hour, because every time zone's offset is a whole number of
+    quarter hours, so the reader's own days, weeks and months are always made of whole slices
+    and every figure stays exactly what the events give.
+
+    Triggers on analytics_event keep it (migration 0023): an insert adds to its slice, and a
+    delete or an update counts the touched quarters again from the events, so no way of writing
+    events, the API, a bulk load, a deletion, an account's removal or the retention, can leave
+    it behind; daily_jobs compares the last two days with the events (analytics/slices.py).
+    Nothing writes it from Python.
+    """
+
+    id = models.BigAutoField(primary_key=True)
+    app = models.ForeignKey(App, on_delete=models.CASCADE, related_name="+", db_index=False)
+    session_id = models.CharField(max_length=255, null=True)  # noqa: DJ001 (as on Event)
+    quarter = models.DateTimeField()  # the start of its quarter hour, UTC
+    platform = models.CharField(max_length=20, null=True)  # noqa: DJ001
+    country = models.CharField(max_length=2, null=True)  # noqa: DJ001
+    first_at = models.DateTimeField()
+    last_at = models.DateTimeField()
+    events = models.PositiveIntegerField()
+    names = ArrayField(models.CharField(max_length=255))  # every event name it holds, sorted
+    last_name = models.CharField(max_length=255)  # the name of its latest event
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["app", "session_id", "quarter", "platform", "country"],
+                nulls_distinct=False,
+                name="session_slice_key",
+            )
+        ]
+        indexes = [models.Index(fields=["app", "quarter"], name="session_slice_app_quarter")]
+
+    def __str__(self):
+        return f"{self.session_id} @ {self.quarter}"
 
 
 class DeletionLog(models.Model):
@@ -287,6 +335,26 @@ class DeletionLog(models.Model):
 
     def __str__(self):
         return f"Deleted {self.events_deleted} events from {self.app_name} on {self.deleted_at}"
+
+
+class Counter(models.Model):
+    """A count toward a block, a lockout warning or a limit (analytics/counters.py), kept in a
+    table of its own: the database cache deletes the alphabetically lowest third of its keys when
+    it fills, so counts kept there could be wiped by anyone asking many different questions."""
+
+    subject = models.CharField(max_length=120)
+    # For counting distinct things (the missing pages of a scan): one row per thing.
+    item = models.CharField(max_length=64, default="", blank=True)
+    count = models.PositiveIntegerField(default=0)
+    expires_at = models.DateTimeField(db_index=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["subject", "item"], name="counter_subject_item")
+        ]
+
+    def __str__(self):
+        return f"{self.subject} {self.item} {self.count}"
 
 
 class BlockedAddress(models.Model):

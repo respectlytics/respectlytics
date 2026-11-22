@@ -1,6 +1,7 @@
 from django.utils import timezone
 from rest_framework import serializers
 
+from .intake import EVENT_NAME_RULE, country_code, platform_name, valid_event_name
 from .models import App, Event
 from .privacy_guards import (
     DEPRECATED_FIELDS,
@@ -99,10 +100,21 @@ class EventCreateSerializer(serializers.Serializer):
             raise serializers.ValidationError("Invalid app_key. App does not exist.") from None
 
     def validate_event_name(self, value):
-        """Ensure event_name is not empty."""
+        """A name, never free text (analytics/intake.py)."""
         if not value or not value.strip():
             raise serializers.ValidationError("event_name cannot be empty.")
-        return value.strip()
+        value = value.strip()
+        if not valid_event_name(value):
+            raise serializers.ValidationError(EVENT_NAME_RULE)
+        return value
+
+    def validate_country(self, value):
+        """An ISO code or nothing (analytics/intake.py); the view fills in a missing one."""
+        return country_code(value)
+
+    def validate_platform(self, value):
+        """One of the known platforms, or "other" (analytics/intake.py)."""
+        return platform_name(value)
 
     def create(self, validated_data):
         """

@@ -1,7 +1,9 @@
 services:
   db:
-    # Pinned by digest, so every install runs the image that was tested.
-    image: postgres:16-alpine@sha256:f4610795587492cd4fb887c2dc3de301b813278bb6f616992061141b5f15ac36
+    # Pinned by digest, so every install runs the image that was tested. Held at PostgreSQL 16
+    # (newest patch): an install's postgres_data volume holds a version 16 data directory, which a
+    # newer major cannot open without an upgrade of the data that the edition does not ship yet.
+    image: postgres:16-alpine@sha256:f2f98726820d0342055351c6e9d36e705f5bfffb3dd53ff556325114b08afb6d
     restart: unless-stopped
     environment:
       POSTGRES_DB: respectlytics

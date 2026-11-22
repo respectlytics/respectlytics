@@ -117,7 +117,10 @@ class SecretKeyApiTest(APITestCase):
         row = SecretKey.find(self.secret)
         _, other = SecretKey.make(self.owner)
         SecretKey.objects.filter(pk=SecretKey.find(other).pk).delete()
-        for secret in (other, self.secret[:-2] + "zz", str(self.app.id)):
+        # A key one letter off: never the same letter, or the "wrong" key would be the real one
+        # (a random key ended in the letters once put there, about one run in a thousand)
+        last = "a" if self.secret[-1] != "a" else "b"
+        for secret in (other, self.secret[:-1] + last, str(self.app.id)):
             with self.subTest(secret=secret[:14]):
                 self.use(secret=secret)
                 response = self.client.get("/api/v1/events/summary/")
@@ -206,3 +209,72 @@ class SecretKeyInLogsTest(TestCase):
         text = SanitizeAppKeyFilter().sanitize_text(f"Authorization: Bearer {key}")
         self.assertNotIn(key, text)
         self.assertIn(key[:14] + "...", text)
+
+
+class SecretKeyLifecycleTest(TestCase):
+    """A key that can delete data is announced when it is made, and a password reset, which is
+    how an account taken over is won back, ends every key made before it (owner, 2026-10-26)."""
+
+    PASSWORD = "a long passphrase 1"
+    VISITOR = {"REMOTE_ADDR": "10.244.0.7", "HTTP_CF_CONNECTING_IP": "203.0.113.5"}
+
+    def setUp(self):
+        cache.clear()
+        self.addCleanup(cache.clear)
+        self.user = User.objects.create_user("dev@example.com", "dev@example.com", self.PASSWORD)
+
+    def test_making_a_key_emails_the_account_with_its_start(self):
+        from django.core import mail
+
+        self.client.force_login(self.user)
+        self.client.post(reverse("account_api_keys"), **self.VISITOR)
+        row = SecretKey.objects.get(user=self.user)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, ["dev@example.com"])
+        self.assertIn("secret key", mail.outbox[0].subject)
+        self.assertIn(row.start, mail.outbox[0].body)
+        self.assertNotIn(row.digest, mail.outbox[0].body)
+
+    def test_a_password_reset_ends_every_key_of_that_account_only(self):
+        from django.contrib.auth.tokens import default_token_generator
+        from django.utils.encoding import force_bytes
+        from django.utils.http import urlsafe_base64_encode
+
+        SecretKey.make(self.user)
+        SecretKey.make(self.user)
+        other = User.objects.create_user("other@example.com", "other@example.com", "x-unused-2")
+        _, kept = SecretKey.make(other)
+        uid = urlsafe_base64_encode(force_bytes(self.user.pk))
+        token = default_token_generator.make_token(self.user)
+        page = self.client.get(
+            reverse("password_reset_confirm", args=[uid, token]), follow=True, **self.VISITOR
+        )
+        new = "an even longer passphrase 2"
+        done = self.client.post(
+            page.redirect_chain[-1][0],
+            {"new_password1": new, "new_password2": new},
+            follow=True,
+            **self.VISITOR,
+        )
+        self.assertFalse(SecretKey.objects.filter(user=self.user).exists())
+        self.assertEqual(SecretKey.find(kept).user, other)
+        self.assertContains(done, "Your secret keys stopped working with the reset.")
+
+    def test_a_reset_without_keys_says_nothing_about_them(self):
+        from django.contrib.auth.tokens import default_token_generator
+        from django.utils.encoding import force_bytes
+        from django.utils.http import urlsafe_base64_encode
+
+        uid = urlsafe_base64_encode(force_bytes(self.user.pk))
+        token = default_token_generator.make_token(self.user)
+        page = self.client.get(
+            reverse("password_reset_confirm", args=[uid, token]), follow=True, **self.VISITOR
+        )
+        new = "an even longer passphrase 2"
+        done = self.client.post(
+            page.redirect_chain[-1][0],
+            {"new_password1": new, "new_password2": new},
+            follow=True,
+            **self.VISITOR,
+        )
+        self.assertNotContains(done, "secret keys")

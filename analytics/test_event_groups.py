@@ -161,10 +161,13 @@ class SummaryCarriesTheGroupsTest(APITestCase):
         with CaptureQueriesContext(connection) as queries:
             self.client.get(self.URL)
         on_events = [q["sql"] for q in queries if '"analytics_event"' in q["sql"]]
-        # what the summary always asked: the freshness mark, then total, by name, by day,
-        # countries and their count; and once per NAMES_TTL the app's names, one index probe
-        # per name; the groups are worked out from "by name" in Python
-        self.assertEqual(len(on_events), 7, [sql[:120] for sql in on_events])
+        # what the summary always asks: the freshness mark, then one pass over the range for
+        # names and countries, its days and their sessions read from the session slices
+        # (analytics/summary.py); and once per NAMES_TTL the app's names, one index probe per
+        # name; the groups are worked out from "by name" in Python
+        self.assertEqual(len(on_events), 3, [sql[:120] for sql in on_events])
+        on_slices = [q["sql"] for q in queries if '"analytics_sessionslice"' in q["sql"]]
+        self.assertEqual(len(on_slices), 1, on_slices)
         self.assertEqual(sum("WITH RECURSIVE names" in sql for sql in on_events), 1)
         with CaptureQueriesContext(connection) as queries:
             event_groups.known_names(self.app.id)
@@ -311,3 +314,29 @@ class KnownNamesAndGroupingTest(TestCase):
         event_groups.change(self.app, "separate", "purchase", [], set())
         self.assertEqual(event_groups.Grouping.of(self.app).key(), event_groups.NONE.key())
         self.assertNotEqual(before, event_groups.NONE.key())
+
+
+class FirstEventIsKnownAtOnceTest(TestCase):
+    """An app's list of event names is kept for a while, but never while it is empty: a dashboard
+    opened before the first event must offer that event as a conversion the moment it arrives
+    (2026-10-26: it said "No events yet" for ten minutes)."""
+
+    def setUp(self):
+        cache.clear()
+        self.addCleanup(cache.clear)
+        user = User.objects.create_user("dev@example.com", "dev@example.com", "a pass 1234")
+        self.app = App.objects.create(name="Lullgate", user=user)
+
+    def test_an_empty_list_is_kept_for_seconds_and_a_full_one_for_minutes(self):
+        with mock.patch.object(event_groups.cache, "set") as kept:
+            self.assertEqual(event_groups.known_names(self.app.id), [])
+        kept.assert_called_once_with(f"event_names:{self.app.id}", [], event_groups.EMPTY_TTL)
+        self.assertLessEqual(event_groups.EMPTY_TTL, 5)
+        Event.objects.create(
+            app=self.app, event_name="app_open", session_id="s" * 32, timestamp=timezone.now()
+        )
+        with mock.patch.object(event_groups.cache, "set") as kept:
+            self.assertEqual(event_groups.known_names(self.app.id), ["app_open"])
+        kept.assert_called_once_with(
+            f"event_names:{self.app.id}", ["app_open"], event_groups.NAMES_TTL
+        )

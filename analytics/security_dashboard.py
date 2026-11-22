@@ -14,7 +14,7 @@ import json
 import os
 import re
 from collections import Counter
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from django.conf import settings
@@ -106,7 +106,7 @@ def parse_security_log(limit: int = 100, hours: int = 24) -> list[dict[str, Any]
     """
     log_path = settings.BASE_DIR / "logs" / "security.log"
     events = []
-    cutoff_time = datetime.utcnow() - timedelta(hours=hours)
+    cutoff_time = datetime.now(UTC).replace(tzinfo=None) - timedelta(hours=hours)
 
     if not os.path.exists(log_path):
         return events
@@ -142,7 +142,7 @@ def parse_security_log(limit: int = 100, hours: int = 24) -> list[dict[str, Any]
             {
                 "level": "ERROR",
                 "message": f"Error reading log file: {str(e)}",
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(UTC).replace(tzinfo=None).isoformat(),
             }
         )
 

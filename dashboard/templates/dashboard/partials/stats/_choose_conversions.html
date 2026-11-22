@@ -1,0 +1,36 @@
+{% load product_shots %}{% comment %}
+A tab that reads conversions, before it can (Conversion, Behavior, Segments): one action card, and
+under it the tab as it will look, a picture of the real product on sample data marked as an
+example (owner, 2026-10-26), so a new developer sees what is coming and what to do for it. Before
+the app's first event the action is to finish setting up; after it, to choose the conversions
+(both are in the page, and stats.html shows the right one as the first event arrives).
+Takes `tab`, `lead` (what the tab then shows, from "this tab ..."), `shot` and `shot2`.
+{% endcomment %}
+<div id="{{ tab }}-empty" class="hidden space-y-6">
+    <div class="action-card">
+        <div data-first-event="waiting"{% if not waiting_for_first_event %} hidden{% endif %}>
+            <h3 class="card-title">Send {{ app.name }}'s first event</h3>
+            <p class="card-lead">Then choose what counts as a conversion, and {{ lead }}</p>
+            <div class="mt-5 flex flex-wrap items-center gap-2">
+                <a href="{% if setup_url %}{{ setup_url }}{% else %}https://respectlytics.com/sdk/{% endif %}" class="btn-primary">{% if setup_url %}Finish setup{% else %}See how to send events{% endif %}</a>
+                {% if demo_url %}<a href="{{ demo_url }}#{{ tab }}" class="btn-quiet">Try it with sample data</a>{% endif %}
+            </div>
+        </div>
+        <div data-first-event="ready"{% if waiting_for_first_event %} hidden{% endif %}>
+            <h3 class="card-title">Choose what counts as a conversion</h3>
+            <p class="card-lead">Then {{ lead }}</p>
+            <div class="mt-5 flex flex-wrap items-center gap-2">
+                <button type="button" onclick="toggleEventPopover(); return false;" class="btn-primary">Choose conversions</button>
+                {% if demo_url %}<a href="{{ demo_url }}#{{ tab }}" class="btn-quiet">Try it with sample data</a>{% endif %}
+            </div>
+        </div>
+    </div>
+    <figure class="example" aria-label="An example of this tab on sample data">
+        <span class="example-badge">Example with sample data</span>
+        <div class="grid items-start gap-6{% if shot2 %} lg:grid-cols-2{% endif %}">
+            {% product_shot shot example=True %}
+            {% if shot2 %}{% product_shot shot2 example=True %}{% endif %}
+        </div>
+        <figcaption class="example-caption">Your own figures show here once {{ app.name }} sends events and you choose its conversions.</figcaption>
+    </figure>
+</div>

@@ -17,7 +17,6 @@ Rate limiting (SEC-007b):
 import logging
 
 from django.conf import settings
-from django.core.cache import cache
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
 from django.urls import NoReverseMatch, reverse
@@ -70,11 +69,12 @@ def _check_rate_limit(cache_key, max_count):
     Returns:
         bool: True if email can be sent, False if rate limited
     """
-    current_count = cache.get(cache_key, 0)
-    if current_count >= max_count:
-        return False
-    cache.set(cache_key, current_count + 1, RATE_LIMIT_WINDOW)
-    return True
+    from analytics import counters
+
+    try:
+        return counters.hit(cache_key, RATE_LIMIT_WINDOW) <= max_count
+    except Exception:
+        return True  # a mail too many beats a security notice never sent
 
 
 def _send_security_email(to_email, subject, html_template, text_template, context, is_admin=False):
@@ -141,7 +141,7 @@ def send_account_lockout_alert(
         user_email: Email of the locked account
         ip_address: IP address of the last failed attempt
         attempt_count: Number of failed attempts
-        lockout_duration: How long it lasts, in words (respectlytics.com's grows on repeat)
+        lockout_duration: How long it lasts, in words (it may grow on repeat)
 
     Returns:
         bool: True if email sent, False if rate limited or failed
@@ -240,6 +240,28 @@ def send_password_changed_notification(user):
         html_template="emails/security/password_changed.html",
         text_template="emails/security/password_changed.txt",
         context=context,
+        is_admin=False,
+    )
+
+
+def send_secret_key_created_notification(user, key):
+    """
+    Tell the account a secret key was made for it, with the key's start and the time, so a key
+    made by someone else is noticed. Transactional: always sent, a few a day at most.
+    """
+    if not _check_rate_limit(f"secret_key_email:{user.pk}", 10):
+        return False
+    return _send_security_email(
+        to_email=user.email,
+        subject="A secret key was made for your Respectlytics account",
+        html_template="emails/security/secret_key_created.html",
+        text_template="emails/security/secret_key_created.txt",
+        context={
+            "user": user,
+            "key_start": key.start,
+            "timestamp": key.created_at,
+            "keys_url": f"{_site_url()}/account/api-keys/",
+        },
         is_admin=False,
     )
 

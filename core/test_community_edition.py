@@ -3,6 +3,7 @@ else's server, so nothing in it may send people to Loheden or speak of billing i
 does not have. scripts/sync_to_oss.py carries this file across, so the community
 checks run in the repository they describe."""
 
+import re
 from pathlib import Path
 from unittest import skipUnless
 
@@ -10,10 +11,11 @@ from django.apps import apps
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.test import TestCase, override_settings
-from django.urls import URLResolver, get_resolver, reverse
+from django.urls import Resolver404, URLResolver, get_resolver, resolve, reverse
+
+from core.testing import LOCMEM
 
 COMMUNITY = getattr(settings, "RESPECTLYTICS_EDITION", None) == "community"
-LOCMEM = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}}
 
 
 def template_files():
@@ -149,3 +151,30 @@ class SharedScriptsTests(TestCase):
             text = (root / base).read_text()
             for needed in self.SHARED:
                 self.assertIn(needed, text, f"{base} lacks {needed}")
+
+
+class FetchedAddressesTests(TestCase):
+    """Every API address a page fetches is one this edition serves: the community dashboard's
+    new-events badge polled /api/events/recent-activity/, which no edition has, and got a 404
+    every minute for every app until 2026-11-22."""
+
+    FETCH = re.compile(r"""fetch(?:JSON)?\(\s*['"`](/api/[^'"`?$]*)""")
+
+    def test_every_fetched_api_address_resolves(self):
+        base = Path(settings.BASE_DIR)
+        sources = list(template_files())
+        sources += [
+            p
+            for p in base.rglob("*.js")
+            if not {"staticfiles", "vendor", "node_modules", ".venv"} & set(p.parts)
+        ]
+        found, missing = set(), []
+        for path in sources:
+            for address in self.FETCH.findall(path.read_text(encoding="utf-8", errors="replace")):
+                found.add(address)
+                try:
+                    resolve(address)
+                except Resolver404:
+                    missing.append(f"{path.relative_to(base)}: {address}")
+        self.assertIn("/api/v1/events/recent-activity/", found)
+        self.assertEqual(missing, [])

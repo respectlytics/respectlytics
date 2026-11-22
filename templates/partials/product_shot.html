@@ -1,0 +1,10 @@
+{% load static %}{% comment %}
+One picture of the product (dashboard/templatetags/product_shots.py): the phone's own crop on a
+phone, AVIF then WebP, and a JPEG for anything else.
+{% endcomment %}<picture class="product-shot">
+    <source media="(max-width: 639px)" type="image/avif" srcset="{% static 'images/product/'|add:phone_small|add:'.avif' %} {{ phone_small_w }}w, {% static 'images/product/'|add:phone_large|add:'.avif' %} {{ phone_large_w }}w" sizes="100vw" width="{{ phone_w }}" height="{{ phone_h }}">
+    <source media="(max-width: 639px)" type="image/webp" srcset="{% static 'images/product/'|add:phone_small|add:'.webp' %} {{ phone_small_w }}w, {% static 'images/product/'|add:phone_large|add:'.webp' %} {{ phone_large_w }}w" sizes="100vw" width="{{ phone_w }}" height="{{ phone_h }}">
+    <source type="image/avif" srcset="{% static 'images/product/'|add:wide_small|add:'.avif' %} {{ wide_small_w }}w, {% static 'images/product/'|add:wide_large|add:'.avif' %} {{ wide_large_w }}w" sizes="{{ sizes }}">
+    <source type="image/webp" srcset="{% static 'images/product/'|add:wide_small|add:'.webp' %} {{ wide_small_w }}w, {% static 'images/product/'|add:wide_large|add:'.webp' %} {{ wide_large_w }}w" sizes="{{ sizes }}">
+    <img src="{% static 'images/product/'|add:wide_small|add:'.'|add:fallback %}" width="{{ wide_w }}" height="{{ wide_h }}" alt="{{ alt }}" decoding="async"{% if eager %} fetchpriority="high"{% else %} loading="lazy"{% endif %}>
+</picture>

@@ -54,6 +54,8 @@ def stats_view(request, app_slug=None):
             "app_slug": app.slug,
             "user_apps": user_apps,
             "preferred_conversion_events": json.dumps(app.preferred_conversion_events or []),
+            # Until the first event the page checks every few seconds (one indexed row)
+            "waiting_for_first_event": not Event.objects.filter(app=app).exists(),
         }
         return render(request, "dashboard/stats.html", context)
     except App.DoesNotExist:

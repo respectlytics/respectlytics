@@ -84,8 +84,4 @@ country, number of events per session, hour of the day or value of a declared pr
     <button type="button" class="btn-secondary mt-4" onclick="loadTabData('segments')">Try again</button>
 </div>
 
-<div id="segments-empty" class="card hidden">
-    <h3 class="card-title">Choose what counts as a conversion</h3>
-    <p class="card-lead">Then this tab compares how each segment converts.</p>
-    <button type="button" onclick="toggleEventPopover(); return false;" class="btn-primary mt-5">Choose conversions</button>
-</div>
+{% include "dashboard/partials/stats/_choose_conversions.html" with tab="segments" lead="this tab compares how each segment converts." shot="segments" %}

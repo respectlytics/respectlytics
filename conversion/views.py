@@ -22,13 +22,12 @@ cross-session user tracking, which is not compatible with session-based analytic
 import logging
 import re
 from collections import defaultdict
-from datetime import datetime, timedelta
+from datetime import timedelta
 from functools import partial
 
 from dateutil.relativedelta import relativedelta
 from django.db.models import Count
 from django.db.models.functions import TruncDay, TruncMonth, TruncQuarter, TruncWeek, TruncYear
-from django.utils import timezone
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status
@@ -37,14 +36,17 @@ from rest_framework.views import APIView
 
 from analytics import event_groups
 from analytics.authentication import APP_OWNER
+from analytics.base_events import base_events, session_count, sessions_per, slices_in
 from analytics.date_utils import (
     _get_timezone_safe,
+    default_range,
     freshness_mark,
     get_cache_key_with_timezone,
     parse_date_range,
 )
 
 # Import from analytics app (shared models, auth, permissions)
+from analytics.intake import platform_name
 from analytics.models import Event
 from analytics.permissions import HasValidAppKey
 
@@ -286,18 +288,9 @@ This provides usage metrics without requiring user consent for tracking.
                 {"error": "Invalid date format. Use YYYY-MM-DD"}, status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Default date range: last 30 days if not specified
-        if not from_date and not to_date:
-            to_date = datetime.now()
-            from_date = to_date - timedelta(days=30)
-            events = events.filter(timestamp__gte=from_date, timestamp__lte=to_date)
-        elif not from_date:
-            # If only to_date specified, go back 30 days from to_date
-            from_date = to_date - timedelta(days=30)
-            events = events.filter(timestamp__gte=from_date)
-        elif not to_date:
-            # If only from_date specified, go until now
-            to_date = datetime.now()
+        # Default range: the last 30 days, from the reader's midnight (analytics/date_utils.py)
+        from_date, to_date = default_range(from_date, to_date, tz_name)
+        events = events.filter(timestamp__gte=from_date, timestamp__lte=to_date)
 
         # Choose truncation function based on granularity
         trunc_functions = {
@@ -315,14 +308,21 @@ This provides usage metrics without requiring user consent for tracking.
 
         # Calculate active sessions per period
         # A "session" is a unique session_id (in-memory, max 2 hours)
-        period_data = (
-            events.filter(session_id__isnull=False)
-            .exclude(session_id="")
-            .annotate(period=trunc_func("timestamp", tzinfo=zone))
-            .values("period")
-            .annotate(unique_sessions=Count("session_id", distinct=True), total_events=Count("id"))
-            .order_by("-period")
-        )
+        period_data = [
+            {
+                "period": row["period"],
+                "unique_sessions": row["sessions"],
+                "total_events": row["events"],
+            }
+            for row in sessions_per(
+                slices_in(app, from_date, to_date)
+                .filter(session_id__isnull=False)
+                .exclude(session_id="")
+                .annotate(period=trunc_func("quarter", tzinfo=zone)),
+                ["period"],
+                order='"period" DESC',
+            )
+        ]
 
         # Calculate average session length per period
         # Uses raw SQL for efficiency - calculates time between first and last event per session
@@ -369,7 +369,7 @@ This provides usage metrics without requiring user consent for tracking.
         top_events = []
         if active_sessions:
             # Get the most recent period's data
-            most_recent_period = period_data.first()
+            most_recent_period = period_data[0] if period_data else None
             if most_recent_period and most_recent_period["period"]:
                 # Filter events for the most recent period
                 period_start = most_recent_period["period"]
@@ -467,7 +467,9 @@ This provides usage metrics without requiring user consent for tracking.
 
     def _calculate_session_lengths(self, app_id, from_date, to_date, granularity, zone):
         """
-        Calculate average session length per period using raw SQL.
+        Calculate average session length per period using raw SQL, from the session slices
+        (analytics.SessionSlice): a session's first and last moments in the range, a row or two
+        per session instead of every event.
 
         Session length = time between first and last event in a session.
         Only includes sessions with 2+ events (single-event sessions have no duration).
@@ -487,11 +489,11 @@ This provides usage metrics without requiring user consent for tracking.
 
         # Determine truncation SQL based on granularity
         trunc_sql_map = {
-            "day": "DATE_TRUNC('day', MIN(timestamp) AT TIME ZONE %s)",
-            "week": "DATE_TRUNC('week', MIN(timestamp) AT TIME ZONE %s)",
-            "month": "DATE_TRUNC('month', MIN(timestamp) AT TIME ZONE %s)",
-            "quarter": "DATE_TRUNC('quarter', MIN(timestamp) AT TIME ZONE %s)",
-            "year": "DATE_TRUNC('year', MIN(timestamp) AT TIME ZONE %s)",
+            "day": "DATE_TRUNC('day', MIN(first_at) AT TIME ZONE %s)",
+            "week": "DATE_TRUNC('week', MIN(first_at) AT TIME ZONE %s)",
+            "month": "DATE_TRUNC('month', MIN(first_at) AT TIME ZONE %s)",
+            "quarter": "DATE_TRUNC('quarter', MIN(first_at) AT TIME ZONE %s)",
+            "year": "DATE_TRUNC('year', MIN(first_at) AT TIME ZONE %s)",
         }
         trunc_sql = trunc_sql_map.get(granularity, trunc_sql_map["day"])
 
@@ -499,10 +501,10 @@ This provides usage metrics without requiring user consent for tracking.
         date_filter = ""
         params = [zone.key, str(app_id)]
         if from_date:
-            date_filter += " AND timestamp >= %s"
+            date_filter += " AND quarter >= %s"
             params.append(from_date)
         if to_date:
-            date_filter += " AND timestamp <= %s"
+            date_filter += " AND quarter <= %s"
             params.append(to_date)
 
         # SQL to calculate session lengths grouped by period
@@ -510,19 +512,19 @@ This provides usage metrics without requiring user consent for tracking.
         sql = f"""
         WITH session_durations AS (
             SELECT
-                session_id,
+                session_id COLLATE "C" AS session_id,
                 {trunc_sql} as period,
                 LEAST(
-                    EXTRACT(EPOCH FROM (MAX(timestamp) - MIN(timestamp))),
+                    EXTRACT(EPOCH FROM (MAX(last_at) - MIN(first_at))),
                     7200
                 ) as duration_seconds
-            FROM analytics_event
+            FROM analytics_sessionslice
             WHERE app_id = %s
                 AND session_id IS NOT NULL
                 AND session_id != ''
                 {date_filter}
-            GROUP BY session_id
-            HAVING COUNT(*) > 1  -- Exclude single-event sessions
+            GROUP BY 1
+            HAVING SUM(events) > 1  -- Exclude single-event sessions
         )
         SELECT
             period,
@@ -808,18 +810,9 @@ A session is a unique app usage period (max 2 hours), identified by session_id.
                 {"error": "Invalid date format. Use YYYY-MM-DD"}, status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Default date range: last 30 days if not specified
-        if not from_date and not to_date:
-            to_date = datetime.now()
-            from_date = to_date - timedelta(days=30)
-            events = events.filter(timestamp__gte=from_date, timestamp__lte=to_date)
-        elif not from_date:
-            # If only to_date specified, go back 30 days from to_date
-            from_date = to_date - timedelta(days=30)
-            events = events.filter(timestamp__gte=from_date)
-        elif not to_date:
-            # If only from_date specified, go until now
-            to_date = datetime.now()
+        # Default range: the last 30 days, from the reader's midnight (analytics/date_utils.py)
+        from_date, to_date = default_range(from_date, to_date, tz_name)
+        events = events.filter(timestamp__gte=from_date, timestamp__lte=to_date)
 
         # Choose truncation function based on granularity
         trunc_functions = {
@@ -833,18 +826,16 @@ A session is a unique app usage period (max 2 hours), identified by session_id.
         zone = _get_timezone_safe(tz_name)  # the reader's own periods, as in DAUView
 
         # Calculate active sessions per period (same logic as DAUView)
-        active_sessions_data = (
-            events.filter(session_id__isnull=False)
+        active_sessions_data = sessions_per(
+            slices_in(app, from_date, to_date)
+            .filter(session_id__isnull=False)
             .exclude(session_id="")
-            .annotate(period=trunc_func("timestamp", tzinfo=zone))
-            .values("period")
-            .annotate(unique_sessions=Count("session_id", distinct=True))
+            .annotate(period=trunc_func("quarter", tzinfo=zone)),
+            ["period"],
         )
 
         # Convert to dict for easy lookup
-        sessions_by_period = {
-            item["period"]: item["unique_sessions"] for item in active_sessions_data
-        }
+        sessions_by_period = {item["period"]: item["sessions"] for item in active_sessions_data}
 
         # Sessions with a conversion event per period: a rate of sessions over sessions, which
         # never passes 100% (until 2026-10-24 it counted the events, so a session that bought
@@ -1162,8 +1153,9 @@ interaction with the app. This is a session-based analysis.
         if end_datetime:
             events_qs = events_qs.filter(timestamp__lte=end_datetime)
 
-        # Get total sessions count for coverage calculation
-        all_sessions_count = events_qs.values("session_id").distinct().count()
+        # Get total sessions count for coverage calculation, from the range's session slices
+        # (analytics/base_events.py)
+        all_sessions_count = session_count(slices_in(app, start_datetime, end_datetime))
 
         # Get conversion analysis data (session-based)
         analysis_result = self._calculate_time_to_conversion(
@@ -1205,75 +1197,52 @@ interaction with the app. This is a session-based analysis.
         from django.db import connection
 
         # Get the SQL and params from the Django queryset (for base filtering)
-        base_sql, base_params = events_qs.query.sql_with_params()
+        base_sql, base_params = base_events(events_qs)
 
         # Build conversion events placeholder for SQL
         conversion_placeholders = ", ".join(["%s"] * len(conversion_events))
 
-        # Session-based time-to-conversion query
-        # Strategy:
-        # 1. Get first event time per session
-        # 2. Get first conversion time per session (if any)
-        # 3. Calculate time difference in SQL
-        # 4. Filter to sessions with conversions only
-
+        # Session-based time to conversion, counted in the database in one row: each converting
+        # session's minutes from its first event to its first conversion event (the first events
+        # read only for converting sessions, on the (app, session_id, timestamp) index), held to
+        # a session's two hours, then their percentiles (percentile_cont interpolates as the
+        # Python reading did), mean, extremes and buckets
         analysis_sql = f"""
-        WITH base_events AS (
-            {base_sql}
-        ),
-        session_first_event AS (
-            -- First event per session
-            SELECT session_id, MIN(timestamp) as first_event_time
-            FROM base_events
-            WHERE session_id IS NOT NULL AND session_id != ''
-            GROUP BY session_id
-        ),
-        session_first_conversion AS (
-            -- First conversion per session
-            SELECT session_id, MIN(timestamp) as first_conversion_time
+        WITH base_events AS NOT MATERIALIZED ({base_sql}),
+        first_conversion AS (
+            SELECT session_id, MIN(timestamp) AS at
             FROM base_events
             WHERE session_id IS NOT NULL AND session_id != ''
               AND event_name IN ({conversion_placeholders})
             GROUP BY session_id
         ),
-        session_conversion_data AS (
-            -- Join first event and first conversion, calculate time difference
-            SELECT
-                sfe.session_id,
-                sfe.first_event_time,
-                sfc.first_conversion_time,
-                EXTRACT(EPOCH FROM (sfc.first_conversion_time - sfe.first_event_time)) / 60.0
-                    as time_to_conversion_minutes
-            FROM session_first_event sfe
-            JOIN session_first_conversion sfc ON sfe.session_id = sfc.session_id
-            WHERE sfc.first_conversion_time >= sfe.first_event_time
+        first_event AS (
+            SELECT e.session_id, MIN(e.timestamp) AS at
+            FROM base_events e
+            JOIN first_conversion c ON c.session_id = e.session_id
+            GROUP BY e.session_id
+        ),
+        minutes AS (
+            SELECT (EXTRACT(EPOCH FROM (c.at - f.at)) / 60.0)::float8 AS m
+            FROM first_event f
+            JOIN first_conversion c ON c.session_id = f.session_id
         )
-        SELECT
-            session_id,
-            time_to_conversion_minutes
-        FROM session_conversion_data
-        WHERE time_to_conversion_minutes >= 0
-          AND time_to_conversion_minutes <= 120  -- Session bounded: max 2 hours
-        ORDER BY time_to_conversion_minutes
+        SELECT COUNT(m),
+            percentile_cont(ARRAY[0.25, 0.5, 0.75, 0.9]) WITHIN GROUP (ORDER BY m),
+            AVG(m), MIN(m), MAX(m),
+            COUNT(*) FILTER (WHERE m < 5),
+            COUNT(*) FILTER (WHERE m >= 5 AND m < 15),
+            COUNT(*) FILTER (WHERE m >= 15 AND m < 60),
+            COUNT(*) FILTER (WHERE m >= 60)
+        FROM minutes
+        WHERE m >= 0 AND m <= 120  -- Session bounded: max 2 hours
         """
 
-        # Combine parameters: base_params + conversion_events
         params = list(base_params) + list(conversion_events)
-
-        # Execute the single query
         with connection.cursor() as cursor:
             cursor.execute(analysis_sql, params)
-            rows = cursor.fetchall()
-
-        # Process results
-        conversion_times = []  # in minutes
-
-        for row in rows:
-            session_id, time_minutes = row
-            if time_minutes is not None:
-                conversion_times.append(float(time_minutes))
-
-        sessions_with_conversions = len(conversion_times)
+            row = cursor.fetchone()
+        sessions_with_conversions, quartiles, mean, least, most, *buckets = row
 
         # Handle zero conversions case
         if sessions_with_conversions == 0:
@@ -1309,9 +1278,23 @@ interaction with the app. This is a session-based analysis.
                 "more data."
             )
 
-        # Calculate statistics
-        time_stats = self._calculate_percentile_stats(conversion_times)
-        time_distribution = self._calculate_time_distribution(conversion_times)
+        # Statistics, from the database's one row
+        p25, median, p75, p90 = quartiles
+        time_stats = {
+            "median_minutes": round(median, 2),
+            "mean_minutes": round(mean, 2),
+            "p25_minutes": round(p25, 2),
+            "p75_minutes": round(p75, 2),
+            "p90_minutes": round(p90, 2),
+            "min_minutes": round(least, 2),
+            "max_minutes": round(most, 2),
+        }
+        time_distribution = {
+            key: {"count": count, "percent": round(count / sessions_with_conversions * 100, 2)}
+            for key, count in zip(
+                ("under_5_min", "5_to_15_min", "15_to_60_min", "1_to_2_hours"), buckets, strict=True
+            )
+        }
 
         return {
             "data_quality": {
@@ -1494,6 +1477,18 @@ This endpoint analyzes events within the **same session_id**. This means:
                 required=True,
             ),
             openapi.Parameter(
+                "country",
+                openapi.IN_QUERY,
+                description="Only these countries, comma-separated codes (e.g., 'US,SE')",
+                type=openapi.TYPE_STRING,
+            ),
+            openapi.Parameter(
+                "platform",
+                openapi.IN_QUERY,
+                description="Only these platforms, comma-separated (ios, android, web, other)",
+                type=openapi.TYPE_STRING,
+            ),
+            openapi.Parameter(
                 "start_date",
                 openapi.IN_QUERY,
                 description="Start date filter (YYYY-MM-DD)",
@@ -1628,8 +1623,39 @@ This endpoint analyzes events within the **same session_id**. This means:
                 {"error": "Invalid date format. Use YYYY-MM-DD"}, status=status.HTTP_400_BAD_REQUEST
             )
 
+        # Cached by its question, as every conversion view is
+        import hashlib
+
+        from django.conf import settings
+        from django.core.cache import cache
+
+        # The funnel's own filters, read as it reads them (analytics/views.py), so its timings
+        # are about the same sessions
+        countries = sorted(
+            {c.strip() for c in (request.query_params.get("country") or "").split(",") if c.strip()}
+        )
+        asked = [
+            p.strip() for p in (request.query_params.get("platform") or "").split(",") if p.strip()
+        ]
+        platforms = sorted(set(asked) | {platform_name(p) for p in asked})
+
+        grouping = event_groups.from_request(request, app)
+        cache_params = (
+            f"{','.join(steps)}:{start_date}:{end_date}:{tz_name}:{grouping.key()}:"
+            f"{','.join(countries)}:{','.join(platforms)}"
+        )
+        cache_hash = hashlib.md5(cache_params.encode()).hexdigest()[:16]
+        cache_key = f"step_timing:{app.id}:{cache_hash}"
+        cached_result = cache.get(cache_key)
+        if cached_result is not None:
+            return Response(cached_result, status=status.HTTP_200_OK)
+
         # Build base queryset
         events_qs = Event.objects.filter(app=app)
+        if countries:
+            events_qs = events_qs.filter(country__in=countries)
+        if platforms:
+            events_qs = events_qs.filter(platform__in=platforms)
 
         if start_datetime:
             events_qs = events_qs.filter(timestamp__gte=start_datetime)
@@ -1637,189 +1663,121 @@ This endpoint analyzes events within the **same session_id**. This means:
             events_qs = events_qs.filter(timestamp__lte=end_datetime)
 
         # Calculate step timing analysis; a step may be a group's name (`group_events=true`)
-        analysis_result = self._calculate_step_timing(
-            events_qs, steps, event_groups.from_request(request, app)
-        )
+        analysis_result = self._calculate_step_timing(events_qs, steps, grouping)
 
-        return Response(
-            {
-                "app": {"id": app.id, "name": app.name, "slug": app.slug},
-                "steps": steps,
-                "filters": {"start_date": start_date, "end_date": end_date},
-                **analysis_result,
+        response_data = {
+            "app": {"id": app.id, "name": app.name, "slug": app.slug},
+            "steps": steps,
+            "filters": {
+                "start_date": start_date,
+                "end_date": end_date,
+                "country": countries,
+                "platform": platforms,
             },
-            status=status.HTTP_200_OK,
-        )
+            **analysis_result,
+        }
+        cache.set(cache_key, response_data, timeout=settings.CACHE_TTL_CONVERSION)
+        return Response(response_data, status=status.HTTP_200_OK)
 
     def _calculate_step_timing(self, events_qs, steps, grouping=event_groups.NONE):
         """
-        Calculate timing between consecutive funnel steps within sessions.
+        Timing between consecutive funnel steps within sessions, in one SQL aggregate.
 
-        This analysis is session-based: we only consider events that occur
-        within the same session_id, in the correct order.
+        Each session's first time at each step is read in one pass over the steps' events
+        (the (app, event_name, timestamp) index), and every count, percentile and mean is taken
+        in the database, so one row comes back however many sessions there are. A step whose
+        names all belong to a later step stands for nothing, as a name counts for the last step
+        that holds it; conversion/test_step_timing.py holds this to the Python reading it
+        replaced.
 
         Returns:
             dict with 'transitions' and 'funnel_summary'
         """
-        # Every event a step stands for: itself, or a group's events
+        from django.db import connection
+
+        # Every event a step stands for: itself, or a group's events; a name counts for the
+        # last step that holds it
         step_index = {}
         for i, step in enumerate(steps):
             for name in grouping.expand([step]):
                 step_index[name] = i
+        names = [[n for n, j in step_index.items() if j == i] for i in range(len(steps))]
 
-        # Get all relevant events for the funnel steps
-        relevant_events = (
-            events_qs.filter(event_name__in=list(step_index))
-            .values("session_id", "event_name", "timestamp")
-            .order_by("session_id", "timestamp")
+        base_sql, base_params = base_events(events_qs)
+        firsts, first_params = [], []
+        for i, step_names in enumerate(names):
+            if step_names:
+                firsts.append(
+                    f"MIN(timestamp) FILTER (WHERE event_name IN "
+                    f"({', '.join(['%s'] * len(step_names))})) AS t{i}"
+                )
+                first_params += step_names
+            else:
+                firsts.append(f"NULL::timestamptz AS t{i}")
+        last = len(steps) - 1
+        gaps = [
+            f"CASE WHEN t{i + 1} >= t{i} THEN EXTRACT(EPOCH FROM t{i + 1} - t{i})::float8 END "
+            f"AS d{i}"
+            for i in range(last)
+        ]
+        in_order = " AND ".join(f"t{i + 1} >= t{i}" for i in range(last))
+        stats = [
+            f"COUNT(d{i}), percentile_cont(ARRAY[0.25, 0.5, 0.75]) WITHIN GROUP "
+            f"(ORDER BY d{i}), AVG(d{i})"
+            for i in range(last)
+        ]
+        sql = f"""
+        WITH base_events AS ({base_sql}),
+        firsts AS (
+            SELECT {", ".join(firsts)}
+            FROM base_events
+            WHERE event_name IN ({", ".join(["%s"] * len(step_index))})
+            GROUP BY session_id
+        ),
+        timed AS (
+            SELECT t0, {", ".join(gaps)},
+                CASE WHEN {in_order} THEN EXTRACT(EPOCH FROM t{last} - t0)::float8 END AS total
+            FROM firsts
         )
+        SELECT COUNT(t0), COUNT(total),
+            percentile_cont(0.5) WITHIN GROUP (ORDER BY total), AVG(total),
+            {", ".join(stats)}
+        FROM timed
+        """
+        params = [*base_params, *first_params, *step_index]
+        with connection.cursor() as cursor:
+            cursor.execute(sql, params)
+            row = cursor.fetchone()
 
-        # Group events by session
-        sessions = {}
-        for event in relevant_events:
-            session_id = event["session_id"]
-            if session_id not in sessions:
-                sessions[session_id] = []
-            sessions[session_id].append(
-                {"event_name": event["event_name"], "timestamp": event["timestamp"]}
-            )
+        def seconds(value):
+            return round(value, 2) if value is not None else 0
 
-        # For each session, find step transitions, by the step index built above
-
-        # Collect timing data for each transition
-        transition_times = {i: [] for i in range(len(steps) - 1)}
-        total_funnel_times = []
-        sessions_with_first_step = 0
-        sessions_with_all_steps = 0
-
-        for _session_id, session_events in sessions.items():
-            # Find the first occurrence of each step in order
-            step_occurrences = {}
-
-            for event in session_events:
-                event_name = event["event_name"]
-                if event_name in step_index:
-                    idx = step_index[event_name]
-                    # Only record the first occurrence of each step
-                    if idx not in step_occurrences:
-                        step_occurrences[idx] = event["timestamp"]
-
-            # Check if this session has the first step
-            if 0 in step_occurrences:
-                sessions_with_first_step += 1
-
-            # Check for complete funnel and calculate timing
-            has_all_steps = True
-            for i in range(len(steps)):
-                if i not in step_occurrences:
-                    has_all_steps = False
-                    break
-                # Also check ordering: each step must come after the previous
-                if i > 0:
-                    prev_time = step_occurrences.get(i - 1)
-                    curr_time = step_occurrences.get(i)
-                    if prev_time and curr_time and curr_time < prev_time:
-                        has_all_steps = False
-                        break
-
-            if has_all_steps:
-                sessions_with_all_steps += 1
-
-                # Calculate total funnel time
-                first_step_time = step_occurrences[0]
-                last_step_time = step_occurrences[len(steps) - 1]
-                total_seconds = (last_step_time - first_step_time).total_seconds()
-                total_funnel_times.append(total_seconds)
-
-            # Calculate timing for each transition that has both steps in order
-            for i in range(len(steps) - 1):
-                from_time = step_occurrences.get(i)
-                to_time = step_occurrences.get(i + 1)
-
-                if from_time and to_time and to_time >= from_time:
-                    time_seconds = (to_time - from_time).total_seconds()
-                    transition_times[i].append(time_seconds)
-
-        # Build transitions response
         transitions = []
-        for i in range(len(steps) - 1):
-            times = transition_times[i]
+        for i in range(last):
+            analyzed, quartiles, mean = row[4 + 3 * i : 7 + 3 * i]
+            p25, median, p75 = quartiles or (None, None, None)
             transitions.append(
                 {
                     "from": steps[i],
                     "to": steps[i + 1],
-                    "sessions_analyzed": len(times),
-                    **self._calculate_time_stats(times),
+                    "sessions_analyzed": analyzed,
+                    "median_seconds": seconds(median),
+                    "mean_seconds": seconds(mean),
+                    "p25_seconds": seconds(p25),
+                    "p75_seconds": seconds(p75),
                 }
             )
 
-        # Build funnel summary
-        completion_rate = (
-            sessions_with_all_steps / sessions_with_first_step
-            if sessions_with_first_step > 0
-            else 0
-        )
-
+        with_first, with_all, median_total, mean_total = row[:4]
+        completion_rate = with_all / with_first if with_first > 0 else 0
         funnel_summary = {
-            "sessions_with_first_step": sessions_with_first_step,
-            "sessions_with_all_steps": sessions_with_all_steps,
+            "sessions_with_first_step": with_first,
+            "sessions_with_all_steps": with_all,
             "completion_rate": round(completion_rate, 3),
-            **self._calculate_total_funnel_stats(total_funnel_times),
+            "median_total_seconds": seconds(median_total),
+            "mean_total_seconds": seconds(mean_total),
         }
-
         return {"transitions": transitions, "funnel_summary": funnel_summary}
-
-    def _calculate_time_stats(self, times):
-        """
-        Calculate timing statistics for a list of time values (in seconds).
-
-        Returns dict with median_seconds, mean_seconds, p25_seconds, p75_seconds.
-        """
-        if not times:
-            return {"median_seconds": 0, "mean_seconds": 0, "p25_seconds": 0, "p75_seconds": 0}
-
-        sorted_times = sorted(times)
-        n = len(sorted_times)
-
-        def percentile(p):
-            """Calculate percentile using linear interpolation."""
-            if n == 1:
-                return sorted_times[0]
-            k = (n - 1) * p / 100.0
-            f = int(k)
-            c = f + 1 if f + 1 < n else f
-            if f == c:
-                return sorted_times[f]
-            return sorted_times[f] * (c - k) + sorted_times[c] * (k - f)
-
-        return {
-            "median_seconds": round(percentile(50), 2),
-            "mean_seconds": round(sum(times) / len(times), 2),
-            "p25_seconds": round(percentile(25), 2),
-            "p75_seconds": round(percentile(75), 2),
-        }
-
-    def _calculate_total_funnel_stats(self, total_times):
-        """
-        Calculate total funnel timing statistics.
-
-        Returns dict with median_total_seconds, mean_total_seconds.
-        """
-        if not total_times:
-            return {"median_total_seconds": 0, "mean_total_seconds": 0}
-
-        sorted_times = sorted(total_times)
-        n = len(sorted_times)
-
-        # Calculate median
-        if n % 2 == 1:
-            median = sorted_times[n // 2]
-        else:
-            median = (sorted_times[n // 2 - 1] + sorted_times[n // 2]) / 2.0
-
-        mean = sum(total_times) / len(total_times)
-
-        return {"median_total_seconds": round(median, 2), "mean_total_seconds": round(mean, 2)}
 
 
 class ConversionPathsView(APIView):
@@ -2125,6 +2083,7 @@ Automatically discover the most common behavior sequences that lead to conversio
             min_sessions=min_sessions,
             max_path_length=max_path_length,
             grouping=grouping,
+            slices=slices_in(app, start_datetime, end_datetime),
         )
 
         # Add small sample warning if sessions are low
@@ -2173,341 +2132,180 @@ Automatically discover the most common behavior sequences that lead to conversio
         min_sessions=1,
         max_path_length=10,
         grouping=event_groups.NONE,
+        *,
+        slices,
     ):
         """
-        Discover the most common paths leading to conversion within sessions.
+        The most common paths converting sessions took, walked and counted in one SQL query.
 
-        OPTIMIZED: Uses SQL CTE with array_agg() to extract all paths in a single
-        query, avoiding N+1 query pattern. Python post-processing handles
-        consecutive duplicate removal.
-
-        Algorithm:
-        1. Single SQL query to get event paths for all converting sessions
-        2. Python deduplication of consecutive events
-        3. Group and count paths
-        4. Second SQL query for timestamps of top N paths only
+        A converting session's path is its events up to its first conversion event, each name
+        read through the groups, a step that repeats the one before dropped, the last
+        `max_path_length` kept. The database counts the paths and averages their timings, and
+        returns only the top `limit`, so the rows that come back do not grow with the sessions
+        (conversion/test_bounded_reads.py holds it to the Python walk it replaced).
 
         Returns:
             dict with 'data_quality' and 'paths' keys
         """
-        from collections import defaultdict
-
         from django.db import connection
 
-        # Build conversion events SQL array
+        empty = {
+            "total_converting_sessions": 0,
+            "paths_analyzed": 0,
+            "unique_paths_found": 0,
+        }
         conversion_events_list = list(conversion_events)
         if not conversion_events_list:
-            return {
-                "data_quality": {
-                    "total_converting_sessions": 0,
-                    "paths_analyzed": 0,
-                    "unique_paths_found": 0,
-                },
-                "paths": [],
-            }
+            return {"data_quality": empty, "paths": []}
 
-        # Get the SQL and params from the Django queryset (includes date filters!)
-        base_sql, base_params = events_qs.query.sql_with_params()
-
-        # Create SQL placeholders for conversion events
+        base_sql, base_params = base_events(events_qs)
+        slice_sql, slice_params = slices.order_by().values("session_id").query.sql_with_params()
         conversion_placeholders = ",".join(["%s"] * len(conversion_events_list))
+        name_sql, name_params = grouping.sql("e.event_name")
 
-        # SQL Query 1: Get all paths in a single query using CTE
-        # Session-based: analyze paths within each session that has a conversion
-        # Uses base_events CTE to properly respect date filters from events_qs
         sql = f"""
-        WITH base_events AS (
-            {base_sql}
-        ),
-        -- Get first conversion time for each session
+        WITH base_events AS NOT MATERIALIZED ({base_sql}),
         first_conversions AS (
-            SELECT
-                session_id,
-                MIN(timestamp) as first_conversion_time
+            SELECT session_id, MIN(timestamp) AS first_conversion_time
             FROM base_events
             WHERE event_name IN ({conversion_placeholders})
-                AND session_id IS NOT NULL
-                AND session_id != ''
+                AND session_id IS NOT NULL AND session_id != ''
             GROUP BY session_id
         ),
-        -- Get all sessions for conversion rate denominator
+        -- Every session of the range, from its slices (analytics.SessionSlice), counted by hash
         all_sessions AS (
-            SELECT COUNT(DISTINCT session_id) as total_sessions
-            FROM base_events
-            WHERE session_id IS NOT NULL
-                AND session_id != ''
+            SELECT COUNT(*) AS total_sessions
+            FROM (
+                SELECT session_id COLLATE "C" FROM ({slice_sql}) s
+                WHERE session_id IS NOT NULL AND session_id != ''
+                GROUP BY 1
+            ) s
         ),
-        -- Get event paths for each converting session (before first conversion)
-        session_paths AS (
-            SELECT
-                e.session_id,
-                array_agg(e.event_name ORDER BY e.timestamp) as event_path
+        walked AS (
+            SELECT e.session_id, {name_sql} AS name, e.timestamp,
+                e.event_name IN ({conversion_placeholders}) AS converts,
+                ROW_NUMBER() OVER (PARTITION BY e.session_id ORDER BY e.timestamp) AS rn
             FROM base_events e
-            INNER JOIN first_conversions fc ON e.session_id = fc.session_id
+            JOIN first_conversions fc ON e.session_id = fc.session_id
             WHERE e.timestamp <= fc.first_conversion_time
-            GROUP BY e.session_id
+        ),
+        -- ending at the first conversion event
+        cut AS (
+            SELECT session_id, name, timestamp, rn,
+                MIN(rn) FILTER (WHERE converts) OVER (PARTITION BY session_id) AS stop
+            FROM walked
+        ),
+        -- a step that repeats the one before is dropped
+        steps AS (
+            SELECT session_id, name, timestamp, rn,
+                name IS DISTINCT FROM LAG(name) OVER (PARTITION BY session_id ORDER BY rn)
+                    AS new_step
+            FROM cut
+            WHERE rn <= stop
+        ),
+        walks AS (
+            SELECT session_id,
+                array_agg(name ORDER BY rn) AS names,
+                array_agg(timestamp ORDER BY rn) AS times
+            FROM steps
+            WHERE new_step
+            GROUP BY session_id
+        ),
+        -- the last max_path_length steps
+        kept AS (
+            SELECT names[greatest(1, cardinality(names) - %s + 1):] AS names,
+                times[greatest(1, cardinality(times) - %s + 1):] AS times
+            FROM walks
+        ),
+        counted AS (
+            SELECT names, COUNT(*) AS sessions,
+                AVG(EXTRACT(EPOCH FROM times[cardinality(times)] - times[1])::float8)
+                    FILTER (WHERE cardinality(times) >= 2) AS duration
+            FROM kept
+            GROUP BY names
+        ),
+        top AS (
+            SELECT names, sessions, duration
+            FROM counted
+            WHERE sessions >= %s
+            ORDER BY sessions DESC, names
+            LIMIT %s
+        ),
+        gaps AS (
+            SELECT k.names, g.i,
+                AVG(EXTRACT(EPOCH FROM k.times[g.i + 1] - k.times[g.i])::float8) AS gap
+            FROM kept k
+            JOIN top t ON t.names = k.names
+            CROSS JOIN LATERAL generate_subscripts(k.times, 1) AS g(i)
+            WHERE g.i < cardinality(k.times)
+            GROUP BY k.names, g.i
+        ),
+        totals AS (
+            SELECT (SELECT COUNT(*) FROM kept) AS converting,
+                (SELECT COUNT(*) FROM counted) AS unique_paths,
+                (SELECT total_sessions FROM all_sessions) AS total_sessions
         )
-        SELECT
-            sp.session_id,
-            sp.event_path,
-            (SELECT total_sessions FROM all_sessions) as total_sessions
-        FROM session_paths sp
+        SELECT totals.converting, totals.unique_paths, totals.total_sessions,
+            t.names, t.sessions, t.duration,
+            (SELECT array_agg(g.gap ORDER BY g.i) FROM gaps g WHERE g.names = t.names)
+        FROM totals
+        LEFT JOIN top t ON true
+        ORDER BY t.sessions DESC NULLS LAST, t.names
         """
-
-        # Combine parameters: base_params + conversion_events
-        params = list(base_params) + conversion_events_list
-
+        params = [
+            *base_params,
+            *conversion_events_list,
+            *slice_params,
+            *name_params,
+            *conversion_events_list,
+            max_path_length,
+            max_path_length,
+            min_sessions,
+            limit,
+        ]
         with connection.cursor() as cursor:
             cursor.execute(sql, params)
             rows = cursor.fetchall()
 
-        if not rows:
-            return {
-                "data_quality": {
-                    "total_converting_sessions": 0,
-                    "paths_analyzed": 0,
-                    "unique_paths_found": 0,
-                },
-                "paths": [],
-            }
+        converting, unique_paths, total_sessions = rows[0][:3]
+        total_sessions = total_sessions or 0
+        if not converting:
+            return {"data_quality": empty, "paths": []}
+        found = {
+            "total_converting_sessions": converting,
+            "paths_analyzed": converting,
+            "unique_paths_found": unique_paths,
+        }
+        top = [row for row in rows if row[3] is not None]
+        if not top:
+            return {"data_quality": found, "paths": []}
 
-        # Extract total_sessions from first row (same for all rows)
-        total_sessions = rows[0][2] if rows else 0
-        total_converting_sessions = len(rows)
-
-        # Process paths in Python: remove consecutive duplicates, limit length
-        path_counts = defaultdict(list)  # path_tuple -> list of session_ids
-        paths_analyzed = 0
-
-        for row in rows:
-            session_id, event_path_raw = row[0], row[1]
-
-            if not event_path_raw:
-                continue
-
-            # Python: Remove consecutive duplicates and limit to max_path_length
-            # Also stop at first conversion event
-            path = self._normalize_path(
-                event_path_raw, conversion_events_list, max_path_length, grouping
-            )
-
-            if path and len(path) >= 1:
-                paths_analyzed += 1
-                path_tuple = tuple(path)
-                path_counts[path_tuple].append(session_id)
-
-        # Filter and rank paths
-        unique_paths_found = len(path_counts)
-        qualified_paths = [
-            (path, session_ids)
-            for path, session_ids in path_counts.items()
-            if len(session_ids) >= min_sessions
-        ]
-
-        # Sort by number of sessions (descending)
-        qualified_paths.sort(key=lambda x: len(x[1]), reverse=True)
-
-        # Take top N paths
-        top_paths = qualified_paths[:limit]
-
-        if not top_paths:
-            return {
-                "data_quality": {
-                    "total_converting_sessions": total_converting_sessions,
-                    "paths_analyzed": paths_analyzed,
-                    "unique_paths_found": unique_paths_found,
-                },
-                "paths": [],
-            }
-
-        # SQL Query 2: Get timestamps for sessions in top paths only
-        # This is much more efficient than getting timestamps for all sessions
-        top_path_session_ids = set()
-        for _path, session_ids in top_paths:
-            top_path_session_ids.update(session_ids)
-
-        session_timestamps = self._get_session_timestamps_bulk(
-            events_qs,
-            list(top_path_session_ids),
-            conversion_events_list,
-            max_path_length,
-            grouping,
-        )
-
-        # Calculate statistics for each path
         result_paths = []
-        for rank, (path_tuple, session_ids) in enumerate(top_paths, 1):
-            path_list = list(path_tuple)
-            session_count = len(session_ids)
-
-            # Calculate conversion rate for sessions that took this path
-            conversion_rate = session_count / total_sessions if total_sessions > 0 else 0
-
-            # Build session data with timestamps for this path
-            sessions_with_timestamps = []
-            for sid in session_ids:
-                ts_data = session_timestamps.get(sid, {})
-                if ts_data:
-                    sessions_with_timestamps.append(
-                        {
-                            "timestamps": ts_data.get("timestamps", []),
-                            "total_duration": ts_data.get("total_duration"),
-                        }
-                    )
-
-            # Calculate average duration
-            durations = [
-                s["total_duration"]
-                for s in sessions_with_timestamps
-                if s.get("total_duration") is not None
+        for rank, (*_, names, sessions, duration, gaps) in enumerate(top, 1):
+            names = list(names)
+            conversion_rate = sessions / total_sessions if total_sessions > 0 else 0
+            step_timings = [
+                {"from": names[i], "to": names[i + 1], "avg_minutes": round(gap / 60.0, 2)}
+                for i, gap in enumerate(gaps or [])
             ]
-            avg_duration_minutes = sum(durations) / len(durations) / 60.0 if durations else 0
-
-            # Calculate step timings
-            step_timings = self._calculate_step_timings(path_list, sessions_with_timestamps)
-
             result_paths.append(
                 {
                     "rank": rank,
-                    "path": path_list,
-                    "sessions": session_count,
+                    "path": names,
+                    "sessions": sessions,
                     "conversion_rate": round(conversion_rate, 4),
-                    "avg_duration_minutes": round(avg_duration_minutes, 2),
+                    "avg_duration_minutes": round(duration / 60.0, 2) if duration else 0,
                     "step_timings": step_timings,
                 }
             )
 
         return {
             "data_quality": {
-                "total_converting_sessions": total_converting_sessions,
-                "paths_analyzed": paths_analyzed,
-                "unique_paths_found": unique_paths_found,
-                "total_unique_paths": unique_paths_found,  # Alias for frontend compatibility
+                **found,
+                "total_unique_paths": unique_paths,  # Alias for frontend compatibility
             },
             "paths": result_paths,
         }
-
-    def _walk(self, events, conversion_events, max_length, grouping):
-        """The steps a converting session took, as (name, timestamp) pairs: each name read
-        through the groups, a step that repeats the one before dropped, ending at the first
-        conversion event, the last `max_length` kept. The path and its timings both come from
-        here, so the timings always line up with the steps they belong to."""
-        conversion_set = set(conversion_events)
-        steps = []
-        for event_name, timestamp in events:
-            name = grouping.label(event_name)
-            if not steps or steps[-1][0] != name:
-                steps.append((name, timestamp))
-            if event_name in conversion_set:
-                break
-        return steps[-max_length:]
-
-    def _normalize_path(
-        self, event_list, conversion_events, max_length, grouping=event_groups.NONE
-    ):
-        """
-        Normalize a path by removing consecutive duplicates and limiting length.
-        Stops at the first conversion event.
-
-        Args:
-            event_list: List of event names (from array_agg)
-            conversion_events: Set/list of conversion event names
-            max_length: Maximum path length to return
-            grouping: the app's event groups, when the request asked for them
-
-        Returns:
-            List of event names (deduplicated)
-        """
-        events = ((e, None) for e in event_list or [])
-        steps = self._walk(events, conversion_events, max_length, grouping)
-        return [name for name, _ in steps]
-
-    def _get_session_timestamps_bulk(
-        self, events_qs, session_ids, conversion_events, max_length, grouping
-    ):
-        """
-        Get timestamps for multiple sessions in a single query, from the same events the paths
-        were read from (the date range included).
-
-        Returns:
-            dict: session_id -> {'timestamps': [...], 'total_duration': seconds}
-        """
-        from collections import defaultdict
-
-        from django.db import connection
-
-        if not session_ids:
-            return {}
-
-        base_sql, base_params = events_qs.query.sql_with_params()
-        session_placeholders = ",".join(["%s"] * len(session_ids))
-        sql = f"""
-        WITH base_events AS (
-            {base_sql}
-        )
-        SELECT session_id, event_name, timestamp
-        FROM base_events
-        WHERE session_id IN ({session_placeholders})
-        ORDER BY session_id, timestamp
-        """
-
-        with connection.cursor() as cursor:
-            cursor.execute(sql, [*base_params, *session_ids])
-            rows = cursor.fetchall()
-
-        session_events = defaultdict(list)
-        for session_id, event_name, timestamp in rows:
-            session_events[session_id].append((event_name, timestamp))
-
-        result = {}
-        for session_id, events in session_events.items():
-            steps = self._walk(events, conversion_events, max_length, grouping)
-            timestamps = [timestamp for _, timestamp in steps]
-            total_duration = None
-            if len(timestamps) >= 2:
-                total_duration = (timestamps[-1] - timestamps[0]).total_seconds()
-            result[session_id] = {"timestamps": timestamps, "total_duration": total_duration}
-
-        return result
-
-    def _calculate_step_timings(self, path, sessions):
-        """
-        Calculate average timing between consecutive steps in a path.
-
-        Args:
-            path: list of event names
-            sessions: list of session data dicts with 'timestamps' key
-
-        Returns:
-            list of step timing dicts
-        """
-        if len(path) < 2:
-            return []
-
-        step_timings = []
-
-        for i in range(len(path) - 1):
-            from_event = path[i]
-            to_event = path[i + 1]
-
-            # Collect timing data from all sessions
-            step_durations = []
-            for session_data in sessions:
-                timestamps = session_data.get("timestamps", [])
-                if len(timestamps) > i + 1:
-                    duration_seconds = (timestamps[i + 1] - timestamps[i]).total_seconds()
-                    step_durations.append(duration_seconds)
-
-            # Calculate average
-            avg_minutes = 0
-            if step_durations:
-                avg_minutes = sum(step_durations) / len(step_durations) / 60.0
-
-            step_timings.append(
-                {"from": from_event, "to": to_event, "avg_minutes": round(avg_minutes, 2)}
-            )
-
-        return step_timings
 
 
 class DropOffView(APIView):
@@ -2792,7 +2590,7 @@ Identify where non-converting sessions end.
         # Calculate drop-off diagnostics (session-based)
         analysis_result = self._analyze_drop_offs(
             app,
-            events_qs,
+            slices_in(app, start_datetime, end_datetime),
             conversion_events,
             min_sessions=min_sessions,
             limit=limit,
@@ -2826,24 +2624,22 @@ Identify where non-converting sessions end.
     def _analyze_drop_offs(
         self,
         app,
-        events_qs,
+        slices,
         conversion_events,
         min_sessions=5,
         limit=10,
         grouping=event_groups.NONE,
     ):
         """
-        PERF-010 & PERF-FIX: Optimized drop-off analysis using SQL subqueries.
+        Where sessions that did not convert stopped, and which events they hit more often than
+        converting sessions, in one SQL query.
 
-        Previous implementation: Loaded all session IDs into Python sets (memory issue)
-        New implementation: Uses SQL subqueries throughout - never materializes session IDs
-
-        Algorithm:
-        1. Use SQL subqueries to define all_sessions and converting_sessions
-        2. For non-converters, find their "last event before exit" (bulk SQL)
-        3. Get distinct events per session for differential analysis (bulk SQL)
-        4. Rank drop-off points by frequency
-        5. Calculate event frequency differential between groups
+        It reads the range's session slices (analytics.SessionSlice, `slices`), a row or two per
+        session instead of every event: each session (did it convert, its first and last
+        moment, its last event), the events each session hit, then the sessions that stopped at
+        each event and how long after their first, and how many converting and other sessions
+        hit each event. The rows that come back are one per event name, whatever the number of
+        sessions (conversion/test_bounded_reads.py holds it to the readings it replaced).
 
         With the app's groups (`grouping`), every event is read as its group in SQL, before
         sessions are counted, so a session that sent purchase_light and purchase_pro counts once
@@ -2852,51 +2648,84 @@ Identify where non-converting sessions end.
         Returns:
             dict with 'data_quality', 'drop_off_points', and 'differential_events'
         """
-        from collections import defaultdict
-
         from django.db import connection
 
-        # PERF-FIX: Get the SQL and params from the Django queryset (for base filtering)
-        # This avoids loading all session IDs into Python memory
-        base_sql, base_params = events_qs.query.sql_with_params()
-
-        # Build conversion events placeholder for SQL
-        conversion_placeholders = ", ".join(["%s"] * len(conversion_events))
+        slice_sql, slice_params = (
+            slices.order_by()
+            .filter(session_id__isnull=False)
+            .exclude(session_id="")
+            .values("session_id", "names", "first_at", "last_at", "last_name")
+            .query.sql_with_params()
+        )
         # Each event as its group, and the names a conversion event reads as
-        name_sql, name_params = grouping.sql("e.event_name")
+        name_sql, name_params = grouping.sql("n")
+        last_sql, last_params = grouping.sql("substr(last_key, 21)")
         conversion_names = {grouping.label(e) for e in conversion_events}
 
-        # =========================================================================
-        # QUERY 1: Get session counts and classification using SQL subqueries
-        # =========================================================================
-        session_counts_sql = f"""
-        WITH base_events AS (
-            {base_sql}
+        sql = f"""
+        -- Read once per use rather than copied to disk, session ids compared byte for byte
+        WITH slices AS NOT MATERIALIZED (
+            SELECT x.session_id COLLATE "C" AS session_id, x.names, x.first_at, x.last_at,
+                x.last_name
+            FROM ({slice_sql}) x
         ),
-        all_sessions AS (
-            SELECT DISTINCT session_id
-            FROM base_events
-            WHERE session_id IS NOT NULL AND session_id != ''
+        -- A session's last event: the moment, as fixed-width text, then the name, so the
+        -- greatest key over its slices holds it
+        sessions AS (
+            SELECT session_id, bool_or(names && %s::varchar[]) AS converted,
+                MIN(first_at) AS first_at, MAX(last_at) AS last_at,
+                MAX(to_char(last_at AT TIME ZONE 'UTC', 'YYYYMMDDHH24MISSUS')
+                    || last_name COLLATE "C") AS last_key
+            FROM slices
+            GROUP BY session_id
         ),
-        converting_sessions AS (
-            SELECT DISTINCT session_id
-            FROM base_events
-            WHERE session_id IS NOT NULL AND session_id != ''
-              AND event_name IN ({conversion_placeholders})
+        -- The sessions in one pass: all of them, the converting ones, and those that stopped
+        -- at each event and how long after their first
+        ended AS (
+            SELECT CASE WHEN converted THEN NULL ELSE {last_sql} END AS name, converted,
+                COUNT(*) AS sessions,
+                AVG(NULLIF(EXTRACT(EPOCH FROM (last_at - first_at))::float8, 0)) AS seconds
+            FROM sessions
+            GROUP BY 1, 2
+        ),
+        -- Each session's events, in session order, with whether the session converted read in
+        -- the same pass, so nothing is joined back
+        pairs AS (
+            SELECT s.session_id, {name_sql} AS name, bool_or(n = ANY(%s::varchar[])) AS converts
+            FROM slices s CROSS JOIN LATERAL unnest(s.names) AS n
+            GROUP BY 1, 2
+        ),
+        presence AS (
+            SELECT name, COUNT(*) FILTER (WHERE converted) AS converters,
+                COUNT(*) FILTER (WHERE NOT converted) AS others
+            FROM (
+                SELECT name, bool_or(converts) OVER (PARTITION BY session_id) AS converted
+                FROM pairs
+            ) flagged
+            GROUP BY name
+        ),
+        totals AS (
+            SELECT SUM(sessions)::bigint AS sessions,
+                (SUM(sessions) FILTER (WHERE converted))::bigint AS converting
+            FROM ended
+        ),
+        dropped AS (
+            SELECT name, sessions AS sessions_dropped, seconds FROM ended WHERE NOT converted
         )
-        SELECT
-            (SELECT COUNT(*) FROM all_sessions) as total_sessions,
-            (SELECT COUNT(*) FROM converting_sessions) as converting_sessions
+        SELECT totals.sessions, totals.converting, presence.name, presence.converters,
+            presence.others, dropped.sessions_dropped, dropped.seconds
+        FROM totals
+        LEFT JOIN presence ON true
+        LEFT JOIN dropped ON dropped.name = presence.name
         """
-
-        params = list(base_params) + list(conversion_events)
-
+        conversions = list(conversion_events)
+        params = [*slice_params, conversions, *last_params, *name_params, conversions]
         with connection.cursor() as cursor:
-            cursor.execute(session_counts_sql, params)
-            row = cursor.fetchone()
+            cursor.execute(sql, params)
+            rows = cursor.fetchall()
 
-        total_sessions = row[0] or 0
-        converting_sessions_count = row[1] or 0
+        total_sessions = rows[0][0] or 0
+        converting_sessions_count = rows[0][1] or 0
         non_converting_sessions_count = total_sessions - converting_sessions_count
         conversion_rate = converting_sessions_count / total_sessions if total_sessions > 0 else 0.0
 
@@ -2924,130 +2753,16 @@ Identify where non-converting sessions end.
                 "differential_events": [],
             }
 
-        # =========================================================================
-        # QUERY 2: Get last event per non-converting session (SQL subquery approach)
-        # Uses ROW_NUMBER() window function to find first/last events efficiently
-        # Non-converting sessions defined via SQL NOT IN subquery
-        # =========================================================================
-        last_events_sql = f"""
-        WITH base_events AS (
-            {base_sql}
-        ),
-        converting_sessions AS (
-            SELECT DISTINCT session_id
-            FROM base_events
-            WHERE session_id IS NOT NULL AND session_id != ''
-              AND event_name IN ({conversion_placeholders})
-        ),
-        non_converting_events AS (
-            SELECT
-                e.session_id,
-                {name_sql} AS event_name,
-                e.timestamp
-            FROM base_events e
-            WHERE e.session_id IS NOT NULL AND e.session_id != ''
-              AND e.session_id NOT IN (SELECT session_id FROM converting_sessions)
-        ),
-        session_events AS (
-            SELECT
-                session_id,
-                event_name,
-                timestamp,
-                ROW_NUMBER() OVER (PARTITION BY session_id ORDER BY timestamp ASC) as first_rn,
-                ROW_NUMBER() OVER (PARTITION BY session_id ORDER BY timestamp DESC) as last_rn
-            FROM non_converting_events
-        ),
-        first_last_events AS (
-            SELECT
-                session_id,
-                MAX(CASE WHEN first_rn = 1 THEN timestamp END) as first_timestamp,
-                MAX(CASE WHEN last_rn = 1 THEN event_name END) as last_event_name,
-                MAX(CASE WHEN last_rn = 1 THEN timestamp END) as last_timestamp
-            FROM session_events
-            WHERE first_rn = 1 OR last_rn = 1
-            GROUP BY session_id
-        )
-        SELECT
-            session_id,
-            last_event_name,
-            last_timestamp,
-            EXTRACT(EPOCH FROM (last_timestamp - first_timestamp)) as time_since_first
-        FROM first_last_events
-        WHERE last_event_name IS NOT NULL
-        """
-
-        params = list(base_params) + list(conversion_events) + name_params
-
-        with connection.cursor() as cursor:
-            cursor.execute(last_events_sql, params)
-            last_event_rows = cursor.fetchall()
-
-        # Build last_event_counts from query results
-        last_event_counts = defaultdict(list)
-        for row in last_event_rows:
-            session_id, last_event_name, last_timestamp, time_since_first = row
-            last_event_counts[last_event_name].append(
-                {
-                    "session_id": session_id,
-                    "timestamp": last_timestamp,
-                    "time_since_first": float(time_since_first) if time_since_first else None,
-                }
-            )
-
-        # =========================================================================
-        # QUERY 3: Get distinct events per session with converter flag (SQL approach)
-        # Returns event counts for converters and non-converters in single query
-        # =========================================================================
-        events_per_session_sql = f"""
-        WITH base_events AS (
-            {base_sql}
-        ),
-        converting_sessions AS (
-            SELECT DISTINCT session_id
-            FROM base_events
-            WHERE session_id IS NOT NULL AND session_id != ''
-              AND event_name IN ({conversion_placeholders})
-        ),
-        session_events AS (
-            SELECT DISTINCT
-                e.session_id,
-                {name_sql} AS event_name,
-                CASE WHEN cs.session_id IS NOT NULL THEN true ELSE false END as is_converter
-            FROM base_events e
-            LEFT JOIN converting_sessions cs ON e.session_id = cs.session_id
-            WHERE e.session_id IS NOT NULL AND e.session_id != ''
-        )
-        SELECT
-            event_name,
-            SUM(CASE WHEN is_converter THEN 1 ELSE 0 END) as converter_count,
-            SUM(CASE WHEN NOT is_converter THEN 1 ELSE 0 END) as non_converter_count
-        FROM session_events
-        GROUP BY event_name
-        """
-
-        params = list(base_params) + list(conversion_events) + name_params
-
-        with connection.cursor() as cursor:
-            cursor.execute(events_per_session_sql, params)
-            event_count_rows = cursor.fetchall()
-
-        # Build event counts per group from SQL results
-        converter_event_counts = {}
-        non_converter_event_counts = {}
-
-        for row in event_count_rows:
-            event_name, converter_count, non_converter_count = row
-            converter_event_counts[event_name] = converter_count or 0
-            non_converter_event_counts[event_name] = non_converter_count or 0
+        converter_event_counts = {row[2]: row[3] or 0 for row in rows if row[2] is not None}
+        non_converter_event_counts = {row[2]: row[4] or 0 for row in rows if row[2] is not None}
+        last_event_rows = [(row[2], row[5], row[6]) for row in rows if row[5]]
 
         # =========================================================================
         # Build drop-off points list (session-based)
         # =========================================================================
         drop_off_points = []
 
-        for event_name, session_data_list in last_event_counts.items():
-            sessions_dropped = len(session_data_list)
-
+        for event_name, sessions_dropped, avg_seconds in last_event_rows:
             if sessions_dropped < min_sessions:
                 continue
 
@@ -3061,13 +2776,8 @@ Identify where non-converting sessions end.
                 else 0
             )
 
-            # Calculate average time before exit
-            times = [
-                s["time_since_first"]
-                for s in session_data_list
-                if s["time_since_first"] is not None
-            ]
-            avg_time_before_exit_minutes = sum(times) / len(times) / 60.0 if times else 0
+            # Average time before exit
+            avg_time_before_exit_minutes = avg_seconds / 60.0 if avg_seconds else 0
 
             # Calculate converter comparison
             converters_with_event = converter_event_counts.get(event_name, 0)
@@ -3459,7 +3169,7 @@ Identify which events correlate with conversion (positive or negative lift).
         # Calculate event correlations (session-based)
         analysis_result = self._analyze_event_correlations(
             app,
-            events_qs,
+            slices_in(app, start_datetime, end_datetime),
             conversion_events,
             min_sessions=min_sessions,
             limit=limit,
@@ -3494,7 +3204,7 @@ Identify which events correlate with conversion (positive or negative lift).
     def _analyze_event_correlations(
         self,
         app,
-        events_qs,
+        slices,
         conversion_events,
         min_sessions=10,
         limit=10,
@@ -3522,13 +3232,20 @@ Identify which events correlate with conversion (positive or negative lift).
         from django.db import connection
 
         # PERF-FIX: Get the SQL and params from the Django queryset (for base filtering)
-        base_sql, base_params = events_qs.query.sql_with_params()
+        # The range's session slices (analytics.SessionSlice): the event names each session holds
+        slice_sql, slice_params = (
+            slices.order_by()
+            .filter(session_id__isnull=False)
+            .exclude(session_id="")
+            .values("session_id", "names")
+            .query.sql_with_params()
+        )
 
         # Build conversion events placeholder for SQL
         conversion_placeholders = ", ".join(["%s"] * len(conversion_events))
         # Each event as its group; the events left out: the conversion events and every event
         # of a group that holds one
-        name_sql, name_params = grouping.sql("event_name")
+        name_sql, name_params = grouping.sql("n")
         left_out = grouping.expand({grouping.label(e) for e in conversion_events})
         left_out_placeholders = ", ".join(["%s"] * len(left_out))
 
@@ -3538,89 +3255,67 @@ Identify which events correlate with conversion (positive or negative lift).
         # - For each non-conversion event: sessions with/without, converters with/without
         # =========================================================================
 
+        # One pass over the range's session slices: each session's event names as (session,
+        # event) pairs, whether the pair holds a conversion event; the sessions from the pairs;
+        # then per event, the sessions with it and the converting ones among them. The events
+        # left out are counted for no event, but their sessions still count, and convert.
         correlation_sql = f"""
-        WITH base_events AS (
-            {base_sql}
+        -- Read once per use rather than copied to disk, session ids compared byte for byte
+        WITH slices AS NOT MATERIALIZED (
+            SELECT x.session_id COLLATE "C" AS session_id, x.names FROM ({slice_sql}) x
         ),
-        all_sessions AS (
-            SELECT DISTINCT session_id
-            FROM base_events
-            WHERE session_id IS NOT NULL AND session_id != ''
+        pairs AS (
+            SELECT s.session_id, {name_sql} AS event_name,
+                bool_or(n IN ({conversion_placeholders})) AS converts,
+                bool_or(n NOT IN ({left_out_placeholders})) AS counted
+            FROM slices s CROSS JOIN LATERAL unnest(s.names) AS n
+            GROUP BY 1, 2
         ),
-        converting_sessions AS (
-            SELECT DISTINCT session_id
-            FROM base_events
-            WHERE session_id IS NOT NULL AND session_id != ''
-              AND event_name IN ({conversion_placeholders})
+        -- The pairs come out in session order, so whether a session converted, and its first
+        -- pair (to count it once), are read in that same pass, with no join back
+        flagged AS (
+            SELECT event_name, counted,
+                bool_or(converts) OVER per_session AS converted,
+                row_number() OVER per_session = 1 AS first_of_session
+            FROM pairs
+            WINDOW per_session AS (PARTITION BY session_id)
         ),
-        session_counts AS (
-            SELECT
-                (SELECT COUNT(*) FROM all_sessions) as total_sessions,
-                (SELECT COUNT(*) FROM converting_sessions) as converting_sessions
-        ),
-        -- Get distinct events per session (excluding conversion events)
-        session_events AS (
-            SELECT DISTINCT session_id, {name_sql} AS event_name
-            FROM base_events
-            WHERE session_id IS NOT NULL AND session_id != ''
-              AND event_name NOT IN ({left_out_placeholders})
-        ),
-        -- Count ALL unique event types (before filtering)
-        all_event_types AS (
-            SELECT COUNT(DISTINCT event_name) as total_event_types
-            FROM session_events
-        ),
-        -- Count sessions per event
-        event_session_counts AS (
-            SELECT
-                event_name,
-                COUNT(*) as sessions_with_event
-            FROM session_events
+        per_event AS (
+            SELECT event_name,
+                COUNT(*) FILTER (WHERE counted) AS sessions_with_event,
+                COUNT(*) FILTER (WHERE counted AND converted) AS converters_with_event,
+                (SUM(COUNT(*) FILTER (WHERE first_of_session)) OVER ())::bigint
+                    AS total_sessions,
+                (SUM(COUNT(*) FILTER (WHERE first_of_session AND converted)) OVER ())::bigint
+                    AS converting_sessions
+            FROM flagged
             GROUP BY event_name
-            HAVING COUNT(*) >= %s
         ),
-        -- For each event, count converters among sessions with the event
-        event_converter_counts AS (
-            SELECT
-                se.event_name,
-                COUNT(*) as converters_with_event
-            FROM session_events se
-            INNER JOIN converting_sessions cs ON se.session_id = cs.session_id
-            GROUP BY se.event_name
-        ),
-        -- Combine all stats
-        event_stats AS (
-            SELECT
-                esc.event_name,
-                esc.sessions_with_event,
-                COALESCE(ecc.converters_with_event, 0) as converters_with_event,
-                sc.total_sessions,
-                sc.converting_sessions as total_converters,
-                aet.total_event_types
-            FROM event_session_counts esc
-            CROSS JOIN session_counts sc
-            CROSS JOIN all_event_types aet
-            LEFT JOIN event_converter_counts ecc ON esc.event_name = ecc.event_name
+        counted AS (
+            SELECT *, COUNT(*) OVER () AS total_event_types
+            FROM per_event
+            WHERE sessions_with_event > 0
         )
         SELECT
             event_name,
             sessions_with_event,
-            (total_sessions - sessions_with_event) as sessions_without_event,
+            (total_sessions - sessions_with_event) AS sessions_without_event,
             converters_with_event,
-            (total_converters - converters_with_event) as converters_without_event,
+            (converting_sessions - converters_with_event) AS converters_without_event,
             total_sessions,
-            total_converters,
+            converting_sessions,
             total_event_types
-        FROM event_stats
-        WHERE (total_sessions - sessions_with_event) >= %s  -- Ensure enough sessions without
+        FROM counted
+        WHERE sessions_with_event >= %s
+            AND (total_sessions - sessions_with_event) >= %s
         """
 
-        # Parameters, in the order they appear: base_params + conversion_events + the group
-        # names + the events left out + min_sessions + min_sessions
+        # Parameters, in the order they appear: base_params + the group names + the conversion
+        # events + the events left out + min_sessions + min_sessions
         params = (
-            list(base_params)
-            + list(conversion_events)
+            list(slice_params)
             + name_params
+            + list(conversion_events)
             + left_out
             + [min_sessions, min_sessions]
         )
@@ -4101,30 +3796,9 @@ are exposed. Country data comes from request headers only - no IP geolocation.
                 {"error": "Invalid date format. Use YYYY-MM-DD"}, status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Default date range: last 30 days if not specified
-        if not from_datetime and not to_datetime:
-            import pytz
-
-            tz = pytz.timezone(tz_name) if tz_name != "UTC" else pytz.UTC
-            to_datetime = timezone.now().astimezone(tz)
-            from_datetime = to_datetime - timedelta(days=30)
-            events = events.filter(timestamp__gte=from_datetime, timestamp__lte=to_datetime)
-        elif not from_datetime:
-            # If only to_date specified, go back 30 days from to_date
-            from_datetime = to_datetime - timedelta(days=30)
-            events = events.filter(timestamp__gte=from_datetime, timestamp__lte=to_datetime)
-        elif not to_datetime:
-            # If only from_date specified, go until now
-            import pytz
-
-            tz = pytz.timezone(tz_name) if tz_name != "UTC" else pytz.UTC
-            to_datetime = timezone.now().astimezone(tz)
-            events = events.filter(timestamp__gte=from_datetime, timestamp__lte=to_datetime)
-        else:
-            if from_datetime:
-                events = events.filter(timestamp__gte=from_datetime)
-            if to_datetime:
-                events = events.filter(timestamp__lte=to_datetime)
+        # Default range: the last 30 days, from the reader's midnight (analytics/date_utils.py)
+        from_datetime, to_datetime = default_range(from_datetime, to_datetime, tz_name)
+        events = events.filter(timestamp__gte=from_datetime, timestamp__lte=to_datetime)
 
         # PERF-016: Check cache before running expensive analysis
         import hashlib
@@ -4178,7 +3852,10 @@ are exposed. Country data comes from request headers only - no IP geolocation.
             # Field-based segmentation (platform, country)
             segment_field = "platform" if segment_by == "platform" else "country"
             segments_data = self._calculate_field_segments(
-                events, conversion_events, trunc_func, segment_field
+                slices_in(app, from_datetime, to_datetime),
+                conversion_events,
+                trunc_func,
+                segment_field,
             )
 
         # Format response
@@ -4227,7 +3904,7 @@ are exposed. Country data comes from request headers only - no IP geolocation.
 
         return Response(response_data, status=status.HTTP_200_OK)
 
-    def _calculate_field_segments(self, events, conversion_events, trunc_func, segment_field):
+    def _calculate_field_segments(self, slices, conversion_events, trunc_func, segment_field):
         """
         Calculate segment data for a regular field (platform, country) using session_id.
 
@@ -4240,22 +3917,20 @@ are exposed. Country data comes from request headers only - no IP geolocation.
         """
         from django.db.models import Q
 
-        # Filter to events with session_id for session counting
-        events_with_session = events.filter(session_id__isnull=False).exclude(session_id="")
+        # The range's session slices with a session (analytics.SessionSlice)
+        with_session = slices.filter(session_id__isnull=False).exclude(session_id="")
 
         # One query for both: the sessions, and the sessions with a conversion event, so the
         # rate is sessions over sessions, as for depth and hour (until 2026-10-24 conversions
         # counted the events, and a rate could pass 100%)
-        segment_data = (
-            events_with_session.annotate(period=trunc_func("timestamp"))
-            .values("period", segment_field)
-            .annotate(
-                unique_sessions=Count("session_id", distinct=True),
-                conversions=Count(
-                    "session_id", distinct=True, filter=Q(event_name__in=conversion_events)
-                ),
+        segment_data = [
+            {**row, "unique_sessions": row["sessions"], "conversions": row["converting"]}
+            for row in sessions_per(
+                with_session.annotate(period=trunc_func("quarter")),
+                ["period", segment_field],
+                converted=Q(names__overlap=list(conversion_events)),
             )
-        )
+        ]
 
         return self._segments_from(segment_data, segment_field)
 
@@ -4330,17 +4005,16 @@ are exposed. Country data comes from request headers only - no IP geolocation.
 
         with_session = events.filter(session_id__isnull=False).exclude(session_id="")
         converting = with_session.filter(event_name__in=conversion_events).values("session_id")
-        rows = list(
-            with_session.filter(properties__has_key=name)
-            .annotate(period=trunc_func("timestamp"), value=KeyTextTransform(name, "properties"))
-            .values("period", "value")
-            .annotate(
-                unique_sessions=Count("session_id", distinct=True),
-                conversions=Count(
-                    "session_id", distinct=True, filter=Q(session_id__in=Subquery(converting))
+        rows = [
+            {**row, "unique_sessions": row["sessions"], "conversions": row["converting"]}
+            for row in sessions_per(
+                with_session.filter(properties__has_key=name).annotate(
+                    period=trunc_func("timestamp"), value=KeyTextTransform(name, "properties")
                 ),
+                ["period", "value"],
+                converted=Q(session_id__in=Subquery(converting)),
             )
-        )
+        ]
         totals = defaultdict(int)
         for row in rows:
             totals[row["value"]] += row["unique_sessions"]
@@ -4382,37 +4056,35 @@ are exposed. Country data comes from request headers only - no IP geolocation.
 
         # The period in the reader's zone: the unit is one of five known words, never the caller's
         unit = granularity if granularity in ("day", "week", "month", "quarter") else "year"
-        trunc_sql = f"DATE_TRUNC('{unit}', MIN(timestamp) AT TIME ZONE %s)"
+        trunc_sql = f"DATE_TRUNC('{unit}', MIN(first_at) AT TIME ZONE %s)"
 
-        # The conversion events as placeholders, never as text in the SQL: a name is whatever the
-        # caller sent, and the placeholders come first in the query, so their values do too
-        conversion_placeholders = ", ".join(["%s"] * len(conversion_events))
+        # The conversion events as one array parameter, never as text in the SQL: a name is
+        # whatever the caller sent
 
         # Build date filter SQL
         date_filter = ""
-        params = [zone.key, *conversion_events, str(app_id)]  # in the order the query asks
+        params = [zone.key, list(conversion_events), str(app_id)]  # in the order the query asks
         if from_date:
-            date_filter += " AND timestamp >= %s"
+            date_filter += " AND quarter >= %s"
             params.append(from_date)
         if to_date:
-            date_filter += " AND timestamp <= %s"
+            date_filter += " AND quarter <= %s"
             params.append(to_date)
 
         # SQL query to calculate session depth buckets with conversion rates
         sql = f"""
         WITH session_stats AS (
             SELECT
-                session_id,
+                session_id COLLATE "C" AS session_id,
                 {trunc_sql} as period,
-                COUNT(*) as event_count,
-                MAX(CASE WHEN event_name IN ({conversion_placeholders}) THEN 1 ELSE 0 END)
-                    as converted
-            FROM analytics_event
+                SUM(events) as event_count,
+                MAX(CASE WHEN names && %s::varchar[] THEN 1 ELSE 0 END) as converted
+            FROM analytics_sessionslice
             WHERE app_id = %s
                 AND session_id IS NOT NULL
                 AND session_id != ''
                 {date_filter}
-            GROUP BY session_id
+            GROUP BY 1
         ),
         depth_buckets AS (
             SELECT
@@ -4534,18 +4206,17 @@ are exposed. Country data comes from request headers only - no IP geolocation.
         """
         from django.db import connection
 
-        # The conversion events as placeholders, never as text in the SQL: a name is whatever the
-        # caller sent, and the placeholders come first in the query, so their values do too
-        conversion_placeholders = ", ".join(["%s"] * len(conversion_events))
+        # The conversion events as one array parameter, never as text in the SQL: a name is
+        # whatever the caller sent
 
         # Build date filter SQL
         date_filter = ""
-        params = [*conversion_events, str(app_id)]
+        params = [list(conversion_events), str(app_id)]
         if from_date:
-            date_filter += " AND timestamp >= %s"
+            date_filter += " AND quarter >= %s"
             params.append(from_date)
         if to_date:
-            date_filter += " AND timestamp <= %s"
+            date_filter += " AND quarter <= %s"
             params.append(to_date)
 
         # SQL query to calculate hourly session patterns
@@ -4553,16 +4224,15 @@ are exposed. Country data comes from request headers only - no IP geolocation.
         sql = f"""
         WITH session_hours AS (
             SELECT
-                session_id,
-                EXTRACT(HOUR FROM MIN(timestamp) AT TIME ZONE 'UTC') as session_hour,
-                MAX(CASE WHEN event_name IN ({conversion_placeholders}) THEN 1 ELSE 0 END)
-                    as converted
-            FROM analytics_event
+                session_id COLLATE "C" AS session_id,
+                EXTRACT(HOUR FROM MIN(first_at) AT TIME ZONE 'UTC') as session_hour,
+                MAX(CASE WHEN names && %s::varchar[] THEN 1 ELSE 0 END) as converted
+            FROM analytics_sessionslice
             WHERE app_id = %s
                 AND session_id IS NOT NULL
                 AND session_id != ''
                 {date_filter}
-            GROUP BY session_id
+            GROUP BY 1
         )
         SELECT
             session_hour::int as hour,
@@ -4777,7 +4447,7 @@ class GlobeStatsView(APIView):
         from django.conf import settings
         from django.core.cache import cache
         from django.db import connection
-        from django.db.models import Count, Q
+        from django.db.models import Q
 
         logger = logging.getLogger("analytics.performance")
         start_time = time.time()
@@ -4833,7 +4503,8 @@ class GlobeStatsView(APIView):
                 app_key, to_date_str, getattr(settings, "GLOBE_STATS_CACHE_TTL", 900)
             )
             cache_key = (
-                f"globe_stats_{app_key}_{conversion_hash}_{from_date_str}_{to_date_str}_{tz_name}"
+                f"globe_stats_{app_key}_{conversion_hash}_{from_date_str}_{to_date_str}"
+                f"_{_get_timezone_safe(tz_name).key}"
                 f"_{fresh}"
             )
 
@@ -4860,32 +4531,26 @@ class GlobeStatsView(APIView):
             with connection.cursor() as cursor:
                 cursor.execute(f"SET statement_timeout = {query_timeout}")
 
-            # Build base queryset with minimal column selection
-            queryset = Event.objects.filter(
-                app=app,
-                timestamp__gte=from_datetime,
-                timestamp__lte=to_datetime,
-                country__isnull=False,  # Only include events with country data
-            ).only("country", "session_id", "event_name")
+            # The range's session slices with a country (analytics.SessionSlice)
+            queryset = slices_in(app, from_datetime, to_datetime).filter(country__isnull=False)
 
             # Execute optimized query: GROUP BY country only (no period grouping)
             query_start = time.time()
 
-            # Build aggregation
-            aggregation = {"events": Count("id"), "sessions": Count("session_id", distinct=True)}
-
             # Sessions with a conversion event, so the rate is sessions over sessions and never
-            # passes 100% (until 2026-10-24 it counted the events)
-            if conversion_events:
-                aggregation["conversions"] = Count(
-                    "session_id", distinct=True, filter=Q(event_name__in=conversion_events)
+            # passes 100% (until 2026-10-24 it counted the events); sessions grouped by hash
+            # first (analytics/base_events.py)
+            results = [
+                {**row, "conversions": row.get("converting", 0)}
+                for row in sessions_per(
+                    queryset,
+                    ["country"],
+                    converted=Q(names__overlap=list(conversion_events))
+                    if conversion_events
+                    else None,
+                    order="3 DESC",  # most events first
                 )
-
-            results = list(
-                queryset.values("country")
-                .annotate(**aggregation)
-                .order_by("-events")  # Order by event count descending
-            )
+            ]
 
             query_duration = time.time() - query_start
 
@@ -4966,3 +4631,11 @@ class GlobeStatsView(APIView):
                 {"error": "Failed to fetch globe statistics", "detail": error_detail},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+        finally:
+            # The time limit set above holds for this connection, which Django keeps for the next
+            # request (CONN_MAX_AGE), whatever that request is: give the server's default back.
+            try:
+                with connection.cursor() as cursor:
+                    cursor.execute("RESET statement_timeout")
+            except Exception:
+                logger.warning("globe-stats: could not reset the statement timeout")

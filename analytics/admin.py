@@ -3,7 +3,7 @@ import ipaddress
 from django.contrib import admin, messages
 from django.utils import timezone
 
-from .blocks import address_key, lift
+from .blocks import address_key, lift, lift_by_hand
 from .models import App, BlockedAddress, Event, SecretKey
 
 
@@ -85,8 +85,6 @@ class BlockedAddressAdmin(admin.ModelAdmin):
         if not reached:
             self.message_user(
                 request,
-                "Cloudflare could not be reached, so it may still refuse these addresses: remove "
-                "them from the block list in the Cloudflare dashboard (Manage Account, "
-                "Configurations, Lists).",
+                lift_by_hand(several=True),
                 messages.WARNING,
             )

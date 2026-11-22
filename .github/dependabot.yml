@@ -1,0 +1,37 @@
+# Dependabot: the newest Python packages, base image, database image and actions, once a month,
+# grouped, each release three days old first. requirements.txt is exported from respectlytics.com's
+# lock (see its header), so a package update reaches this repository with the next sync.
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: monthly
+    cooldown:
+      default-days: 3
+    groups:
+      python-packages:
+        patterns: ["*"]
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: monthly
+    cooldown:
+      default-days: 3
+  - package-ecosystem: docker-compose
+    directory: /
+    schedule:
+      interval: monthly
+    cooldown:
+      default-days: 3
+    # PostgreSQL stays on major 16: an install's postgres_data volume holds a version 16 data
+    # directory, which a newer major cannot open (docker-compose.yml)
+    ignore:
+      - dependency-name: postgres
+        update-types: ["version-update:semver-major"]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    cooldown:
+      default-days: 3

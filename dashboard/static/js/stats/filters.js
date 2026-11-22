@@ -213,6 +213,11 @@ function toggleEventPopover() {
     if (badge) badge.setAttribute('aria-expanded', open ? 'true' : 'false');
 
     document.removeEventListener('click', closeEventPopoverOnClickOutside);
+    // Opened while it still lists nothing: ask again, as events may have arrived since the page loaded
+    if (open && typeof fetchAllEventTypes === 'function'
+        && (typeof availableEventTypes === 'undefined' || !availableEventTypes.length)) {
+        fetchAllEventTypes();
+    }
     if (open) {
         // one panel at a time: the event groups one closes
         const groups = document.getElementById('eventGroupsPanel');

@@ -9,9 +9,7 @@ Only a header that the edge in front of the app sets, and overwrites when a
 client sends its own, can say who the visitor is. Which headers those are
 depends on where the app runs, so settings.TRUSTED_CLIENT_IP_HEADERS names them:
 
-- respectlytics.com is reached only through Cloudflare: its records are proxied to a
-  Cloudflare Tunnel, and the server opens no web port, so every request comes
-  through Cloudflare, then the tunnel and the server's Caddy. Cloudflare sets
+- Behind Cloudflare, with no way around it to the server, Cloudflare sets
   CF-Connecting-IP to the address that connected to it, and for a Worker on
   another account to the one address every Worker shares, so that header alone
   names the visitor there, and READ_X_FORWARDED_FOR is off.

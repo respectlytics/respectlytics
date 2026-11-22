@@ -19,7 +19,7 @@ the plan and the SDK guides are simply absent.
     </a>
     {% app_switcher %}
     <div class="ml-auto flex items-center gap-1 sm:gap-2">
-      {% if sdk_url or api_url %}
+      {% if sdk_url or api_url or docs_links %}
       <div class="relative">
         <button type="button" data-popover aria-expanded="false" aria-controls="docsMenu" aria-label="Docs"
                 class="btn-quiet h-9 min-h-9 gap-1.5 px-2.5 sm:px-3">
@@ -38,6 +38,12 @@ the plan and the SDK guides are simply absent.
             <span class="min-w-0"><span class="block text-sm font-medium text-slate-50">API reference</span><span class="block text-sm text-slate-400">Read and export your data</span></span>
           </a>
           {% endif %}
+          {% for doc in docs_links %}
+          <a href="{{ doc.url }}" class="flex items-start gap-3 rounded-xl p-2.5 no-underline hover:bg-white/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-400">
+            <span class="icon-chip h-8 w-8 bg-amber-400/10 text-amber-300 ring-amber-300/25">{% include 'partials/icon.html' with name=doc.icon size='h-4 w-4' %}</span>
+            <span class="min-w-0"><span class="block text-sm font-medium text-slate-50">{{ doc.name }}</span><span class="block text-sm text-slate-400">{{ doc.line }}</span></span>
+          </a>
+          {% endfor %}
         </div>
       </div>
       {% endif %}

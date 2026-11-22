@@ -1,7 +1,7 @@
 # Respectlytics Community Edition. The base image is pinned by digest, so a build uses exactly
 # the image that was tested; every package is installed from requirements.txt with its hash
 # checked; and the app runs as an unprivileged user, never as root.
-FROM python:3.12-slim@sha256:a6e34c598f2467ed0e9a8d349809fcd8b5c603269512df273a0bb1784edc11b1
+FROM python:3.15-slim@sha256:65a65fc7b30b06cb6df4930fd4650697cb23f4c2698ab81fc87e4b031bc36928
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \

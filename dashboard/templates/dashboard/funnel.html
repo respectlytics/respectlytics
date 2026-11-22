@@ -1,5 +1,5 @@
 {% extends 'dashboard/dashboard_base.html' %}
-{% load static app_nav %}
+{% load static app_nav product_shots %}
 
 {% block title %}Funnels | Respectlytics{% endblock %}
 
@@ -152,6 +152,15 @@
         </div>
     </section>
     {% endif %}{# not demo #}
+
+    {% if not demo %}
+    {# Until a funnel is analysed: what one will look like, marked as an example (owner, 2026-10-26) #}
+    <figure id="funnelExample" class="example" aria-label="An example funnel on sample data">
+        <span class="example-badge">Example with sample data</span>
+        {% product_shot "funnel" example=True %}
+        <figcaption class="example-caption">Add two or more steps above and press Analyze to see your own.</figcaption>
+    </figure>
+    {% endif %}
 
     <section id="funnelResults" class="card hidden" aria-labelledby="resultsTitle">
         <div class="flex flex-wrap items-center justify-between gap-3">
@@ -911,6 +920,8 @@ async function analyzeFunnel() {
 
     const results = document.getElementById('funnelResults');
     const button = document.getElementById('analyzeButton');
+    const example = document.getElementById('funnelExample');
+    if (example) example.hidden = true;
     results.classList.remove('hidden');
     results.setAttribute('aria-busy', 'true');
     document.getElementById('funnelLoading').hidden = false;
@@ -980,6 +991,9 @@ async function loadTimingData(steps, filterParams) {
     // Add date filters if present
     if (filterParams.from) params.append('start_date', filterParams.from);
     if (filterParams.to) params.append('end_date', filterParams.to);
+    // The same countries and platforms the funnel was filtered by
+    if (filterParams.country) params.append('country', filterParams.country);
+    if (filterParams.platform) params.append('platform', filterParams.platform);
 
     try {
         const response = await fetch(`/api/v1/analytics/step-timing/?${params}`, {

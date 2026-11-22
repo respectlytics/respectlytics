@@ -29,6 +29,7 @@ from .blocks import (
     SCAN_BLOCKS,
     address_key,
     block,
+    blocks_lifted,
     delete_ended,
 )
 from .middleware import ATTACK_PATH_REGEX, SCAN_LIMIT
@@ -41,7 +42,7 @@ OWNER = "198.51.100.42"
 WORKERS = "2a06:98c0:3600::103"
 PROXY = "10.244.0.7"  # the server's own proxy, which every request arrives through
 PAGE = "/login/"  # a plain page both editions serve
-# respectlytics.com's attack signals on its own admin; the community edition's admin is /admin.
+# Attack signals on /admin where the admin lives elsewhere; the community edition's is /admin.
 HOSTED_ONLY = not getattr(settings, "ATTACK_SIGNAL_ADMIN_PREFIX", None)
 
 
@@ -264,19 +265,33 @@ class AdminTest(Fresh):
         block(OTHER, SCAN, "20 missing pages within 5 minutes")
         self.url = reverse("admin:analytics_blockedaddress_changelist")
 
-    def otp_verified(self):
-        # The admin asks for a second factor (django-otp); the test passes it as verified.
-        return patch("django_otp.admin.OTPAdminSite.has_permission", return_value=True)
-
     def test_the_owner_finds_a_block_by_its_address(self):
-        with self.otp_verified():
-            page = self.client.get(self.url, {"q": SCANNER}, **visitor(OWNER))
+        page = self.client.get(self.url, {"q": SCANNER}, **visitor(OWNER))
         self.assertContains(page, "GET /.env")
         self.assertNotContains(page, "20 missing pages")
 
     def test_one_click_lifts_a_block(self):
         row = BlockedAddress.objects.get(key=address_key(SCANNER))
-        with self.otp_verified():
+        response = self.client.post(
+            self.url,
+            {"action": "lift_blocks", "_selected_action": [row.pk]},
+            follow=True,
+            **visitor(OWNER),
+        )
+        self.assertContains(response, "Lifted 1 block.")
+        self.assertFalse(BlockedAddress.objects.filter(pk=row.pk).exists())
+        self.client.logout()
+        self.assertEqual(self.client.get(PAGE, **visitor(SCANNER)).status_code, 200)
+
+    def test_a_lift_the_edge_never_heard_says_where_to_finish_it(self):
+        def unreachable(**kwargs):
+            raise ConnectionError("the block list could not be reached")
+
+        blocks_lifted.connect(unreachable, dispatch_uid="unreachable-edge")
+        self.addCleanup(blocks_lifted.disconnect, dispatch_uid="unreachable-edge")
+        row = BlockedAddress.objects.get(key=address_key(SCANNER))
+        where = "in the dashboard of that list"
+        with override_settings(BLOCK_LIST_BY_HAND=where):
             response = self.client.post(
                 self.url,
                 {"action": "lift_blocks", "_selected_action": [row.pk]},
@@ -284,6 +299,8 @@ class AdminTest(Fresh):
                 **visitor(OWNER),
             )
         self.assertContains(response, "Lifted 1 block.")
-        self.assertFalse(BlockedAddress.objects.filter(pk=row.pk).exists())
-        self.client.logout()
-        self.assertEqual(self.client.get(PAGE, **visitor(SCANNER)).status_code, 200)
+        self.assertContains(
+            response,
+            f"may still refuse these addresses: remove them from that list by hand {where}.",
+            html=False,
+        )

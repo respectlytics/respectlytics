@@ -108,6 +108,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django.contrib.postgres",  # ArrayField for the session slices (analytics.SessionSlice)
     "rest_framework",
     "drf_yasg",
     # SEC-009: Django OTP for admin 2FA (optional, controlled by ADMIN_REQUIRE_OTP)
@@ -183,16 +184,16 @@ else:
     DATABASES = {"default": env.db("DATABASE_URL")}
 
 # SSL for production databases (e.g., managed PostgreSQL services)
-# Enable with DATABASE_SSL=True when using managed PostgreSQL (e.g., AWS RDS, DigitalOcean)
+# Enable with DATABASE_SSL=True when using a managed PostgreSQL service
 # Docker Compose local PostgreSQL does NOT support SSL, so this defaults to False
 if env.bool("DATABASE_SSL", default=False):
     DATABASES["default"]["OPTIONS"] = {
         "sslmode": "require",
     }
 
-    _db_port = str(DATABASES["default"].get("PORT", ""))
-    _using_digitalocean_pool = _db_port == "25061"
-    if not _using_digitalocean_pool:
+    # A managed transaction pool (PgBouncer, which some providers serve on port 25061) refuses
+    # startup options, so the search path is left to the server there.
+    if str(DATABASES["default"].get("PORT", "")) != "25061":
         DATABASES["default"]["OPTIONS"]["options"] = "-c search_path=public"
 
 # CONN_MAX_AGE: reuse a connection for 60 seconds instead of opening one per request.
@@ -233,6 +234,8 @@ AUTH_PASSWORD_VALIDATORS = [
         "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
     },
 ]
+# How long a password reset link works; the reset email says so.
+PASSWORD_RESET_TIMEOUT = 60 * 60 * 24
 
 
 # Internationalization
@@ -499,15 +502,26 @@ if TESTING:
 # - conversion stats: 2 min (expensive to compute)
 
 CACHES = {
+    # Cached answers only. The counts behind blocks, lockouts and limits live in a table of their
+    # own (analytics/counters.py) and in "ratelimit" below, because this table, once full,
+    # deletes the alphabetically lowest third of its keys on the next write.
     "default": {
         "BACKEND": "django.core.cache.backends.db.DatabaseCache",
         "LOCATION": "django_cache",
         "TIMEOUT": 120,  # Default 2 minutes
         "OPTIONS": {
-            "MAX_ENTRIES": 1000,  # Max cached items before culling
+            "MAX_ENTRIES": 10000,  # Max cached items before culling
             "CULL_FREQUENCY": 3,  # Remove 1/3 of entries when MAX_ENTRIES reached
         },
-    }
+    },
+    # django-ratelimit's counts (RATELIMIT_USE_CACHE), apart from the cached answers, so that no
+    # number of dashboard questions can push a sign-in or sign-up limit's count out.
+    "ratelimit": {
+        "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+        "LOCATION": "django_cache_ratelimit",
+        "TIMEOUT": 3600,
+        "OPTIONS": {"MAX_ENTRIES": 100000, "CULL_FREQUENCY": 3},
+    },
 }
 
 # Cache TTL settings (seconds)
@@ -529,14 +543,14 @@ GLOBE_STATS_SLOW_QUERY_THRESHOLD = 2  # 2 seconds - log queries slower than this
 # Protects login, registration, and password reset from brute force attacks.
 
 RATELIMIT_ENABLE = True
-RATELIMIT_USE_CACHE = "default"
+RATELIMIT_USE_CACHE = "ratelimit"
 # Don't use a custom view - we handle rate limiting inline for better UX
 
 # Who a request came from, for every limit, ban, geolocation and log
 # (analytics/client_ip.py). A self-hosted server trusts no header naming the
 # visitor unless the edge in front of it sets and overwrites that header, so
 # TRUSTED_CLIENT_IP_HEADER is empty by default; behind Cloudflare it is
-# CF-Connecting-IP. Published directly, or behind your own nginx or Caddy,
+# CF-Connecting-IP. Published directly, or behind your own reverse proxy,
 # leave it empty: the address your proxy appends is read without it.
 TRUSTED_CLIENT_IP_HEADERS = tuple(
     "HTTP_" + header.strip().upper().replace("-", "_")

@@ -5,6 +5,33 @@ the figures by day. Each card shows its own skeleton while it loads (stats.css, 
 Each figure has its own colour, on its tile and its chart alike (stats/charts.js, SERIES).
 {% endcomment %}
 <div class="space-y-6">
+    {% comment %}
+    No events in the range: one line over the whole dashboard, which stays in view in its empty
+    state so a new developer sees what it will show (owner, 2026-10-26); before the app's first
+    event it says it is waiting, and where to finish setting up (stats.html, loadStats).
+    {% endcomment %}
+    <section id="overviewWaiting" class="action-card"{% if not waiting_for_first_event %} hidden{% endif %} aria-labelledby="overviewWaitingTitle" data-first-event="waiting">
+        <div class="grid items-center gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)]">
+            <div>
+                <h3 id="overviewWaitingTitle" class="card-title">Waiting for {{ app.name }}'s first event</h3>
+                <p class="card-lead">This page fills in within seconds of it arriving, and looks like the example.</p>
+                <div class="mt-5 flex flex-wrap items-center gap-2">
+                    <a href="{% if setup_url %}{{ setup_url }}{% else %}https://respectlytics.com/sdk/{% endif %}" class="btn-primary">{% if setup_url %}Finish setup{% else %}See how to send events{% endif %}</a>
+                    {% if demo_url %}<a href="{{ demo_url }}" class="btn-quiet">Try it with sample data</a>{% endif %}
+                </div>
+            </div>
+            <figure class="example" aria-label="An example of the Overview on sample data">
+                <span class="example-badge">Example with sample data</span>
+                {% load product_shots %}{% product_shot "overview" sizes="(min-width: 1024px) 38rem, 100vw" example=True %}
+            </figure>
+        </div>
+    </section>
+
+    <section id="overviewEmpty" hidden role="status" class="flex flex-col gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 sm:flex-row sm:items-center">
+        <p class="min-w-0 flex-1 text-sm text-slate-200">No events in this range.</p>
+        <button type="button" id="overviewEmptyWider" onclick="setDatePreset('90d')" class="btn-quiet" hidden>Show the last 90 days</button>
+    </section>
+
     {# Today only: what arrived in the last half hour #}
     <div id="last30Section" hidden class="relative">
         <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
@@ -62,15 +89,6 @@ Each figure has its own colour, on its tile and its chart alike (stats/charts.js
     </section>
     {% endif %}
 
-    {# A range with no events: said once, with the way to fill it (stats.html, loadStats) #}
-    <section id="overviewEmpty" hidden class="card" aria-labelledby="overviewEmptyTitle">
-        <h3 id="overviewEmptyTitle" class="card-title">No events in this range yet</h3>
-        <p class="card-lead">Events show here a few seconds after your app sends them.</p>
-        <div class="mt-5 flex flex-wrap items-center gap-2">
-            <a href="https://respectlytics.com/sdk/" class="btn-secondary">See how to send events</a>
-            <button type="button" id="overviewEmptyWider" onclick="setDatePreset('90d')" class="btn-quiet">Show the last 90 days</button>
-        </div>
-    </section>
 
     <div id="overviewData" class="space-y-6">
     {# The trend: events, sessions and the average session, one chart each #}

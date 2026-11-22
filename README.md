@@ -69,7 +69,7 @@ Open [http://localhost:8080](http://localhost:8080) and you're ready to go.
 
 ### Prerequisites
 
-- Python 3.12+
+- Python 3.15
 - PostgreSQL 15+ (required: SQLite is not supported, and Django 6.1 needs 15 or later)
 
 ### Setup
@@ -90,8 +90,9 @@ pip install -r requirements.txt
 cp .env.example .env
 # Edit .env: set DATABASE_URL and SECRET_KEY at minimum
 
-# Run migrations
+# Run migrations, and create the cache tables (run both again after every upgrade)
 python manage.py migrate
+python manage.py createcachetable
 
 # Create admin user
 python manage.py createsuperuser
@@ -142,8 +143,8 @@ All configuration is via environment variables. See [.env.example](.env.example)
 | `SECURITY_CONTACT_EMAIL` | Receives admin security alerts (lockouts, banned addresses); none are sent without it | _(empty)_ |
 
 > **Production:** Always set `SECRET_KEY` to a random string, `DEBUG=False`, and `ALLOWED_HOSTS` to your domain.
-> If running behind an HTTPS reverse proxy (nginx, Caddy), also set `SECURE_SSL=True`.
-> If using managed PostgreSQL (AWS RDS, DigitalOcean), also set `DATABASE_SSL=True`.
+> If running behind an HTTPS reverse proxy (such as nginx), also set `SECURE_SSL=True`.
+> If using a managed PostgreSQL service, also set `DATABASE_SSL=True`.
 
 ---
 

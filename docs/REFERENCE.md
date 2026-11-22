@@ -300,7 +300,7 @@ API endpoints are rate-limited using `django-ratelimit`. Default limits prevent 
 | `PORT` | Server listen port | `8080` | No |
 | `DATABASE_SSL` | Require SSL for PostgreSQL connection (enable for managed DB services) | `False` | No |
 | `SECURE_SSL` | Force HTTPS redirect and secure cookies (enable behind HTTPS reverse proxy) | `False` | No |
-| `TRUSTED_CLIENT_IP_HEADER` | Header that names the visitor's address, set only when a CDN that overwrites it sits in front, such as `CF-Connecting-IP` behind Cloudflare. Leave empty when the server is reached directly or through your own nginx or Caddy | _(empty)_ | No |
+| `TRUSTED_CLIENT_IP_HEADER` | Header that names the visitor's address, set only when a CDN that overwrites it sits in front, such as `CF-Connecting-IP` behind Cloudflare. Leave empty when the server is reached directly or through your own reverse proxy | _(empty)_ | No |
 | `ADMIN_REQUIRE_OTP` | Require TOTP 2FA for admin panel | `False` | No |
 | `MAXMIND_ACCOUNT_ID` | MaxMind GeoLite2 account ID; without it, DB-IP's free IP to Country Lite is used | _(empty)_ | No |
 | `MAXMIND_LICENSE_KEY` | MaxMind GeoLite2 license key; without it, DB-IP's free IP to Country Lite is used | _(empty)_ | No |
@@ -327,9 +327,10 @@ python -c "from django.core.management.utils import get_random_secret_key; print
 ### Step-by-step (Ubuntu/Debian)
 
 ```bash
-# 1. Install system dependencies
+# 1. Install system dependencies, and Python 3.15 (your distribution's package where it has
+#    one, otherwise python.org's release): requirements.txt is locked for 3.15
 sudo apt-get update
-sudo apt-get install -y python3.12 python3.12-venv python3.12-dev postgresql libpq-dev
+sudo apt-get install -y postgresql libpq-dev
 
 # 2. Create PostgreSQL database
 sudo -u postgres createuser respectlytics
@@ -341,7 +342,7 @@ git clone https://github.com/respectlytics/respectlytics.git
 cd respectlytics
 
 # 4. Create virtual environment
-python3.12 -m venv venv
+python3.15 -m venv venv
 source venv/bin/activate
 
 # 5. Install Python dependencies
@@ -355,8 +356,9 @@ cp .env.example .env
 #   DEBUG=False
 #   ALLOWED_HOSTS=your-domain.com
 
-# 7. Run migrations
+# 7. Run migrations, and create the cache tables (run both again after every upgrade)
 python manage.py migrate
+python manage.py createcachetable
 
 # 8. Create superuser
 python manage.py createsuperuser
@@ -530,7 +532,7 @@ DATABASES = {
 You're running the SaaS version settings. The Community Edition should not reference billing. Check that `core/settings.py` is the Community Edition version.
 
 **"relation does not exist"**
-Run migrations: `python manage.py migrate`
+Run migrations and create the cache tables: `python manage.py migrate`, then `python manage.py createcachetable`
 
 **"FATAL: password authentication failed"**
 Check your `DATABASE_URL` credentials.

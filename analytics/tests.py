@@ -240,7 +240,9 @@ class EventAPITestCase(APITestCase):
 
         # Verify only stored fields are persisted
         event = Event.objects.get(id=response.data["id"])
-        self.assertEqual(event.platform, "ios")  # STORED
+        self.assertEqual(
+            event.platform, "iOS"
+        )  # STORED, as the SDKs spell it (analytics/intake.py)
         # Note: Deprecated fields (app_version, locale, screen) no longer exist on model
         # They are accepted by API but silently discarded
 
@@ -1239,7 +1241,7 @@ class PrivacyGuardsTestCase(APITestCase):
         # Verify event was created with only stored fields
         event = Event.objects.get(id=response.data["id"])
         self.assertEqual(event.event_name, "purchase")
-        self.assertEqual(event.platform, "ios")
+        self.assertEqual(event.platform, "iOS")  # as the SDKs spell it (analytics/intake.py)
         self.assertEqual(event.country, "US")
         # Note: Deprecated fields (app_version, os_version, device_type, locale, region, screen)
         # no longer exist on model - they are accepted by API but silently discarded

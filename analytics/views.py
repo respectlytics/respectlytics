@@ -19,12 +19,10 @@ Community Edition differences:
 import csv
 import json
 import logging
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 from django.conf import settings
-from django.contrib.postgres.aggregates import ArrayAgg
-from django.db.models import Count, Q, Value
-from django.db.models.functions import Trim, TruncDate
+from django.db.models import Count
 from django.http import HttpResponse, StreamingHttpResponse
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
@@ -37,19 +35,22 @@ from rest_framework.views import APIView
 
 from . import event_groups
 from .authentication import APP_OWNER, AppKeyAuthentication
+from .base_events import base_events, session_count, slices_in
 from .client_ip import get_client_ip
 from .date_utils import (
-    _get_timezone_safe,
     freshness_mark,
     get_cache_key_with_timezone,
     parse_date_range,
 )
-from .event_groups import with_groups
+from .event_groups import known_names, with_groups
+from .filter_values import countries_and_platforms
 from .geolocation import get_location_from_ip
+from .intake import country_code, platform_name
 from .models import App, DeletionLog, Event
 from .permissions import HasValidAppKey, IsAppOwner
 from .security_logger import SecurityEvent, log_security_event
 from .serializers import AppSerializer, EventCreateSerializer
+from .summary import summary_figures
 
 logger = logging.getLogger(__name__)
 
@@ -412,7 +413,9 @@ This prevents cross-session tracking while enabling same-day funnel analysis."""
         # Auto-detect country from IP if not provided
         # User-provided values always take precedence
         # NOTE: Region is no longer auto-populated (schema reduction for privacy compliance)
-        if not event_data.get("country"):
+        # A country that is not an ISO code counts as none (analytics/intake.py)
+        if not country_code(event_data.get("country")):
+            event_data["country"] = None
             client_ip = get_client_ip(request)
             detected_country, _ = get_location_from_ip(client_ip)
 
@@ -499,50 +502,9 @@ class EventSummaryView(APIView):
                 {"error": "Invalid date format. Use YYYY-MM-DD"}, status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Calculate aggregations
-        total_events = events.count()
-
-        # Events by name
-        events_by_name = dict(
-            events.values("event_name")
-            .annotate(count=Count("id"))
-            .values_list("event_name", "count")
-        )
-
-        # Events by day (include unique_buckets for JS compatibility)
-        events_by_day = list(
-            events.annotate(date=TruncDate("timestamp", tzinfo=_get_timezone_safe(tz_name)))
-            .values("date")
-            .annotate(count=Count("id"), unique_buckets=Count("session_id", distinct=True))
-            .order_by("date")
-            .values("date", "count", "unique_buckets")
-        )
-        # Format dates as strings
-        for item in events_by_day:
-            item["date"] = item["date"].strftime("%Y-%m-%d")
-
-        # Top countries (exclude null values)
-        top_countries = list(
-            events.filter(country__isnull=False)
-            .exclude(country="")
-            .values("country")
-            .annotate(count=Count("id"))
-            .order_by("-count")[:10]
-        )
-
-        # Unique countries count (for Key Metrics card - not limited to top 10)
-        unique_countries = (
-            events.filter(country__isnull=False).exclude(country="").values("country").distinct()
-        ).count()
-
-        response_data = {
-            "app_name": app.name,
-            "total_events": total_events,
-            "events_by_name": events_by_name,
-            "events_by_day": events_by_day,
-            "top_countries": top_countries,
-            "unique_countries": unique_countries,
-        }
+        # Two passes over the range (analytics/summary.py)
+        slices = slices_in(app, from_datetime, to_datetime)
+        response_data = {"app_name": app.name, **summary_figures(events, slices, tz_name)}
 
         # Cache the result for 1 minute
         cache_ttl = getattr(settings, "CACHE_TTL_SUMMARY", 60)
@@ -702,7 +664,10 @@ class GeoSummaryView(APIView):
         from_date = request.query_params.get("from")
         to_date = request.query_params.get("to")
         tz_name = request.query_params.get("tz", "UTC")
-        limit = int(request.query_params.get("limit", 20))
+        try:
+            limit = min(max(int(request.query_params.get("limit", 20)), 1), 250)
+        except (TypeError, ValueError):
+            return Response({"error": "limit must be a whole number."}, status=400)
 
         # Start with events for this app
         events = Event.objects.filter(app=app)
@@ -946,7 +911,9 @@ class FunnelAnalysisView(APIView):
                 events = events.filter(country__in=country_list)
 
         if platform:
-            platform_list = [p.strip() for p in platform.split(",") if p.strip()]
+            # As sent and as intake names it, so "ios" finds "iOS" (analytics/intake.py)
+            asked = [p.strip() for p in platform.split(",") if p.strip()]
+            platform_list = sorted(set(asked) | {platform_name(p) for p in asked})
             if platform_list:
                 events = events.filter(platform__in=platform_list)
 
@@ -970,167 +937,58 @@ class FunnelAnalysisView(APIView):
 
         # Get the SQL and params from the Django queryset
         # We'll use this as a subquery for our funnel analysis
-        base_sql, base_params = events.query.sql_with_params()
+        base_sql, base_params = base_events(events)
 
-        # Create step index mapping for SQL CASE statement
-        # A name in two steps belongs to the first, as before
-        step_cases = " ".join(
-            f"WHEN event_name IN ({', '.join(['%s'] * len(names))}) THEN {i}"
-            for i, names in enumerate(step_names)
-        )
-        step_params = [name for names in step_names for name in names]
-
-        # Build the funnel analysis SQL using PostgreSQL recursive CTE
-        #
-        # Strategy: Use a recursive CTE to properly track funnel progression.
-        # For each session, we find the earliest occurrence of each step that
-        # happens AFTER the previous step was completed.
-        #
-        # This correctly handles cases like:
-        #   step_0 at t1, step_2 at t2, step_1 at t3, step_2 at t4
-        # Where the valid progression is: step_0 → step_1 (t3) → step_2 (t4)
-        #
-        # The recursive CTE:
-        # 1. Base case: Find all sessions with step 0 (first funnel step)
-        # 2. Recursive case: For each session at step N, find the earliest
-        #    occurrence of step N+1 that happens after step N's timestamp
-
+        # Each session's first moment at each step, in one pass over the steps' events (the
+        # funnel only ever reads a step's first occurrence in a session), then how far the
+        # session got: step i+1 counts when its first moment comes after step i's, and within
+        # the window when one is set. Until 2026-10-26 a recursive query walked the same first
+        # occurrences; analytics/test_funnel.py holds this to it. A name in two steps belongs to
+        # the first, as before.
         num_steps = len(steps)
+        owner = {}
+        for i, names in enumerate(step_names):
+            for name in names:
+                owner.setdefault(name, i)
+        firsts, first_params = [], []
+        for i in range(num_steps):
+            names = [name for name, step in owner.items() if step == i]
+            if names:
+                placeholders = ", ".join(["%s"] * len(names))
+                firsts.append(
+                    f"MIN(timestamp) FILTER (WHERE event_name IN ({placeholders})) AS t{i}"
+                )
+                first_params += names
+            else:
+                firsts.append(f"NULL::timestamptz AS t{i}")
 
+        def follows(i):
+            condition = f"t{i} > t{i - 1}"
+            if window_seconds:
+                condition += f" AND EXTRACT(EPOCH FROM (t{i} - t{i - 1})) <= %s"
+            return f"COALESCE({condition}, false)"
+
+        reached = " ".join(f"WHEN NOT {follows(i)} THEN {i - 1}" for i in range(1, num_steps))
+        funnel_sql = f"""
+        WITH base_events AS ({base_sql}),
+        firsts AS (
+            SELECT {", ".join(firsts)}
+            FROM base_events
+            GROUP BY session_id COLLATE "C"
+        ),
+        reached AS (
+            SELECT CASE WHEN t0 IS NULL THEN -1 {reached} ELSE {num_steps - 1} END AS max_step
+            FROM firsts
+        )
+        SELECT s.step_index, COUNT(*)
+        FROM reached CROSS JOIN LATERAL generate_series(0, reached.max_step) AS s(step_index)
+        GROUP BY s.step_index
+        ORDER BY s.step_index
+        """
+        params = [*base_params, *first_params]
         if window_seconds:
-            funnel_sql = f"""
-            WITH RECURSIVE base_events AS (
-                {base_sql}
-            ),
-            step_events AS (
-                SELECT
-                    session_id,
-                    event_name,
-                    timestamp,
-                    CASE {step_cases} END as step_index
-                FROM base_events
-            ),
-            -- Get earliest occurrence of each step per session
-            first_occurrences AS (
-                SELECT DISTINCT ON (session_id, step_index)
-                    session_id,
-                    step_index,
-                    timestamp
-                FROM step_events
-                WHERE step_index IS NOT NULL
-                ORDER BY session_id, step_index, timestamp
-            ),
-            -- Recursive CTE to track valid funnel progression
-            funnel_progress AS (
-                -- Base case: sessions that have step 0
-                SELECT
-                    session_id,
-                    step_index,
-                    timestamp as step_timestamp
-                FROM first_occurrences
-                WHERE step_index = 0
+            params += [window_seconds] * (num_steps - 1)
 
-                UNION ALL
-
-                -- Recursive case: find next step that occurs after current step
-                -- and within the conversion window
-                SELECT
-                    f.session_id,
-                    fo.step_index,
-                    fo.timestamp as step_timestamp
-                FROM funnel_progress f
-                JOIN first_occurrences fo
-                    ON fo.session_id = f.session_id
-                    AND fo.step_index = f.step_index + 1
-                    AND fo.timestamp > f.step_timestamp
-                    AND EXTRACT(EPOCH FROM (fo.timestamp - f.step_timestamp)) <= %s
-                WHERE f.step_index < %s
-            ),
-            -- Get max step reached per session
-            session_max_step AS (
-                SELECT session_id, MAX(step_index) as max_step
-                FROM funnel_progress
-                GROUP BY session_id
-            ),
-            -- Expand to count sessions at each step level
-            step_counts AS (
-                SELECT s.step_index, COUNT(*) as session_count
-                FROM session_max_step sms
-                CROSS JOIN generate_series(0, sms.max_step) as s(step_index)
-                GROUP BY s.step_index
-            )
-            SELECT step_index, session_count
-            FROM step_counts
-            ORDER BY step_index
-            """
-            params = list(base_params) + step_params + [window_seconds, num_steps - 1]
-        else:
-            funnel_sql = f"""
-            WITH RECURSIVE base_events AS (
-                {base_sql}
-            ),
-            step_events AS (
-                SELECT
-                    session_id,
-                    event_name,
-                    timestamp,
-                    CASE {step_cases} END as step_index
-                FROM base_events
-            ),
-            -- Get earliest occurrence of each step per session
-            first_occurrences AS (
-                SELECT DISTINCT ON (session_id, step_index)
-                    session_id,
-                    step_index,
-                    timestamp
-                FROM step_events
-                WHERE step_index IS NOT NULL
-                ORDER BY session_id, step_index, timestamp
-            ),
-            -- Recursive CTE to track valid funnel progression
-            funnel_progress AS (
-                -- Base case: sessions that have step 0
-                SELECT
-                    session_id,
-                    step_index,
-                    timestamp as step_timestamp
-                FROM first_occurrences
-                WHERE step_index = 0
-
-                UNION ALL
-
-                -- Recursive case: find next step that occurs after current step
-                SELECT
-                    f.session_id,
-                    fo.step_index,
-                    fo.timestamp as step_timestamp
-                FROM funnel_progress f
-                JOIN first_occurrences fo
-                    ON fo.session_id = f.session_id
-                    AND fo.step_index = f.step_index + 1
-                    AND fo.timestamp > f.step_timestamp
-                WHERE f.step_index < %s
-            ),
-            -- Get max step reached per session
-            session_max_step AS (
-                SELECT session_id, MAX(step_index) as max_step
-                FROM funnel_progress
-                GROUP BY session_id
-            ),
-            -- Expand to count sessions at each step level
-            step_counts AS (
-                SELECT s.step_index, COUNT(*) as session_count
-                FROM session_max_step sms
-                CROSS JOIN generate_series(0, sms.max_step) as s(step_index)
-                GROUP BY s.step_index
-            )
-            SELECT step_index, session_count
-            FROM step_counts
-            ORDER BY step_index
-            """
-            params = list(base_params) + step_params + [num_steps - 1]
-
-        # Execute the funnel query
         with connection.cursor() as cursor:
             cursor.execute(funnel_sql, params)
             rows = cursor.fetchall()
@@ -1143,7 +1001,19 @@ class FunnelAnalysisView(APIView):
                 step_counts[step_index] = count
 
         # Get total sessions analyzed (sessions that have at least one funnel event)
-        total_sessions = events.values("session_id").distinct().count()
+        # The sessions with any step's event, from the same filters' session slices: one row or
+        # two per session instead of every event (analytics/base_events.py)
+        with_steps = (
+            slices_in(app, from_datetime, to_datetime)
+            .filter(names__overlap=[name for names in step_names for name in names])
+            .exclude(session_id__isnull=True)
+            .exclude(session_id="")
+        )
+        if country and country_list:
+            with_steps = with_steps.filter(country__in=country_list)
+        if platform and platform_list:
+            with_steps = with_steps.filter(platform__in=platform_list)
+        total_sessions = session_count(with_steps)
 
         # Format response (same API contract as before)
         funnel_data = [{"step": steps[i], "count": step_counts[i]} for i in range(len(steps))]
@@ -1212,21 +1082,9 @@ class EventTypesView(APIView):
         # Get the authenticated app
         app = request.user
 
-        # Get distinct event names from the last 90 days
-        # Using a 90-day lookback for performance (avoids scanning entire event history)
-        # while still capturing all relevant event types
-        from datetime import timedelta
-
-        from django.utils import timezone
-
-        lookback = timezone.now() - timedelta(days=90)
-
-        event_types = (
-            Event.objects.filter(app=app, timestamp__gte=lookback)
-            .values_list("event_name", flat=True)
-            .distinct()
-            .order_by("event_name")
-        )
+        # Every name the app has sent, as the API reference says: one short index read per name,
+        # never a scan of its events (analytics/event_groups.py, known_names)
+        event_types = known_names(app.id)
 
         return Response(
             {"app_name": app.name, "event_types": list(event_types), "count": len(event_types)}
@@ -1291,44 +1149,18 @@ class FilterOptionsView(APIView):
         if cached_result is not None:
             return Response(cached_result)
 
-        # PERF-002: Single query using PostgreSQL ArrayAgg
-        # Returns 1 row with array columns instead of iterating through thousands of rows.
-        # ArrayAgg with distinct=True and filter for non-null/non-empty values.
-        result = Event.objects.filter(app=app).aggregate(
-            countries=ArrayAgg(
-                Trim("country"),
-                distinct=True,
-                filter=Q(country__isnull=False) & ~Q(country=""),
-                default=Value([]),
-            ),
-            platforms=ArrayAgg(
-                Trim("platform"),
-                distinct=True,
-                filter=Q(platform__isnull=False) & ~Q(platform=""),
-                default=Value([]),
-            ),
-            event_names=ArrayAgg(
-                Trim("event_name"),
-                distinct=True,
-                filter=Q(event_name__isnull=False) & ~Q(event_name=""),
-                default=Value([]),
-            ),
-        )
-
-        # Filter out empty strings that might slip through and sort
-        def clean_and_sort(arr):
-            return sorted([v for v in (arr or []) if v and v.strip()])
-
+        # Countries and platforms by index probes, event names from known_names: no read of
+        # the app's events (analytics/filter_values.py)
+        countries, platforms = countries_and_platforms(app.id)
         response_data = {
             "app_name": app.name,
             "filters": {
-                "countries": clean_and_sort(result["countries"]),
-                "platforms": clean_and_sort(result["platforms"]),
-                "event_names": clean_and_sort(result["event_names"]),
+                "countries": countries,
+                "platforms": platforms,
+                "event_names": sorted(n for n in known_names(app.id) if n and n.strip()),
             },
         }
 
-        # Cache the result for 5 minutes
         cache_ttl = getattr(settings, "CACHE_TTL_FILTER_OPTIONS", 300)
         cache.set(cache_key, response_data, timeout=cache_ttl)
 
@@ -1473,7 +1305,7 @@ class ExportEventsView(APIView):
         # Apply date filters with guardrails
         # Defaults: if no dates provided, export last EXPORT_MAX_DAYS days.
         max_days = getattr(settings, "EXPORT_MAX_DAYS", 90)
-        now = datetime.utcnow()
+        now = datetime.now(UTC).replace(tzinfo=None)
         if not from_date and not to_date:
             # Default rolling window
             default_from = (now - timedelta(days=max_days - 1)).strftime("%Y-%m-%d")

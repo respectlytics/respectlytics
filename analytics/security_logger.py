@@ -18,7 +18,7 @@ Usage:
 
 import json
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 
 # Use the analytics logger which writes to security.log
 logger = logging.getLogger("analytics")
@@ -99,7 +99,7 @@ def log_security_event(
     """
     # Build structured event data
     event_data = {
-        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "timestamp": datetime.now(UTC).replace(tzinfo=None).isoformat() + "Z",
         "event": event_type,
     }
 

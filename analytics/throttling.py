@@ -1,10 +1,10 @@
 import logging
 
 from django.conf import settings
-from django.core.cache import cache
 from rest_framework.throttling import SimpleRateThrottle
 
-from .blocks import AUTH, address_key, block, blockable
+from . import counters
+from .blocks import AUTH, address_key, block, blockable, shared
 from .client_ip import get_client_ip
 
 logger = logging.getLogger(__name__)
@@ -54,17 +54,16 @@ def track_failed_auth_attempt(request, app_key=None):
     logs a warning and returns False rather than crashing the request.
     """
     ip = get_client_ip(request)
-    if not blockable(ip):
+    if not blockable(ip) or shared(ip):
         return False
-    cache_key = f"failed_auth:{address_key(ip)}"
+    subject = f"failed_auth:{address_key(ip)}"
 
     try:
-        attempts = cache.get(cache_key, 0) + 1
-        cache.set(cache_key, attempts, 900)  # 15 minutes
+        attempts = counters.hit(subject, 900)  # 15 minutes (analytics/counters.py)
         if attempts >= 10:
-            cache.delete(cache_key)
+            counters.clear(subject)
             return block(ip, AUTH, f"{attempts} refused API keys within 15 minutes") is not None
     except Exception:
-        logger.warning("[SECURITY] Cache unavailable during auth tracking, failing open")
+        logger.warning("[SECURITY] Counts unavailable during auth tracking, failing open")
 
     return False

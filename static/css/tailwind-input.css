@@ -334,6 +334,108 @@ picture.contents > source {
     .item-title {
         @apply text-[19px] font-semibold leading-[1.25] tracking-[-0.01em] text-white md:text-[21px] lg:text-[22px];
     }
+    /* One question with a few answers, each saying what it means (setup's step 2): a radio card
+       per answer, the chosen one ringed, and below it only what that answer needs. */
+    .way {
+        @apply flex w-full items-start gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-4 text-left transition-colors duration-150 hover:border-white/25 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400;
+    }
+    .way[aria-checked="true"] {
+        @apply border-brand-400/70 bg-brand-500/[0.08];
+    }
+    .way-icon {
+        @apply flex h-9 w-9 flex-none items-center justify-center rounded-lg bg-white/5 text-slate-400;
+    }
+    .way[aria-checked="true"] .way-icon {
+        @apply bg-brand-500/15 text-brand-200;
+    }
+    .way-name {
+        @apply block font-semibold text-slate-50;
+    }
+    .way-line {
+        @apply mt-0.5 block text-sm text-slate-400;
+    }
+    /* A button among a few that picks one (an app screen), the picked one in a neutral light */
+    .choice {
+        @apply rounded-lg bg-white/5 px-3 py-1.5 text-sm font-medium text-slate-200 transition-colors duration-150 hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400 aria-pressed:bg-slate-100 aria-pressed:text-slate-900;
+    }
+    /* A success said where it happened, and hard to miss: a tinted box with a filled check that
+       glows three times as it arrives, and stays still with Reduce Motion */
+    .done-banner {
+        @apply mt-2 flex items-center gap-3 rounded-xl border border-emerald-400/50 bg-emerald-500/15 px-4 py-3 text-base font-semibold text-emerald-100;
+        animation: done-glow 1.1s ease-out 3;
+    }
+    .done-banner-icon {
+        @apply flex h-7 w-7 flex-none items-center justify-center rounded-full bg-emerald-400 text-slate-950;
+    }
+    @keyframes done-glow {
+        0% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.55); }
+        100% { box-shadow: 0 0 0 14px rgba(52, 211, 153, 0); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .done-banner { animation: none; }
+    }
+    /* What to do next on an empty screen: a tinted card with the one main action, apart from
+       everything else on the page */
+    .action-card {
+        @apply rounded-2xl border border-brand-400/40 bg-brand-500/[0.08] p-5 sm:p-6;
+    }
+    /* A picture of the product on sample data, shown where the person's own figures will be:
+       dimmed a little, never clickable, and marked as an example in amber above it (never over
+       it, where it would hide part of the picture), a colour no figure on the dashboard uses */
+    .example {
+        @apply relative m-0 select-none;
+    }
+    .example .product-shot {
+        @apply pointer-events-none max-w-[46rem] opacity-80;
+    }
+    .example-badge {
+        @apply mb-3 inline-flex items-center gap-1.5 rounded-full bg-amber-300 px-3 py-1 text-xs font-semibold text-slate-950;
+    }
+    .example-caption {
+        @apply mt-3 text-sm text-slate-400;
+    }
+    /* A card that is a further choice rather than a step (setup's card after the first event):
+       tinted and bordered in the accent so it reads apart from the steps, and, when it arrives
+       while the page is open, rising into place and glowing twice so nobody misses that it
+       appeared; still with Reduce Motion */
+    .next-card {
+        @apply border-brand-400/50 bg-brand-500/[0.09];
+    }
+    .next-card.is-new {
+        animation: card-arrive 0.6s cubic-bezier(0.22, 1, 0.36, 1) both, card-glow 1.2s ease-out 0.6s 2;
+    }
+    @keyframes card-arrive {
+        from { opacity: 0; transform: translateY(12px); }
+        to { opacity: 1; transform: none; }
+    }
+    @keyframes card-glow {
+        0% { box-shadow: 0 0 0 0 rgba(129, 140, 248, 0.5); }
+        100% { box-shadow: 0 0 0 16px rgba(129, 140, 248, 0); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .next-card.is-new { animation: none; }
+    }
+    /* A short word beside a title that says the card can be skipped */
+    .optional-pill {
+        @apply rounded-full border border-white/20 px-2.5 py-0.5 text-xs font-medium text-slate-300;
+    }
+    /* A small step number inside a card (the page's own steps use the larger mark) */
+    .step-dot {
+        @apply mt-px flex h-6 w-6 flex-none items-center justify-center rounded-full border border-white/25 text-xs font-semibold text-slate-200;
+    }
+    /* A row of choices that shows one panel at a time (static/js/tabs.js), wrapping where
+       there are many. The chosen one is filled in a neutral light, never the accent, which
+       belongs to a band's one main action. */
+    .pick-row {
+        @apply flex flex-wrap gap-2;
+    }
+    .pick {
+        @apply min-h-11 rounded-full px-4 text-[15px] font-medium text-slate-300 ring-1 ring-inset ring-white/[0.1] transition-colors duration-150 hover:bg-white/[0.06] hover:text-slate-50 focus-visible:outline focus-visible:outline-[3px] focus-visible:outline-offset-[3px] focus-visible:outline-brand-300 aria-selected:bg-slate-100 aria-selected:text-slate-900 aria-selected:ring-slate-100 sm:min-h-9;
+    }
+    /* A step's number in a numbered list of steps on a setup guide */
+    .step-number {
+        @apply flex h-8 w-8 items-center justify-center rounded-full border border-white/25 text-sm font-semibold text-slate-100;
+    }
     .item-text {
         @apply mt-2 ml-0 text-[17px] leading-[1.6] text-slate-400;
         text-wrap: pretty;
@@ -365,6 +467,69 @@ picture.contents > source {
        the picture first on a phone. */
     .illo-aside {
         @apply mt-10 grid gap-10 text-[17px] leading-[1.6] text-slate-300 md:grid-cols-2 md:items-center lg:mt-14 lg:gap-16;
+    }
+    /* A drawn conversation in a neutral window (the website's scene partial): the question,
+       the tools called, the answer and the change proposed. Its beats arrive in turn only under the .motion class the site adds when
+       motion is allowed, and only while it is in view (static/js/scenes.js), so without
+       script or with Reduce Motion it is the finished conversation. */
+    .scene {
+        @apply m-0 min-w-0 cursor-default;
+    }
+    .scene-window {
+        @apply overflow-hidden rounded-[22px] bg-[#0b1222] ring-1 ring-inset ring-white/[0.08];
+    }
+    .scene-bar {
+        @apply flex items-center gap-2 border-b border-white/[0.07] px-5 py-3 font-mono text-[13px] text-slate-400;
+    }
+    .scene-dot {
+        @apply h-2 w-2 rounded-full bg-emerald-400/80;
+    }
+    .scene-body {
+        @apply space-y-4 px-5 py-5 text-[15px] leading-relaxed sm:px-6;
+    }
+    .scene-ask {
+        @apply m-0 ml-auto w-fit max-w-[85%] rounded-2xl rounded-br-md bg-brand-500/20 px-4 py-2.5 text-slate-50;
+    }
+    .scene-step {
+        @apply m-0 flex items-center gap-2.5 text-[14px] text-slate-400;
+    }
+    .scene-tick {
+        @apply h-1.5 w-1.5 flex-none rounded-full bg-slate-500;
+    }
+    .scene-tick-tool {
+        @apply bg-brand-400;
+    }
+    .scene-answer {
+        @apply m-0 text-slate-200;
+    }
+    .scene-change {
+        @apply flex min-w-0 flex-col gap-1 rounded-xl bg-white/[0.04] px-4 py-3 text-[14px] ring-1 ring-inset ring-white/[0.06];
+    }
+    .scene-change code {
+        @apply block overflow-x-auto whitespace-pre text-[13px] sm:text-[14px];
+    }
+    .scene-file {
+        @apply font-mono text-[13px] text-slate-400;
+    }
+    .scene-caption {
+        @apply mt-3 text-[14px] text-slate-450;
+    }
+    .motion .scene.is-playing .scene-beat {
+        animation: 12s cubic-bezier(0.22, 1, 0.36, 1) infinite both;
+    }
+    .motion .scene.is-playing .scene-beat-1 { animation-name: scene-beat-1; }
+    .motion .scene.is-playing .scene-beat-2 { animation-name: scene-beat-2; }
+    .motion .scene.is-playing .scene-beat-3 { animation-name: scene-beat-3; }
+    .motion .scene.is-playing .scene-beat-4 { animation-name: scene-beat-4; }
+    .motion .scene.is-held .scene-beat {
+        animation-play-state: paused;
+    }
+    @keyframes scene-beat-1 { 0% { opacity: 0; transform: translateY(6px); } 5%, 88% { opacity: 1; transform: none; } 95%, 100% { opacity: 0; } }
+    @keyframes scene-beat-2 { 0%, 14% { opacity: 0; transform: translateY(6px); } 19%, 88% { opacity: 1; transform: none; } 95%, 100% { opacity: 0; } }
+    @keyframes scene-beat-3 { 0%, 30% { opacity: 0; transform: translateY(6px); } 35%, 88% { opacity: 1; transform: none; } 95%, 100% { opacity: 0; } }
+    @keyframes scene-beat-4 { 0%, 46% { opacity: 0; transform: translateY(6px); } 51%, 88% { opacity: 1; transform: none; } 95%, 100% { opacity: 0; } }
+    @media (prefers-reduced-motion: reduce) {
+        .motion .scene.is-playing .scene-beat { animation: none; }
     }
     /* A link that stands alone: the accent, a small chevron that moves 3 px on hover, no arrow */
     .chev-link {
@@ -790,3 +955,138 @@ pre[class*="language-"] {
 .token.operator, .token.entity { color: #cbd5e1; }
 .token.variable, .token.regex { color: #fdba74; }
 .token.namespace { opacity: 0.8; }
+
+/* -------------------------------------------------------------------------- */
+/* .hero-stamp - the rubber stamp in the home page hero                       */
+/* -------------------------------------------------------------------------- */
+/* After respectaso.com's (owner, 2026-10-26): a round stamp, turned a little,
+   that drops in once and settles, ink in the brand's indigo. A link, so it has
+   a focus ring and a hover; with Reduce Motion it simply sits there. */
+@keyframes hero-stamp-drop {
+    0% { opacity: 0; transform: rotate(-25deg) scale(2.4); }
+    60% { opacity: 1; transform: rotate(-10deg) scale(0.92); }
+    80% { transform: rotate(-13deg) scale(1.04); }
+    100% { opacity: 1; transform: rotate(-12deg) scale(1); }
+}
+
+.hero-stamp {
+    --stamp-color: #a5b4fc;
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 10.5rem;
+    height: 10.5rem;
+    border-radius: 9999px;
+    border: 3px solid var(--stamp-color);
+    color: var(--stamp-color);
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+    text-decoration: none;
+    background: rgba(99, 102, 241, 0.05);
+    box-shadow:
+        inset 0 0 0 6px rgba(165, 180, 252, 0.08),
+        0 10px 40px rgba(79, 70, 229, 0.28);
+    transform: rotate(-12deg);
+    animation: hero-stamp-drop 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) 0.6s both;
+    filter: drop-shadow(0 0 1px rgba(165, 180, 252, 0.4));
+    transition: box-shadow 150ms ease;
+}
+
+.hero-stamp:hover {
+    box-shadow:
+        inset 0 0 0 6px rgba(165, 180, 252, 0.14),
+        0 12px 48px rgba(79, 70, 229, 0.45);
+}
+
+.hero-stamp:focus-visible {
+    outline: 3px solid #a5b4fc;
+    outline-offset: 4px;
+}
+
+.hero-stamp::before,
+.hero-stamp::after {
+    content: "";
+    position: absolute;
+    inset: 0.55rem;
+    border: 1.5px dashed rgba(165, 180, 252, 0.45);
+    border-radius: 9999px;
+    pointer-events: none;
+}
+
+.hero-stamp::after {
+    inset: 0.95rem;
+    border-style: solid;
+    border-width: 1px;
+    border-color: rgba(165, 180, 252, 0.25);
+}
+
+.hero-stamp-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.15rem;
+    padding: 0.5rem;
+    line-height: 1.05;
+}
+
+.hero-stamp-eyebrow {
+    font-size: 0.55rem;
+    letter-spacing: 0.18em;
+    opacity: 0.8;
+}
+
+.hero-stamp-headline {
+    font-size: 1.2rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: #ffffff;
+    text-shadow: 0 0 12px rgba(165, 180, 252, 0.5);
+}
+
+.hero-stamp-divider {
+    width: 1.4rem;
+    height: 1px;
+    background: rgba(165, 180, 252, 0.5);
+    margin: 0.15rem 0;
+}
+
+.hero-stamp-sub {
+    font-size: 0.6rem;
+    letter-spacing: 0.14em;
+    opacity: 0.9;
+    max-width: 7.5rem;
+    line-height: 1.2;
+}
+
+/* A wide screen: beside the title, top right of the hero */
+.hero-stamp-anchor {
+    position: absolute;
+    top: 5rem;
+    right: 2rem;
+    z-index: 5;
+}
+
+/* Narrower: under the buttons, a little smaller */
+@media (max-width: 1279px) {
+    .hero-stamp {
+        width: 9.5rem;
+        height: 9.5rem;
+    }
+    .hero-stamp-headline {
+        font-size: 1.05rem;
+    }
+    .hero-stamp-eyebrow,
+    .hero-stamp-sub {
+        font-size: 0.5rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .hero-stamp {
+        animation: none;
+    }
+}

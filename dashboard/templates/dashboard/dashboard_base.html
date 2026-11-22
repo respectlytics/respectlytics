@@ -31,12 +31,13 @@
     </aside>
     {% endblock sidebar %}
 
-    <main class="flex min-w-0 flex-1 flex-col overflow-x-hidden bg-[#0f172a]">
+    {# The page's one <main> is the base template's, around all of this #}
+    <div class="flex min-w-0 flex-1 flex-col overflow-x-hidden bg-[#0f172a]">
         {% block topbar %}{% endblock %}
         <div class="flex-1 p-4 md:p-6 lg:p-8 lg:px-12 overflow-x-hidden max-w-full">
             {% block dashboard_content %}{% endblock %}
         </div>
-    </main>
+    </div>
 </div>
 {% block dashboard_scripts %}{% endblock %}
 {% endblock %}

@@ -1,12 +1,13 @@
+import hashlib
 import logging
 import re
 
 from django.conf import settings
-from django.core.cache import cache
 from django.http import HttpResponseForbidden, HttpResponsePermanentRedirect
 from django.utils.deprecation import MiddlewareMixin
 
-from .blocks import ATTACK, SCAN, active_block, address_key, block, blockable, refused
+from . import counters
+from .blocks import ATTACK, SCAN, active_block, address_key, block, blockable, refused, shared
 from .client_ip import get_client_ip
 from .throttling import track_failed_auth_attempt
 
@@ -109,9 +110,9 @@ HEALTH_CHECK_PATHS = ("/healthz", "/api/v1/health/")
 
 
 def is_attack(request) -> bool:
-    """A known scanner path, or a POST to the admin a hosted site keeps hidden: where the
-    admin lives elsewhere (ATTACK_SIGNAL_ADMIN_PREFIX, respectlytics.com's settings), only a
-    tool posts to /admin. The community edition's admin is /admin itself, so it sets none."""
+    """A known scanner path, or a POST to /admin on a site whose admin lives elsewhere
+    (ATTACK_SIGNAL_ADMIN_PREFIX), where only a tool posts to it. The community edition's admin
+    is /admin itself, so it sets none."""
     if ATTACK_PATH_REGEX.search(request.path):
         return True
     prefix = getattr(settings, "ATTACK_SIGNAL_ADMIN_PREFIX", None)
@@ -161,7 +162,8 @@ class SecurityMiddleware(MiddlewareMixin):
             if self._count_missing(request, ip):
                 return self._blocked_response(request, ip)
 
-        if response.status_code == 401:
+        exempt = getattr(settings, "BLOCK_EXEMPT_401_PATHS", ())
+        if response.status_code == 401 and not request.path.startswith(tuple(exempt)):
             app_key = self._extract_app_key(request)
             if track_failed_auth_attempt(request, app_key):
                 logger.error("[SECURITY] Blocked an address for repeated refused API keys")
@@ -180,21 +182,23 @@ class SecurityMiddleware(MiddlewareMixin):
             return False
         if EXEMPT_404_REGEX.search(request.path) or is_crawler(request) or not blockable(ip):
             return False
+        if shared(ip):
+            return False
         user = getattr(request, "user", None)
         if user is not None and user.is_authenticated:
             return False  # a signed-in customer following an old link is no scanner
         try:
-            counter = f"missing:{address_key(ip)}"
-            paths = cache.get(counter, set())
-            paths.add(request.path[:200])
-            if len(paths) < SCAN_LIMIT:
-                cache.set(counter, paths, SCAN_WINDOW)
+            # One row per missing page (analytics/counters.py), named by its digest
+            subject = f"missing:{address_key(ip)}"
+            page = hashlib.sha256(request.path[:200].encode()).hexdigest()[:32]
+            pages = counters.distinct(subject, SCAN_WINDOW, page)
+            if pages < SCAN_LIMIT:
                 return False
-            cache.delete(counter)
+            counters.clear(subject)
         except Exception:
-            logger.warning("[SECURITY] Cache unavailable during 404 counting, failing open")
+            logger.warning("[SECURITY] Counts unavailable during 404 counting, failing open")
             return False
-        reason = f"{len(paths)} missing pages within {SCAN_WINDOW // 60} minutes"
+        reason = f"{pages} missing pages within {SCAN_WINDOW // 60} minutes"
         return block(ip, SCAN, reason) is not None
 
     def _blocked_response(self, request, ip):
@@ -425,7 +429,12 @@ class CSPMiddleware(MiddlewareMixin):
             "base-uri 'self'",
             # A form's redirect counts as its action: the checkout and the portal answer with a
             # redirect to Stripe, which 'self' alone blocked (owner, 2026-10-24).
-            "form-action 'self' https://checkout.stripe.com https://billing.stripe.com",
+            directive(
+                "form-action",
+                "'self' https://checkout.stripe.com https://billing.stripe.com",
+                # A page whose form answers with a redirect elsewhere names that origin itself
+                *getattr(response, "form_action_extra", ()),
+            ),
             "frame-ancestors 'none'",
         ]
 

@@ -11,6 +11,15 @@ from django.views.decorators.http import require_POST
 
 from analytics.models import SecretKey
 
+from .security_emails import send_secret_key_created_notification
+
+
+def end_all(user) -> int:
+    """End every secret key of the account, for when its owner proves who they are again: a
+    password reset, which is also how an account taken over is won back. Returns how many."""
+    ended, _ = SecretKey.objects.filter(user=user).delete()
+    return ended
+
 
 @never_cache
 @login_required
@@ -21,7 +30,10 @@ def account_api_keys_view(request):
         if keys.count() >= SecretKey.LIMIT:
             messages.error(request, f"You have {SecretKey.LIMIT} keys. Revoke one first.")
             return redirect("account_api_keys")
-        _, new_key = SecretKey.make(request.user)
+        row, new_key = SecretKey.make(request.user)
+        # A key that can delete data is worth a line in the inbox: if the account was taken
+        # over, its owner learns it here.
+        send_secret_key_created_notification(request.user, row)
     app = request.user.apps.order_by("created_at").first()
     return render(
         request,

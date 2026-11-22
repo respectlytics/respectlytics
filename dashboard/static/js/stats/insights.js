@@ -17,6 +17,7 @@
         time: 'clock',
         started: 'spark',
         stopped: 'alert',
+        stopped_platform: 'alert',
         silent: 'alert',
         experiment: 'flask'
     };
@@ -25,6 +26,7 @@
         volume: 'See events',
         started: 'See events',
         stopped: 'See events',
+        stopped_platform: 'See events',
         silent: 'See events',
         drop_off: 'See drop-offs',
         gap: 'See segments',

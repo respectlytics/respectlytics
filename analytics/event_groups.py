@@ -34,6 +34,7 @@ MAX_OWN_GROUPS = 50
 MAX_GROUP_EVENTS = 50
 MAX_NAMES = 2000  # the names an app's groups are worked out from, alphabetically
 NAMES_TTL = 600  # seconds an app's list of names is kept in the cache
+EMPTY_TTL = 5  # an app with no events yet: its first event is listed within seconds
 # Words that name a step or an outcome, never a kind: a group of them would add up stages.
 STEPS = frozenset(
     "start begin end open close view show hide click tap press complete finish fail success "
@@ -95,7 +96,8 @@ def groups(names, choices):
 def known_names(app_id):
     """Every event name the app has sent, alphabetically. Read from the (app, event_name,
     timestamp) index one name at a time, each probe starting after the last name found, so it
-    costs one short index read per name, never a read of the app's events; kept for NAMES_TTL."""
+    costs one short index read per name, never a read of the app's events; kept for NAMES_TTL,
+    and for EMPTY_TTL while the app has sent nothing."""
     key = f"event_names:{app_id}"
     names = cache.get(key)
     if names is None:
@@ -116,7 +118,9 @@ def known_names(app_id):
                 [app_id, app_id, MAX_NAMES],
             )
             names = [row[0] for row in cursor.fetchall()]
-        cache.set(key, names, NAMES_TTL)
+        # An app with no events yet is asked again within seconds (one index probe that finds
+        # nothing), so its first event can be chosen at once rather than after NAMES_TTL
+        cache.set(key, names, NAMES_TTL if names else EMPTY_TTL)
     return names
 
 

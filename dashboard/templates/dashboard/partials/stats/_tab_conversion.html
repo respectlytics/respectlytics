@@ -77,8 +77,4 @@ control names. Each card shows its own skeleton until its answer arrives.
     <button type="button" class="btn-secondary mt-4" onclick="loadTabData('conversion')">Try again</button>
 </div>
 
-<div id="conversion-empty" class="card hidden">
-    <h3 class="card-title">Choose what counts as a conversion</h3>
-    <p class="card-lead">Then this tab shows how sessions get there and where they stop.</p>
-    <button type="button" onclick="toggleEventPopover(); return false;" class="btn-primary mt-5">Choose conversions</button>
-</div>
+{% include "dashboard/partials/stats/_choose_conversions.html" with tab="conversion" lead="this tab shows how sessions get there and where they stop." shot="paths" shot2="dropoffs" %}
